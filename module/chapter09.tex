@@ -1,0 +1,69 @@
+\chapter{Komunikasi Antarlayanan dan Event-Driven Architecture}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Membedakan komunikasi sinkron dan asinkron beserta dampaknya terhadap ketersediaan layanan.
+  \item Memodelkan proses bisnis sebagai rangkaian \textit{event}.
+  \item Membandingkan koordinasi berbasis \textit{choreography} dan \textit{orchestration}.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: setiap kali layanan notifikasi Medikara+ bermasalah, pasien juga gagal membuat janji temu; integrasi point-to-point membuat satu gangguan merambat ke banyak sistem.
+
+\section{Komunikasi Sinkron dan Asinkron}
+
+% TODO
+% Cakupan: request/response dan menunggu jawaban; komunikasi asinkron lewat pesan; dampak pada ketersediaan gabungan dan latensi; contoh sehari-hari (telepon dibandingkan pesan tertulis).
+% Kasus Medikara: alur janji temu yang saat ini memanggil empat sistem secara berantai.
+
+\section{Antrean Pesan, Publish/Subscribe, dan Event Broker}
+
+% TODO
+% Cakupan: antrean pesan (point-to-point) dan publish/subscribe; peran event broker; contoh produk (RabbitMQ, Apache Kafka, layanan terkelola penyedia cloud) pada tingkat konsep.
+% Pendalaman teknis: menjalankan broker lokal dan mengirim serta menerima satu event.
+
+\section{Pola Event: Notification, State Transfer, dan Event Sourcing}
+
+% TODO
+% Cakupan: event notification, event-carried state transfer, dan event sourcing; kelebihan dan biaya tiap pola; penamaan event dalam bahasa bisnis (kaitan dengan ubiquitous language Bab 6).
+% Kasus Medikara: event JanjiTemuDibuat, HasilLabTersedia, dan TagihanTerbit.
+
+\section{Choreography dan Orchestration}
+
+% TODO
+% Cakupan: koordinasi tanpa pengatur pusat dan dengan pengatur pusat; kemudahan melacak alur dibandingkan kebebasan tiap layanan; kapan memilih masing-masing.
+% Kasus Medikara: proses klaim asuransi dari mitra asuransi sebagai contoh orchestration.
+
+\section{Pengiriman At-Least-Once dan Idempotensi}
+
+% TODO
+% Cakupan: jaminan pengiriman at-most-once, at-least-once, dan exactly-once; mengapa pesan bisa terkirim dua kali; consumer yang idempoten; contoh dampak bisnis bila idempotensi diabaikan (tagihan ganda).
+
+\section{Service Mesh dan Batas dengan Desain API}
+
+% TODO
+% Cakupan: service mesh pada tingkat konsep (enkripsi antarlayanan, retry, dan telemetri di luar kode aplikasi); kapan service mesh tidak diperlukan; gaya API (REST, GraphQL, event, webhook), desain kontrak, dan API gateway disinggung singkat (dibahas rinci di IT40613).
+% Kasus Medikara: integrasi ke SATUSEHAT berbasis HL7 FHIR sebagai antarmuka eksternal yang kontraknya dikelola di IT40613.
+
+\section{Aktivitas: Peta Interaksi Layanan dan Katalog Event}
+
+% TODO
+% Tujuan aktivitas: memodelkan satu alur bisnis sebagai interaksi antarlayanan dan rangkaian event, lalu menetapkan pola komunikasi tiap interaksi.
+% Peran dalam tim: anggota non-teknis menuliskan kejadian bisnis dan pihak yang perlu mengetahuinya; anggota teknis menentukan pola komunikasi beserta alasannya; seluruh anggota memeriksa dampak bila satu layanan mati.
+% Langkah: (1) pilih alur janji temu atau alur sejenis; (2) daftar kejadian bisnis secara berurutan; (3) tentukan layanan pengirim dan penerima; (4) pilih sinkron atau asinkron untuk tiap interaksi; (5) susun katalog event berisi nama, pemilik, isi data, dan pelanggan.
+% Luaran dan tonggak capstone: C3, peta interaksi layanan dan katalog event.
+% Berkas sources yang direncanakan: sources/chapter09/templat-katalog-event.xlsx, sources/chapter09/contoh-broker-lokal/ (opsional, docker-compose untuk RabbitMQ atau Kafka)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Layanan notifikasi mati selama satu jam. Apa akibatnya pada alur janji temu yang memakai komunikasi sinkron, dan apa bedanya bila alur itu memakai \textit{event}?
+  \item Jelaskan mengapa \textit{consumer} harus idempoten ketika pesan dapat terkirim lebih dari sekali. Berikan contoh dari proses pembayaran.
+  \item Kapan \textit{orchestration} lebih tepat daripada \textit{choreography}? Gunakan contoh proses klaim asuransi.
+\end{enumerate}

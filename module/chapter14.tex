@@ -1,0 +1,67 @@
+\chapter{Peta Jalan Modernisasi dan Tata Kelola Cloud}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Menyusun urutan modernisasi bertahap dengan pola \textit{strangler fig}.
+  \item Merancang \textit{guardrail} tata kelola \textit{cloud} untuk biaya, keamanan, dan lokasi data.
+  \item Mempertahankan peta jalan modernisasi di depan pemangku kepentingan dengan metrik yang terukur.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: direksi Medikara Health meminta satu dokumen yang menjawab apa yang dimodernisasi lebih dulu, berapa biayanya, dan bagaimana risikonya dikendalikan; bab ini menyatukan seluruh artefak semester menjadi peta jalan yang dapat dipertanggungjawabkan.
+
+\section{Pola Strangler Fig dan Modernisasi Bertahap}
+
+% TODO
+% Cakupan: pola strangler fig dan alasan penggantian sekaligus berisiko tinggi; anticorruption layer selama masa transisi; cara memilih irisan pertama yang kecil tetapi bernilai.
+% Kasus Medikara: memindahkan fungsi janji temu dari SIMRS ke layanan baru tanpa menghentikan rumah sakit.
+
+\section{Menyusun Gelombang Modernisasi}
+
+% TODO
+% Cakupan: pengelompokan aplikasi menjadi gelombang berdasarkan dependensi, risiko, dan nilai; prasyarat platform dan tim untuk tiap gelombang; memakai ulang usulan 7R (Bab 4) dan keputusan runtime (Bab 8); teknik peta jalan dan perencanaan migrasi tingkat enterprise disinggung singkat (dibahas rinci di IT40513).
+
+\section{Guardrail dan Policy as Code pada Landing Zone}
+
+% TODO
+% Cakupan: guardrail sebagai batas yang mencegah kesalahan tanpa menghambat tim; policy as code dan pemeriksaan otomatis; contoh guardrail untuk region, enkripsi, tagging, dan akses; kaitan dengan fase Govern dan Secure pada Microsoft CAF.
+% Pendalaman teknis: menulis kebijakan dengan Open Policy Agent yang menolak sumber daya di luar region yang diizinkan.
+
+\section{FinOps pada Fase Operate}
+
+% TODO
+% Cakupan: anggaran dan peringatan biaya; deteksi anomali; kebijakan tagging dan alokasi; peninjauan rutin biaya per unit (kaitan dengan Bab 3); peran capability Executive Strategy Alignment.
+
+\section{Kedaulatan Data dan Sovereign Cloud}
+
+% TODO
+% Cakupan: arti kedaulatan data, kedaulatan operasional, dan kedaulatan teknologi; pilihan sovereign cloud dan region lokal; status regulasi Indonesia per Oktober 2026 (PP 71/2019 dan rencana revisinya, PP 33/2026, rancangan Perpres pusat data); kepatuhan regulasi dibahas rinci di IT40813.
+% Kasus Medikara: guardrail lokasi data untuk rekam medis elektronik.
+
+\section{Metrik Peta Jalan dan Pelaporan Kemajuan}
+
+% TODO
+% Cakupan: metrik DORA, SLO, biaya per unit, dan jejak karbon sebagai ukuran kemajuan; mengapa jumlah aplikasi yang dipindahkan adalah metrik yang menyesatkan; format laporan ringkas untuk direksi (KPI dan pelaporan direksi dibahas rinci di IT40813).
+
+\section{Aktivitas: Peta Jalan Modernisasi dan Guardrail Tata Kelola}
+
+% TODO
+% Tujuan aktivitas: menyatukan artefak Bab 1 sampai 13 menjadi peta jalan modernisasi tiga gelombang dan menetapkan guardrail tata kelola cloud, lalu mempresentasikannya sebagai bagian C4.
+% Peran dalam tim: anggota non-teknis memimpin narasi nilai bisnis dan urutan prioritas; anggota teknis memeriksa kelayakan dependensi dan prasyarat teknis; seluruh anggota menyiapkan presentasi dan jawaban atas pertanyaan direksi.
+% Langkah: (1) kumpulkan artefak C1 sampai C3; (2) susun tiga gelombang berisi layanan, strategi 7R, prasyarat platform, sasaran SLO dan biaya, serta risiko; (3) tetapkan lima sampai tujuh guardrail; (4) pilih empat metrik kemajuan; (5) siapkan presentasi C4 menjelang UAS.
+% Luaran dan tonggak capstone: C4, peta jalan modernisasi dan guardrail tata kelola cloud, dipresentasikan menjelang UAS.
+% Berkas sources yang direncanakan: sources/chapter14/templat-peta-jalan-modernisasi.xlsx, sources/chapter14/katalog-guardrail.md, sources/chapter14/templat-presentasi-c4.md, sources/chapter14/contoh-opa/ (opsional)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Jelaskan mengapa pola \textit{strangler fig} lebih aman daripada mengganti SIMRS sekaligus dalam satu kali peralihan.
+  \item Susun tiga \textit{guardrail} tata kelola \textit{cloud} untuk Medikara Health dan jelaskan risiko yang dicegah oleh masing-masing.
+  \item Pilih empat metrik untuk melaporkan kemajuan peta jalan kepada direksi. Jelaskan mengapa metrik tersebut lebih bermakna daripada jumlah aplikasi yang sudah dipindahkan.
+\end{enumerate}

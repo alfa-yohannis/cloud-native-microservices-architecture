@@ -1,0 +1,65 @@
+\chapter{Model Layanan, Model Penerapan, dan Lokasi Data}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Membedakan karakteristik esensial, model layanan, dan model penerapan \textit{cloud} menurut NIST (National Institute of Standards and Technology) SP 800-145.
+  \item Menjelaskan pembagian tanggung jawab antara penyedia dan pelanggan pada IaaS, PaaS, dan SaaS.
+  \item Menganalisis pengaruh aturan lokasi data di Indonesia terhadap pilihan penempatan \textit{workload}.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: direksi Medikara Health menerima tawaran dari beberapa penyedia cloud dengan istilah yang membingungkan (IaaS, SaaS, hybrid, region); sebelum memilih, organisasi perlu tahu apa yang sebenarnya dibeli dan data mana yang boleh ditempatkan di mana.
+
+\section{Lima Karakteristik Esensial Cloud}
+
+% TODO
+% Cakupan: definisi NIST SP 800-145 (2011, masih berstatus final); on-demand self-service, broad network access, resource pooling, rapid elasticity, dan measured service; cara membedakan cloud sungguhan dari pusat data yang sekadar diberi label cloud.
+% Kasus Medikara: menguji apakah pusat data milik vendor SIMRS memenuhi kelima karakteristik tersebut.
+
+\section{Model Layanan dan Shared Responsibility Model}
+
+% TODO
+% Cakupan: IaaS, PaaS, dan SaaS (FaaS disinggung, dibahas rinci di Bab 8); shared responsibility model dan bagian keamanan yang tetap menjadi tanggung jawab pelanggan; contoh layanan sehari-hari untuk tiap model.
+% Kasus Medikara: memetakan surel kantor, ERP keuangan, dan Medikara+ ke model layanan masing-masing.
+
+\section{Model Penerapan: Public, Private, Hybrid, dan Multi-Cloud}
+
+% TODO
+% Cakupan: public, private, hybrid, dan community cloud menurut NIST; multi-cloud sebagai praktik industri; trade-off biaya, keterampilan, dan ketergantungan pada penyedia; data survei industri tentang tingkat adopsi hybrid cloud.
+% Kasus Medikara: pilihan model penerapan untuk SIMRS di lima rumah sakit dengan versi berbeda.
+
+\section{Region, Availability Zone, dan Region Cloud di Indonesia}
+
+% TODO
+% Cakupan: arti region dan availability zone; dampaknya pada latensi, ketersediaan, dan lokasi data; region yang beroperasi di Indonesia per Oktober 2026 (AWS Jakarta, Google Cloud Jakarta, Azure Indonesia Central, Oracle Batam) dan layanan yang belum tentu tersedia di region tersebut.
+% Pendalaman teknis: membaca daftar layanan per region dan perbedaan jumlah zona antarpenyedia.
+
+\section{Lokasi Data dan Kedaulatan Data dalam Regulasi Indonesia}
+
+% TODO
+% Cakupan: PP 71/2019 Pasal 20 dan 21 tentang lokasi pengelolaan data untuk PSE lingkup publik dan privat; Permenkominfo 5/2020 tentang PSE Lingkup Privat; Permenkes 24/2022 Pasal 20 tentang media penyimpanan rekam medis elektronik termasuk cloud yang tersertifikasi; UU 27/2022 dan PP 33/2026 tentang transfer data pribadi lintas negara disinggung singkat (dibahas rinci di IT40813).
+% Kasus Medikara: rekam medis elektronik, data klaim BPJS Kesehatan, dan data karyawan sebagai tiga jenis data dengan kendala berbeda.
+% Catatan: status regulasi dicek ulang di JDIH sebelum naskah ditulis, termasuk rencana revisi PP 71/2019 dan rancangan Perpres pusat data.
+
+\section{Aktivitas: Matriks Kendala Penempatan Workload}
+
+% TODO
+% Tujuan aktivitas: menghasilkan matriks yang menunjukkan model layanan, model penerapan, dan lokasi data yang diizinkan untuk tiap workload organisasi.
+% Peran dalam tim: anggota berlatar hukum, kesehatan, atau bisnis menelusuri jenis data dan aturan yang mengikat; anggota teknis menilai model layanan dan model penerapan yang masuk akal; seluruh anggota memeriksa konsistensi matriks.
+% Langkah: (1) daftar 8 sampai 12 workload; (2) tentukan jenis data tiap workload; (3) cocokkan dengan aturan yang berlaku; (4) usulkan model layanan dan model penerapan; (5) tandai lokasi data yang diizinkan dan pertanyaan yang belum terjawab.
+% Luaran dan tonggak capstone: C1, matriks kendala penempatan workload.
+% Berkas sources yang direncanakan: sources/chapter02/templat-matriks-penempatan-workload.xlsx, sources/chapter02/ringkasan-regulasi-lokasi-data.md
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Klasifikasikan lima layanan yang dipakai sehari-hari di tempat kerja ke dalam IaaS, PaaS, atau SaaS, lalu tunjukkan tanggung jawab keamanan yang tetap dipegang organisasi.
+  \item Medikara Health ingin menyimpan cadangan rekam medis elektronik di region luar negeri karena harganya lebih murah. Analisis pertanyaan regulasi dan risiko yang harus terjawab sebelum keputusan diambil.
+  \item Bandingkan \textit{hybrid cloud} dan \textit{multi-cloud} dari sisi biaya, keterampilan tim, dan ketergantungan pada penyedia.
+\end{enumerate}

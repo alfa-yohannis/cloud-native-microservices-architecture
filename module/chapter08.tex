@@ -1,0 +1,63 @@
+\chapter{Container, Kubernetes, dan Serverless}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Menjelaskan perbedaan \textit{virtual machine}, \textit{container}, dan \textit{serverless} dengan analogi dan contoh.
+  \item Menjelaskan cara Kubernetes menjaga sistem tetap sesuai keadaan yang diinginkan.
+  \item Memilih \textit{runtime} untuk setiap kandidat layanan berdasarkan kriteria yang eksplisit.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: aplikasi yang berjalan baik di satu rumah sakit sering gagal di rumah sakit lain karena lingkungannya berbeda; pada saat yang sama, sebagian layanan hanya dipakai beberapa menit sehari tetapi servernya menyala terus.
+
+\section{Virtual Machine dan Container}
+
+% TODO
+% Cakupan: VM dan container dengan analogi peti kemas; container image dan registry; manfaat konsistensi lingkungan; batas isolasi container dibandingkan VM.
+% Pendalaman teknis: menulis Dockerfile untuk aplikasi contoh dan menyimpan image di registry.
+
+\section{Orkestrasi Container dan Konsep Kubernetes}
+
+% TODO
+% Cakupan: mengapa container perlu orkestrasi; konsep desired state dan rekonsiliasi; pod, deployment, service, self-healing, dan autoscaling pada tingkat konsep; data survei CNCF 2025 tentang adopsi Kubernetes di produksi dan sebagai platform workload AI.
+% Pendalaman teknis: menjalankan aplikasi contoh di klaster Kubernetes lokal dengan kind atau minikube.
+
+\section{Managed Kubernetes dan PaaS}
+
+% TODO
+% Cakupan: tanggung jawab yang diambil alih penyedia pada managed Kubernetes; PaaS sebagai alternatif yang lebih sederhana; biaya keterampilan dan operasi yang sering diremehkan.
+% Kasus Medikara: apakah tim TI Medikara Health yang kecil sanggup mengelola Kubernetes sendiri.
+
+\section{Serverless dan Function as a Service}
+
+% TODO
+% Cakupan: serverless dan FaaS; skala sampai nol dan biaya per eksekusi; cold start, batas waktu eksekusi, dan ketergantungan pada layanan penyedia; pola beban yang cocok.
+% Kasus Medikara: pengingat jadwal kontrol pasien dan pemrosesan hasil laboratorium yang datang berkala.
+
+\section{Memilih Runtime dan Mengelola Vendor Lock-in}
+
+% TODO
+% Cakupan: kriteria memilih runtime (pola beban, latensi, keterampilan tim, biaya, lokasi data); matriks keputusan dari SaaS sampai VM; vendor lock-in, portabilitas, dan biaya keluar dari penyedia; kaitan dengan matriks lokasi data Bab 2.
+
+\section{Aktivitas: Matriks Keputusan Runtime}
+
+% TODO
+% Tujuan aktivitas: menetapkan runtime untuk setiap kandidat layanan dengan kriteria yang dituliskan lebih dulu.
+% Peran dalam tim: anggota teknis menjelaskan konsekuensi operasional setiap opsi; anggota non-teknis menilai biaya, ketersediaan tenaga kerja di pasar, dan risiko ketergantungan pada penyedia; seluruh anggota menyepakati bobot kriteria.
+% Langkah: (1) ambil kandidat layanan dari Bab 6 dan 7; (2) tetapkan kriteria dan bobotnya; (3) nilai opsi SaaS, PaaS, managed Kubernetes, serverless, dan VM; (4) pilih runtime dan catat alasannya dalam ADR singkat.
+% Luaran dan tonggak capstone: C3, matriks keputusan runtime per layanan.
+% Berkas sources yang direncanakan: sources/chapter08/matriks-keputusan-runtime.xlsx, sources/chapter08/contoh-container/ (opsional, Dockerfile dan manifest Kubernetes)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Jelaskan kepada direktur keuangan mengapa layanan pengingat jadwal kontrol pasien cocok dijalankan secara \textit{serverless}.
+  \item Kapan Kubernetes justru menjadi beban bagi organisasi? Berikan dua kondisi beserta alasannya.
+  \item Bandingkan risiko \textit{vendor lock-in} pada layanan \textit{serverless} dan pada \textit{managed} Kubernetes.
+\end{enumerate}

@@ -1,0 +1,69 @@
+\chapter{Data dalam Microservices: Saga dan Outbox}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Menjelaskan alasan setiap layanan memiliki datanya sendiri dan risiko basis data bersama.
+  \item Merancang saga beserta langkah kompensasinya untuk satu proses lintas layanan.
+  \item Menjelaskan cara pola \textit{transactional outbox} mencegah data dan \textit{event} tidak sinkron.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: data pasien Medikara Health tersebar di banyak sistem dan sering tidak cocok satu sama lain; memecah sistem menjadi layanan tanpa memikirkan data justru memperparah masalah ini.
+
+\section{Database per Service dan Basis Data Bersama}
+
+% TODO
+% Cakupan: alasan tiap layanan memiliki datanya sendiri; basis data bersama sebagai anti-pattern dan dampaknya pada perubahan dan kepemilikan; cara layanan lain memperoleh data yang bukan miliknya.
+% Kasus Medikara: tabel pasien SIMRS yang ditulis oleh pendaftaran, keuangan, dan laboratorium sekaligus.
+
+\section{Transaksi Terdistribusi dan Eventual Consistency}
+
+% TODO
+% Cakupan: mengapa satu transaksi basis data tidak bisa lagi mencakup seluruh proses; keterbatasan two-phase commit; eventual consistency dan cara menjelaskannya kepada pengguna bisnis; konsekuensi pada pengalaman pasien.
+
+\section{Saga dan Transaksi Kompensasi}
+
+% TODO
+% Cakupan: gagasan saga dari Garcia-Molina dan Salem (1987); saga berbasis choreography dan orchestration; transaksi kompensasi dan langkah yang tidak dapat dibatalkan; pola saga dalam Richardson (2018).
+% Kasus Medikara: saga pendaftaran pasien rujukan dari klinik mitra sampai klaim terkirim.
+
+\section{Pola Transactional Outbox}
+
+% TODO
+% Cakupan: masalah dual write (data tersimpan tetapi event tidak terkirim, atau sebaliknya); cara kerja transactional outbox; kaitan dengan idempotensi consumer (Bab 9).
+% Pendalaman teknis: menerapkan outbox sederhana dengan PostgreSQL dan proses pembaca yang menerbitkan event.
+
+\section{CQRS dan Read Model untuk Pelaporan}
+
+% TODO
+% Cakupan: CQRS pada tingkat konsep; read model yang dibangun dari event untuk kebutuhan laporan; manfaatnya bagi layanan operasional; batasan kesegaran data.
+% Kasus Medikara: laporan manajemen yang masih disusun dengan spreadsheet sebagai calon read model.
+
+\section{Kepemilikan Data Pasien: Satu Pasien, Satu Rekam Medis}
+
+% TODO
+% Cakupan: identitas pasien tunggal lintas fasilitas; layanan pemilik data induk pasien dan pembaca lainnya; persetujuan pasien dan hak akses sebagai batasan desain (pelindungan data pribadi dibahas rinci di IT40813); arsitektur data tingkat enterprise disinggung singkat (dibahas rinci di IT40513).
+% Kasus Medikara: strategi "Satu Pasien, Satu Rekam Medis" dan pertukaran data dengan SATUSEHAT.
+
+\section{Aktivitas: Peta Kepemilikan Data dan Rancangan Saga}
+
+% TODO
+% Tujuan aktivitas: menetapkan pemilik setiap entitas data utama dan merancang satu saga lintas layanan beserta kompensasinya.
+% Peran dalam tim: anggota non-teknis memastikan aturan bisnis dan langkah kompensasi masuk akal bagi pasien dan bagian keuangan; anggota teknis memilih pola koordinasi dan titik pemakaian outbox; seluruh anggota menguji rancangan dengan skenario gagal.
+% Langkah: (1) daftar entitas data utama; (2) tetapkan layanan pemilik dan layanan pembaca; (3) pilih satu proses lintas layanan; (4) uraikan langkah saga dan kompensasinya; (5) uji dengan dua skenario gagal.
+% Luaran dan tonggak capstone: C3, peta kepemilikan data dan rancangan saga.
+% Berkas sources yang direncanakan: sources/chapter10/templat-peta-kepemilikan-data.xlsx, sources/chapter10/templat-rancangan-saga.md, sources/chapter10/contoh-outbox-postgresql/ (opsional)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Mengapa tim keuangan dan tim layanan pasien sebaiknya tidak menulis langsung ke tabel basis data yang sama?
+  \item Pada saga pendaftaran rujukan, verifikasi kepesertaan BPJS Kesehatan gagal setelah jadwal dokter dikunci. Uraikan langkah kompensasinya.
+  \item Laporan manajemen Medikara Health masih disusun dengan \textit{spreadsheet}. Jelaskan cara \textit{read model} menggantikan kebiasaan itu tanpa membebani layanan operasional.
+\end{enumerate}

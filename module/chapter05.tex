@@ -1,0 +1,68 @@
+\chapter{Prinsip Cloud-Native dan Twelve-Factor App}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Menjelaskan definisi \textit{cloud-native} menurut CNCF (Cloud Native Computing Foundation) dan perbedaannya dengan aplikasi yang sekadar \textit{cloud-hosted}.
+  \item Menerjemahkan dua belas faktor Twelve-Factor App ke dalam dampak bisnis yang mudah dipahami.
+  \item Menilai kesenjangan aplikasi yang ada terhadap prinsip \textit{cloud-native}.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: Medikara+ sudah berjalan di cloud milik vendor, tetapi tetap lambat saat lonjakan pengguna dan butuh dua minggu untuk satu pembaruan; berada di cloud belum tentu berarti cloud-native.
+
+\section{Definisi Cloud-Native menurut CNCF}
+
+% TODO
+% Cakupan: definisi CNCF versi 1.1 (disetujui 26 Februari 2024) dan perubahannya dari versi 1.0; perbedaan cloud-hosted dan cloud-native; sifat sistem yang dituju: loosely coupled, resilient, manageable, observable, dan perubahan berdampak besar yang bisa dilakukan sering dan dapat diprediksi.
+
+\section{Twelve-Factor App dan Statusnya Sekarang}
+
+% TODO
+% Cakupan: asal-usul Twelve-Factor App (2011) dan statusnya sebagai proyek open source sejak November 2024; manfaat memakai daftar faktor sebagai alat penilaian, bukan dogma; pengelompokan dua belas faktor menjadi tiga kelompok untuk memudahkan pembaca non-teknis.
+
+\section{Faktor tentang Kode, Konfigurasi, dan Backing Service}
+
+% TODO
+% Cakupan: codebase, dependencies, config, dan backing services; dampak bisnis tiap faktor, misalnya konfigurasi yang tertanam di kode membuat setiap rumah sakit menjalankan versi berbeda.
+% Kasus Medikara: konfigurasi SIMRS yang berbeda di lima rumah sakit.
+% Pendalaman teknis: memisahkan konfigurasi dari kode dengan environment variable.
+
+\section{Faktor tentang Build, Proses, dan Skala}
+
+% TODO
+% Cakupan: build-release-run, processes tanpa state, port binding, concurrency, dan disposability; penskalaan vertikal dan horizontal; mengapa sesi yang disimpan di memori server menghambat penskalaan.
+% Kasus Medikara: lonjakan pengguna Medikara+ saat program vaksinasi diumumkan.
+
+\section{Faktor tentang Lingkungan, Log, dan Tugas Administratif}
+
+% TODO
+% Cakupan: dev/prod parity, logs sebagai aliran event, dan admin processes; dampaknya pada waktu pemulihan gangguan dan kemampuan audit.
+% Pendalaman teknis: menulis log terstruktur ke stdout dan membiarkan platform yang mengumpulkannya.
+
+\section{Immutable Infrastructure dan Konfigurasi Deklaratif}
+
+% TODO
+% Cakupan: perbedaan server yang dirawat satu per satu dan server yang diganti utuh; konfigurasi deklaratif dibandingkan dengan langkah manual; kaitan dengan container (Bab 8) dan GitOps (Bab 13).
+
+\section{Aktivitas: Kartu Skor Kesenjangan Cloud-Native}
+
+% TODO
+% Tujuan aktivitas: menilai dua sampai tiga aplikasi inti terhadap dua belas faktor dan menerjemahkan setiap kesenjangan ke dampak bisnis.
+% Peran dalam tim: anggota teknis menjelaskan arti tiap faktor dan mengumpulkan bukti dari dokumentasi atau wawancara tim TI; anggota non-teknis menuliskan dampak bisnis tiap kesenjangan dan memeriksa apakah bahasanya dapat dipahami manajemen.
+% Langkah: (1) pilih dua sampai tiga aplikasi inti; (2) beri skor tiap faktor dengan bukti; (3) tulis dampak bisnis tiap kesenjangan; (4) tandai tiga kesenjangan yang paling merugikan.
+% Luaran dan tonggak capstone: C2, kartu skor kesenjangan cloud-native untuk aplikasi inti.
+% Berkas sources yang direncanakan: sources/chapter05/kartu-skor-twelve-factor.xlsx, sources/chapter05/contoh-aplikasi-konfigurasi/ (opsional, untuk pendalaman teknis)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Medikara+ sering lambat setiap kali program vaksinasi diumumkan. Faktor mana dalam Twelve-Factor App yang paling relevan untuk masalah ini? Jelaskan alasannya.
+  \item Jelaskan dengan bahasa non-teknis mengapa aplikasi yang menyimpan sesi pengguna di memori \textit{server} sulit diskalakan.
+  \item Apakah semua aplikasi organisasi perlu memenuhi dua belas faktor? Berikan satu contoh aplikasi yang tidak perlu dan jelaskan alasannya.
+\end{enumerate}

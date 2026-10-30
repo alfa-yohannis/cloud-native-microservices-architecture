@@ -1,0 +1,62 @@
+\chapter{Observability, SRE, dan SLO}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Membedakan \textit{monitoring} dan \textit{observability} serta tiga sinyal telemetri: \textit{log}, metrik, dan \textit{trace}.
+  \item Menetapkan SLI, SLO, dan \textit{error budget} untuk perjalanan pengguna yang kritis.
+  \item Menjelaskan praktik SRE (\textit{Site Reliability Engineering}) yang menyeimbangkan kecepatan perubahan dan keandalan.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: dasbor server Medikara Health selalu hijau, tetapi pasien tetap mengeluh gagal membuat janji temu; ukuran keandalan perlu berangkat dari pengalaman pengguna, bukan dari kondisi mesin.
+
+\section{Monitoring dan Observability}
+
+% TODO
+% Cakupan: monitoring untuk masalah yang sudah diketahui dan observability untuk menjawab pertanyaan baru; tantangan menelusuri gangguan di sistem terdistribusi; peran observability bagi manajemen dan auditor.
+
+\section{Log, Metrik, Trace, dan OpenTelemetry}
+
+% TODO
+% Cakupan: tiga sinyal telemetri dan kegunaan masing-masing; OpenTelemetry sebagai standar terbuka instrumentasi di bawah CNCF; biaya penyimpanan telemetri dan cara mengendalikannya.
+% Pendalaman teknis: menginstrumentasi aplikasi contoh dengan OpenTelemetry dan menampilkan satu trace lintas dua layanan.
+
+\section{SLI, SLO, dan SLA}
+
+% TODO
+% Cakupan: perbedaan SLI, SLO, dan SLA; cara memilih SLI yang mencerminkan pengalaman pengguna; perhitungan waktu tidak tersedia yang diizinkan untuk berbagai target; alasan target 100 persen hampir selalu keliru.
+% Kasus Medikara: SLI untuk membuat janji temu, mengambil hasil laboratorium, dan mengirim klaim BPJS Kesehatan.
+
+\section{Error Budget dan Kebijakannya}
+
+% TODO
+% Cakupan: error budget sebagai selisih antara 100 persen dan target SLO; kebijakan saat anggaran habis (misalnya menunda fitur baru); error budget sebagai alat negosiasi antara bisnis dan tim teknis.
+
+\section{Praktik SRE: Toil, Alerting, Insiden, dan Postmortem}
+
+% TODO
+% Cakupan: SRE menurut buku Google SRE; toil dan batasnya; alerting yang bermakna berbasis SLO; penanganan insiden dan peran-perannya; postmortem tanpa menyalahkan; KPI dan pelaporan ke direksi disinggung singkat (dibahas rinci di IT40813).
+% Kasus Medikara: postmortem gangguan Medikara+ saat program vaksinasi.
+
+\section{Aktivitas: SLO Layanan Kritis dan Rancangan Observability}
+
+% TODO
+% Tujuan aktivitas: menetapkan SLI, SLO, dan kebijakan error budget untuk dua sampai tiga perjalanan pengguna kritis, beserta sinyal telemetri yang dibutuhkan.
+% Peran dalam tim: anggota non-teknis menentukan arti layanan yang baik dari sisi pasien dan manajemen; anggota teknis menerjemahkannya menjadi SLI terukur, target SLO, dan kebutuhan telemetri; seluruh anggota menyepakati kebijakan error budget.
+% Langkah: (1) pilih dua sampai tiga perjalanan pengguna kritis; (2) rumuskan SLI untuk tiap perjalanan; (3) tetapkan target SLO dan hitung error budget; (4) daftar sinyal telemetri yang dibutuhkan; (5) tulis kebijakan error budget satu halaman.
+% Luaran dan tonggak capstone: C3, SLO layanan kritis dan rancangan observability.
+% Berkas sources yang direncanakan: sources/chapter11/templat-slo.xlsx, sources/chapter11/templat-kebijakan-error-budget.md, sources/chapter11/contoh-opentelemetry/ (opsional)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Hitung waktu tidak tersedia yang diizinkan dalam satu bulan untuk SLO ketersediaan 99,5 persen dan 99,9 persen. Jelaskan dampak selisihnya bagi biaya.
+  \item Mengapa target SLO 100 persen hampir selalu merupakan keputusan yang buruk?
+  \item Usulkan satu SLI untuk layanan janji temu yang mencerminkan pengalaman pasien, bukan sekadar kondisi \textit{server}.
+\end{enumerate}

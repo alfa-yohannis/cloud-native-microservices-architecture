@@ -1,0 +1,62 @@
+\chapter{Monolit, Modular Monolith, dan Microservices}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Membandingkan monolit, \textit{modular monolith}, dan \textit{microservices} dari sisi manfaat dan biayanya.
+  \item Mendiagnosis sumber keterkaitan (\textit{coupling}) pada aplikasi yang ada.
+  \item Menuliskan keputusan gaya arsitektur dalam format ADR.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: vendor menawarkan Medikara Health "SIMRS berbasis microservices" sebagai jawaban semua masalah; bab ini menimbang kapan microservices menolong dan kapan justru menambah beban.
+
+\section{Tiga Gaya Arsitektur: Monolit, Modular Monolith, dan Microservices}
+
+% TODO
+% Cakupan: ciri tiap gaya; definisi microservices menurut Lewis dan Fowler (2014); modular monolith sebagai titik tengah; spektrum, bukan pilihan biner.
+% Kasus Medikara: SIMRS monolitik di lima rumah sakit sebagai titik awal.
+
+\section{Coupling, Cohesion, dan Biaya Sistem Terdistribusi}
+
+% TODO
+% Cakupan: jenis coupling (data, waktu, deployment, semantik); cohesion; fallacies of distributed computing; biaya tambahan microservices pada jaringan, data, pengujian, dan operasi.
+% Pendalaman teknis: mengukur coupling antarmodul pada basis kode dengan alat analisis dependensi.
+
+\section{Hukum Conway dan Struktur Tim}
+
+% TODO
+% Cakupan: hukum Conway (1968) dan manuver Conway terbalik; ukuran dan otonomi tim sebagai syarat microservices; jembatan ke Team Topologies (dibahas rinci di Bab 13).
+% Kasus Medikara: tim TI yang tersebar per rumah sakit dan dampaknya pada struktur SIMRS.
+
+\section{Kapan Microservices Tidak Tepat}
+
+% TODO
+% Cakupan: tanda-tanda organisasi belum siap; kisah Segment yang kembali ke monolit (2018); pendekatan monolith first; membaca kajian Jamshidi dkk. (2018) secara kritis tentang manfaat dan tantangan microservices.
+
+\section{Architecture Decision Record}
+
+% TODO
+% Cakupan: fungsi ADR sebagai jejak keputusan; struktur ADR (konteks, opsi, keputusan, konsekuensi, status); ADR sebagai alat komunikasi kepada manajemen dan auditor; contoh ADR yang baik dan yang buruk.
+
+\section{Aktivitas: Diagnosis Arsitektur dan ADR Pertama}
+
+% TODO
+% Tujuan aktivitas: mendiagnosis sumber keterkaitan pada aplikasi inti dan mencatat keputusan gaya arsitektur target dalam ADR; merapikan seluruh artefak C2 untuk tinjauan menjelang UTS.
+% Peran dalam tim: anggota non-teknis mengumpulkan data dampak bisnis dan pola permintaan perubahan dari pengguna; anggota teknis memetakan modul dan dependensi; seluruh anggota menimbang opsi dan menulis ADR bersama.
+% Langkah: (1) identifikasi bagian yang sering berubah bersamaan; (2) identifikasi bagian yang paling sering menimbulkan gangguan; (3) petakan tim pengelola; (4) tulis ADR dengan minimal tiga opsi; (5) gabungkan artefak Bab 4 sampai 7 menjadi berkas C2.
+% Luaran dan tonggak capstone: C2, diagnosis arsitektur aplikasi dan ADR gaya arsitektur, ditinjau menjelang UTS.
+% Berkas sources yang direncanakan: sources/chapter07/templat-adr.md, sources/chapter07/lembar-diagnosis-coupling.xlsx, sources/chapter07/daftar-periksa-c2.md
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Sebuah tim berisi enam pengembang ingin memecah aplikasinya menjadi dua puluh \textit{microservices}. Ajukan tiga pertanyaan yang perlu dijawab sebelum rencana itu disetujui.
+  \item Jelaskan mengapa \textit{modular monolith} sering menjadi titik tengah yang masuk akal bagi organisasi seperti Medikara Health.
+  \item Baca kisah Segment yang kembali ke monolit. Apa penyebab utamanya, dan apakah penyebab itu juga ada di organisasi pilihan tim?
+\end{enumerate}

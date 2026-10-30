@@ -1,0 +1,67 @@
+\chapter{Resiliensi dan Disaster Recovery}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Mengidentifikasi mode kegagalan dalam sistem terdistribusi dan pola resiliensi untuk menanganinya.
+  \item Menetapkan RTO dan RPO berdasarkan dampak bisnis.
+  \item Memilih strategi DR yang seimbang antara biaya dan risiko.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: insiden PDNS 2 Surabaya pada 2024 melumpuhkan layanan ratusan instansi dan memperlihatkan bahwa cadangan yang tidak teruji sama dengan tidak punya cadangan; rumah sakit tidak boleh berhenti melayani hanya karena satu pusat data bermasalah.
+
+\section{Mode Kegagalan dalam Sistem Terdistribusi}
+
+% TODO
+% Cakupan: kegagalan parsial, latensi tinggi, dan kegagalan berantai; titik kegagalan tunggal; kegagalan yang berasal dari penyedia atau pihak ketiga (risiko pihak ketiga dibahas rinci di IT40813).
+% Kasus Medikara: gangguan layanan BPJS Kesehatan yang merambat ke antrean pendaftaran.
+
+\section{Pola Resiliensi}
+
+% TODO
+% Cakupan: timeout, retry dengan backoff, circuit breaker, bulkhead, dan graceful degradation; contoh perilaku yang terasa oleh pengguna untuk tiap pola; risiko retry yang memperparah beban.
+% Pendalaman teknis: mensimulasikan kegagalan satu layanan dan mengamati perilaku circuit breaker dengan pustaka resiliensi.
+
+\section{Multi-AZ dan Multi-Region}
+
+% TODO
+% Cakupan: perlindungan yang diberikan multi-AZ dan multi-region; biaya dan kerumitan replikasi data; kendala lokasi data di Indonesia terhadap pilihan region cadangan (kaitan dengan Bab 2).
+
+\section{RTO, RPO, dan Strategi Disaster Recovery}
+
+% TODO
+% Cakupan: RTO dan RPO sebagai keputusan bisnis; analisis dampak bisnis sederhana; strategi backup and restore, pilot light, warm standby, dan multi-site active-active beserta perkiraan biayanya; kelangsungan bisnis dan ISO 22301 disinggung singkat (dibahas rinci di IT40813).
+% Kasus Medikara: RTO dan RPO untuk rekam medis elektronik, Medikara+, dan ERP keuangan.
+
+\section{Ransomware dan Cadangan yang Tidak Dapat Diubah}
+
+% TODO
+% Cakupan: cara ransomware menyerang cadangan; prinsip cadangan terpisah dan tidak dapat diubah; pelajaran dari insiden PDNS 2 Surabaya 2024 tentang cakupan cadangan dan uji pemulihan.
+
+\section{Chaos Engineering dan Game Day}
+
+% TODO
+% Cakupan: menguji resiliensi dengan sengaja memicu kegagalan secara terkendali; game day sebagai latihan bersama tim teknis dan bisnis; syarat aman sebelum memulai.
+
+\section{Aktivitas: Rencana Resiliensi dan DR}
+
+% TODO
+% Tujuan aktivitas: menetapkan RTO, RPO, dan strategi DR untuk layanan kritis, memperkirakan biayanya, dan menyusun satu skenario uji pemulihan.
+% Peran dalam tim: anggota non-teknis memimpin analisis dampak bisnis (kerugian per jam, keselamatan pasien, kewajiban regulasi); anggota teknis memetakan pola resiliensi dan arsitektur DR; seluruh anggota menyusun skenario uji.
+% Langkah: (1) ambil layanan kritis dari Bab 11; (2) lakukan analisis dampak bisnis sederhana; (3) tetapkan RTO dan RPO; (4) pilih strategi DR dan perkirakan biayanya; (5) susun satu skenario uji, misalnya region utama tidak tersedia selama empat jam, beserta jadwal ujinya.
+% Luaran dan tonggak capstone: C4, rencana resiliensi dan DR beserta jadwal uji pemulihan.
+% Berkas sources yang direncanakan: sources/chapter12/templat-analisis-dampak-bisnis.xlsx, sources/chapter12/templat-rencana-dr.md, sources/chapter12/skenario-game-day.md
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Jelaskan perbedaan RTO dan RPO dengan contoh layanan rekam medis elektronik.
+  \item Pada insiden PDNS 2 tahun 2024, hanya sebagian kecil data yang memiliki cadangan. Pelajaran arsitektur dan tata kelola apa yang dapat diambil?
+  \item Mengapa strategi \textit{multi-site active-active} belum tentu tepat untuk semua layanan Medikara Health?
+\end{enumerate}

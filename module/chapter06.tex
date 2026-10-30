@@ -1,0 +1,64 @@
+\chapter{Domain-Driven Design dan Batas Layanan}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Mengidentifikasi \textit{core}, \textit{supporting}, dan \textit{generic subdomain} dalam sebuah organisasi.
+  \item Memfasilitasi lokakarya EventStorming untuk menemukan \textit{bounded context}.
+  \item Menyusun \textit{context map} yang menunjukkan hubungan antar-\textit{bounded context}.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: tim TI Medikara Health ingin memecah SIMRS, tetapi bagian pendaftaran, keuangan, dan laboratorium memakai kata "pasien" dengan makna berbeda; batas layanan yang salah membuat sistem baru sama kusutnya dengan sistem lama.
+
+\section{Domain, Subdomain, dan Ubiquitous Language}
+
+% TODO
+% Cakupan: DDD sebagai cara memahami bisnis sebelum memecah sistem; core, supporting, dan generic subdomain serta konsekuensinya pada keputusan membangun sendiri atau membeli; ubiquitous language sebagai kosakata bersama antara bisnis dan teknologi.
+% Kasus Medikara: pemetaan subdomain layanan pasien, rekam medis, penagihan, klaim, laboratorium, apotek, dan sumber daya manusia.
+
+\section{Bounded Context}
+
+% TODO
+% Cakupan: bounded context sebagai batas berlakunya satu model dan satu bahasa; satu istilah dengan makna berbeda di konteks berbeda; ukuran bounded context yang wajar.
+% Kasus Medikara: makna "pasien" di pendaftaran, keuangan, dan laboratorium.
+
+\section{Context Map dan Pola Hubungannya}
+
+% TODO
+% Cakupan: context map sebagai peta hubungan antarkonteks; pola customer-supplier, conformist, anticorruption layer, shared kernel, dan open host service; keterkaitan pola hubungan dengan hubungan antartim dan antarorganisasi.
+% Kasus Medikara: hubungan dengan BPJS Kesehatan dan SATUSEHAT sebagai contoh conformist dan anticorruption layer.
+
+\section{EventStorming sebagai Lokakarya Kolaboratif}
+
+% TODO
+% Cakupan: tujuan dan format EventStorming; peran pakar domain, fasilitator, dan pencatat; urutan kerja dari domain event, command, aktor, sampai kelompok konteks; tips menjalankan lokakarya daring dengan papan virtual.
+% Kasus Medikara: alur pendaftaran rawat jalan sampai klaim BPJS Kesehatan.
+
+\section{Dari Bounded Context ke Kandidat Layanan}
+
+% TODO
+% Cakupan: heuristik menurunkan kandidat layanan (kepemilikan data, laju perubahan, kebutuhan skala, tim pengelola); bounded context tidak selalu sama dengan satu layanan; kaitan dengan capability map disinggung singkat (dibahas rinci di IT40513).
+% Pendalaman teknis: mencocokkan bounded context dengan modul dan tabel basis data aplikasi yang ada.
+
+\section{Aktivitas: Lokakarya EventStorming dan Context Map}
+
+% TODO
+% Tujuan aktivitas: menemukan bounded context kondisi saat ini dari satu alur layanan pasien dan menggambarkan hubungannya dalam context map.
+% Peran dalam tim: anggota yang memahami proses bisnis, terutama yang berlatar kesehatan atau manajemen, menjadi pakar domain; anggota teknis menjadi fasilitator dan pencatat istilah; satu anggota menjaga waktu dan merangkum hasil.
+% Langkah: (1) pilih satu alur layanan pasien; (2) tempel domain event secara berurutan; (3) tambahkan command, aktor, dan sistem eksternal; (4) kelompokkan menjadi bounded context; (5) gambar context map kondisi saat ini, termasuk BPJS Kesehatan dan SATUSEHAT.
+% Luaran dan tonggak capstone: C2, peta domain dan context map kondisi saat ini.
+% Berkas sources yang direncanakan: sources/chapter06/panduan-fasilitasi-eventstorming.md, sources/chapter06/templat-papan-eventstorming.pdf, sources/chapter06/templat-context-map.drawio
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Kata ``pasien'' bisa bermakna berbeda di bagian pendaftaran, keuangan, dan laboratorium. Jelaskan cara \textit{bounded context} menangani perbedaan makna ini.
+  \item Tentukan apakah layanan penagihan di Medikara Health termasuk \textit{core}, \textit{supporting}, atau \textit{generic subdomain}. Jelaskan konsekuensinya terhadap keputusan membangun sendiri atau membeli.
+  \item Mengapa integrasi dengan sistem eksternal seperti BPJS Kesehatan sebaiknya dilindungi oleh \textit{anticorruption layer}?
+\end{enumerate}

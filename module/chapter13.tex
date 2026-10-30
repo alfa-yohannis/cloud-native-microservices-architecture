@@ -1,0 +1,63 @@
+\chapter{DevOps, GitOps, dan Platform Engineering}
+
+\section*{Tujuan Pembelajaran}
+\begin{itemize}
+  \item Menjelaskan praktik DevOps dan metrik DORA (DevOps Research and Assessment) untuk mengukur kinerja pengiriman perangkat lunak.
+  \item Menjelaskan alur CI/CD (\textit{Continuous Integration / Continuous Delivery}) dan empat prinsip GitOps.
+  \item Merancang topologi tim dan peran platform internal bagi organisasi.
+\end{itemize}
+
+\section{Pendahuluan}
+
+% TODO
+% Cakupan: satu perubahan kecil di Medikara Health butuh tiga bulan karena harus melewati banyak tiket dan persetujuan manual; arsitektur cloud-native tidak memberi manfaat bila cara mengirim perubahan tetap lambat.
+
+\section{DevOps dan Metrik DORA}
+
+% TODO
+% Cakupan: DevOps sebagai budaya dan praktik; metrik DORA (frekuensi deployment, lead time perubahan, tingkat kegagalan perubahan, waktu pemulihan); temuan laporan DORA 2025 bahwa AI memperkuat kekuatan maupun kelemahan organisasi; anggapan keliru bahwa rilis yang jarang lebih aman.
+% Kasus Medikara: perkiraan metrik DORA kondisi saat ini untuk SIMRS dan Medikara+.
+
+\section{CI/CD dan Strategi Rilis}
+
+% TODO
+% Cakupan: continuous integration, continuous delivery, dan continuous deployment; tahapan pipeline; strategi rilis blue-green dan canary; keamanan rantai pasok perangkat lunak disinggung singkat (dibahas rinci di IT40813).
+% Pendalaman teknis: membuat pipeline CI sederhana dengan GitHub Actions.
+
+\section{Infrastructure as Code dan GitOps}
+
+% TODO
+% Cakupan: IaC sebagai infrastruktur yang ditulis dan ditinjau seperti kode; empat prinsip OpenGitOps v1.0.0 (declarative, versioned and immutable, pulled automatically, continuously reconciled); jejak audit yang dihasilkan GitOps.
+% Pendalaman teknis: menyinkronkan manifest Kubernetes dengan Argo CD atau Flux.
+
+\section{Platform Engineering dan Internal Developer Platform}
+
+% TODO
+% Cakupan: platform engineering dan IDP menurut CNCF Platforms White Paper; golden path, self-service, dan platform as a product; Platform Engineering Maturity Model (investasi, adopsi, antarmuka, operasi, pengukuran); perbedaan tim platform dengan divisi infrastruktur yang melayani tiket.
+
+\section{Team Topologies}
+
+% TODO
+% Cakupan: empat tipe tim (stream-aligned, platform, enabling, complicated-subsystem) dan tiga mode interaksi (collaboration, X-as-a-Service, facilitating) menurut Skelton dan Pais edisi ke-2 (2025); beban kognitif tim; kaitan dengan hukum Conway (Bab 7).
+% Kasus Medikara: penyatuan tim TI dari lima rumah sakit menjadi tim stream-aligned dan tim platform.
+
+\section{Aktivitas: Model Operasi Delivery dan Peta Jalan Platform Internal}
+
+% TODO
+% Tujuan aktivitas: memetakan alur perubahan saat ini, merancang alur CI/CD dan GitOps target, serta menyusun topologi tim dan kapabilitas platform internal yang diprioritaskan.
+% Peran dalam tim: anggota non-teknis memimpin pemetaan waktu tunggu dan rantai persetujuan; anggota teknis merancang alur CI/CD dan GitOps target; seluruh anggota menyusun topologi tim dan prioritas platform.
+% Langkah: (1) petakan alur perubahan dari permintaan fitur sampai produksi; (2) tandai antrean dan langkah manual; (3) rancang alur target; (4) susun topologi tim target; (5) pilih tiga sampai lima kapabilitas platform internal dan urutannya.
+% Luaran dan tonggak capstone: C4, model operasi delivery dan peta jalan platform internal.
+% Berkas sources yang direncanakan: sources/chapter13/templat-pemetaan-alur-perubahan.xlsx, sources/chapter13/templat-topologi-tim.drawio, sources/chapter13/contoh-pipeline-gitops/ (opsional)
+
+\section{Ringkasan}
+
+% TODO
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item Organisasi yang merilis perubahan setiap tiga bulan sering menganggap rilis yang jarang lebih aman. Kritisi anggapan ini dengan merujuk temuan DORA.
+  \item Apa perbedaan tim platform dengan divisi infrastruktur tradisional yang melayani tiket?
+  \item Jelaskan cara GitOps membantu auditor menelusuri siapa mengubah apa di lingkungan produksi.
+\end{enumerate}
