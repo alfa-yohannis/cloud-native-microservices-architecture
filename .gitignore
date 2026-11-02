@@ -333,3 +333,6 @@ TSWLatexianTemp*
 # Berkas bantu Python
 __pycache__/
 *.py[cod]
+
+# Catatan event hasil menjalankan contoh Bab 09
+event_terproses.db

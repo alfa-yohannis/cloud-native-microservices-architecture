@@ -230,7 +230,9 @@ lokasi data dari Bab 2 berlaku juga untuknya.
   \begin{enumerate}
     \item Pasang Docker dan Python 3, lalu masuk ke folder
           \berkas{sources/chapter09/contoh-broker-lokal}.
-    \item Jalankan \texttt{docker compose up -d}, kemudian \texttt{pip install pika}.
+    \item Jalankan \texttt{docker compose up -d}, kemudian \texttt{pip install pika}. Tunggu sekitar
+          10 detik sampai \textit{broker} siap. Galat \texttt{StreamLostError} pada langkah berikutnya
+          berarti \textit{broker} belum siap, sehingga perintahnya cukup diulang.
     \item Jalankan \texttt{python kirim\_terima\_event.py kirim}. Skrip menerbitkan \textit{event}
           yang sama dua kali ke \textit{exchange} \texttt{medikara.janji-temu}.
     \item Buka konsol pengelolaan di \url{http://localhost:15672} dengan pengguna dan sandi

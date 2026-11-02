@@ -13,7 +13,7 @@ Berkas di folder ini mendukung Aktivitas "Peta Interaksi Layanan dan Katalog Eve
 ## Cara memakai contoh broker lokal
 
 1. Pasang Docker dan Python 3, lalu masuk ke folder `contoh-broker-lokal`.
-2. Jalankan `docker compose up -d`, kemudian `pip install pika`.
+2. Jalankan `docker compose up -d`, kemudian `pip install pika`. Tunggu sekitar 10 detik sampai broker siap. Galat `StreamLostError` pada langkah berikutnya berarti broker belum siap, sehingga perintahnya cukup diulang.
 3. Jalankan `python kirim_terima_event.py kirim`. Konsol `http://localhost:15672` (pengguna dan sandi `guest`) memperlihatkan dua pesan di antrean `notifikasi.janji-temu-dibuat`.
 4. Jalankan `python kirim_terima_event.py terima`. Pesan pertama diproses, pesan kedua dilewati karena id-nya sudah tercatat.
 5. Hentikan broker dengan `docker compose down`.

@@ -24,6 +24,6 @@ Hasil yang diharapkan: dua pesan penolakan, yaitu `cadangan-rekam-medis` di *reg
 `ap-southeast-1` dan `log-uji-beban` yang tidak punya tag kelas data. `situs-informasi-publik`
 lolos karena kelas datanya publik.
 
-Kebijakan ini belum dijalankan pada mesin penulis naskah karena OPA tidak terpasang di sana. Mahasiswa
-mencoba kebijakan pada akun atau berkas milik tim sendiri. Data organisasi nyata dipakai seizin
+Kebijakan ini sudah dijalankan dengan OPA 1.22.0, dan keluarannya sama dengan hasil yang diharapkan di
+atas. Mahasiswa mencoba kebijakan pada akun atau berkas milik tim sendiri. Data organisasi nyata dipakai seizin
 organisasi dan dianonimkan. Data pribadi pasien atau karyawan tidak dipakai.

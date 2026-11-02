@@ -299,13 +299,13 @@ PT Medikara Nusa Sehat, disingkat Medikara Health, adalah organisasi **fiktif** 
 
 ## Struktur Repositori
 
-- `figures/`: gambar untuk modul dan slide, yaitu diagram TikZ `chNN-nama.tex`, ilustrasi JPG opsional `chNN-nama.jpg`, serta `logo_universitas.png` dan `building.png`. Daftar lengkapnya ada di [`figures/README.md`](figures/README.md).
+- `figures/`: gambar untuk modul dan slide, yaitu diagram TikZ `chNN-nama.tex`, ilustrasi JPG arsip `chNN-nama.jpg`, serta `logo_universitas.png` dan `building.png`. Daftar lengkapnya ada di [`figures/README.md`](figures/README.md).
 - `module/`: naskah modul LaTeX. Berkas utama `cloud-native-microservices-architecture.tex` memuat `titlepage.tex` dan `chapter01.tex` sampai `chapter14.tex`. Rujukan inti dan rujukan lintas bab ada di `references.bib`, sedangkan rujukan khusus satu bab ada di `bib/chapterNN.bib`. Folder `module/fonts` berisi font Titillium Web. PDF siap pakai ada di `module/cloud-native-microservices-architecture.pdf`.
 - `slides/`: slide per pertemuan di `slides/sessionNN/`, memakai `slides/preamble.tex` bersama. Folder `slides/theme` berisi tema Beamer. PDF siap pakai ada di `slides/sessionNN/sessionNN.pdf`.
 - `sources/`: berkas pendukung per bab di `sources/chapterNN/`, misalnya lembar kerja, templat, data kasus, dan berkas teknis opsional yang dirujuk dari naskah modul. Ringkasannya ada di [`sources/README.md`](sources/README.md).
 - `tools/`: `build.py` membangun modul dan slide, `check-materials.py` memeriksa kelengkapan materi.
 
-Font, tema, logo, dan foto gedung adalah berkas asli di dalam repositori, bukan symlink, sehingga kompilasi tidak membutuhkan repositori lain. Ilustrasi JPG bersifat opsional. Bab dan slide memasangnya bersyarat dengan `\IfFileExists`, sehingga kompilasi tetap bersih bila berkasnya tidak ada, dan diagram TikZ sudah cukup untuk memahami materi.
+Font, tema, logo, dan foto gedung adalah berkas asli di dalam repositori, bukan symlink, sehingga kompilasi tidak membutuhkan repositori lain. Ilustrasi JPG hanya disimpan sebagai arsip dan tidak dipasang pada bab atau slide, karena diagram TikZ dan diagram konsep sudah cukup untuk memahami materi.
 
 Dari akar repositori, seluruh materi diperiksa lalu dibangun dengan:
 
