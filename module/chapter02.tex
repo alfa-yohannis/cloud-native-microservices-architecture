@@ -9,57 +9,1192 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: direksi Medikara Health menerima tawaran dari beberapa penyedia cloud dengan istilah yang membingungkan (IaaS, SaaS, hybrid, region); sebelum memilih, organisasi perlu tahu apa yang sebenarnya dibeli dan data mana yang boleh ditempatkan di mana.
+Misalkan dalam satu bulan direksi Medikara Health menerima tiga tawaran. Vendor Sistem
+Informasi Manajemen Rumah Sakit (SIMRS) untuk rumah sakit Depok dan Bogor menawarkan "SIMRS
+\textit{cloud}" dengan biaya tetap per bulan. Sebuah integrator menawarkan "\textit{hybrid
+cloud}" yang menggabungkan ruang server rumah sakit dengan pusat data sewaan. Seorang
+penyedia \textit{cloud} global menawarkan potongan harga bila Medikara memakai
+\textit{region} Jakarta selama tiga tahun. Ketiganya memakai kata \textit{cloud}, tetapi
+yang dijual berbeda dan tanggung jawab yang dibebankan kepada Medikara juga berbeda.
+
+Kebingungan ini bukan soal istilah semata. Setelah insiden kebocoran data pasien lewat
+vendor pada 2025, direksi ingin tahu tiga hal sebelum menandatangani apa pun: apa yang
+sebenarnya dibeli, siapa yang bertanggung jawab atas bagian mana, dan data mana yang boleh
+ditempatkan di mana. Pertanyaan terakhir paling sulit, karena jawabannya ditentukan oleh
+beberapa aturan sekaligus. Pilihan model layanan dan penerapan perlu mengikuti kebutuhan workload,
+syarat lokasi, serta pembagian tanggung jawab yang dapat dijalankan.
+
+Gambar \ref{fig:ch02-ilustrasi} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch02-diagram-konsep.png}
+  \caption{Memilih model cloud berdasarkan workload dan kendali}
+  \label{fig:ch02-ilustrasi}
+\end{figure}
+
+Bab ini menjawab ketiga pertanyaan tersebut secara berurutan. Bahasa bersamanya diambil
+dari definisi \textit{cloud} NIST SP 800-145 \cite{nist800-145}. Pembagian tanggung jawab
+dibaca dari \textit{shared responsibility model} yang diterbitkan penyedia
+\cite{c02-aws-shared,c02-azure-shared}. Batasan lokasi data diambil dari Peraturan
+Pemerintah (PP) 71/2019, PP 28/2024, Peraturan Menteri Kesehatan (Permenkes) 24/2022, dan Undang-Undang
+(UU) 27/2022 \cite{pp71-2019,pp28-2024-kesehatan,permenkes24-2022,uu27-2022-pdp}. Luarannya adalah matriks
+kendala penempatan \textit{workload} untuk tonggak C1. Istilah \textit{workload} di sini
+berarti satu aplikasi atau sekumpulan proses beserta datanya yang dijalankan sebagai satu
+kesatuan, misalnya SIMRS satu rumah sakit atau sistem penggajian.
 
 \section{Lima Karakteristik Esensial Cloud}
 
-% TODO
-% Cakupan: definisi NIST SP 800-145 (2011, masih berstatus final); on-demand self-service, broad network access, resource pooling, rapid elasticity, dan measured service; cara membedakan cloud sungguhan dari pusat data yang sekadar diberi label cloud.
-% Kasus Medikara: menguji apakah pusat data milik vendor SIMRS memenuhi kelima karakteristik tersebut.
+Pertanyaan pertama: kapan sebuah layanan pantas disebut \textit{cloud}? NIST SP 800-145
+menjawabnya dengan satu definisi yang sejak 2011 belum direvisi dan masih berstatus final.
+\textit{Cloud} adalah model yang memberi akses jaringan yang mudah dan sesuai kebutuhan ke
+kumpulan sumber daya komputasi bersama, seperti jaringan, server, penyimpanan, aplikasi,
+dan layanan. Sumber daya itu disediakan dan dilepas dengan cepat, dengan upaya pengelolaan
+dan interaksi dengan penyedia yang minimal \cite{nist800-145}. Definisi ini disusun dari
+tiga kelompok: lima karakteristik esensial, tiga model layanan, dan empat model penerapan,
+seperti terlihat pada Gambar \ref{fig:ch02-definisi-nist}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch02-definisi-nist.tex}
+  \caption{Struktur definisi \textit{cloud} NIST SP 800-145: lima karakteristik, tiga model
+           layanan, dan empat model penerapan}
+  \label{fig:ch02-definisi-nist}
+\end{figure}
+
+Kelima karakteristik itu menjadi alat uji. Sebuah layanan baru pantas disebut
+\textit{cloud} bila kelimanya terpenuhi. Tabel \ref{tab:ch02-lima-karakteristik}
+merangkum arti tiap karakteristik beserta pertanyaan yang dapat diajukan kepada penyedia
+untuk mengujinya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lima karakteristik esensial \textit{cloud} menurut NIST SP 800-145 dan
+           pertanyaan untuk mengujinya}
+  \label{tab:ch02-lima-karakteristik}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Karakteristik} & \textbf{Artinya} & \textbf{Pertanyaan uji} \\
+    \hline
+    \textit{On-demand self-service} & Pelanggan menambah atau mengurangi sumber daya
+      sendiri, tanpa menunggu petugas penyedia & Dapatkah server baru disiapkan hari ini
+      tanpa tiket dan tanpa telepon? \\
+    \hline
+    \textit{Broad network access} & Layanan diakses lewat jaringan dengan cara standar dari
+      berbagai perangkat & Dapatkah layanan dipakai dari klinik, rumah, dan ponsel dengan
+      pengamanan yang sama? \\
+    \hline
+    \textit{Resource pooling} & Sumber daya penyedia dipakai bersama banyak pelanggan dan
+      dibagi ulang sesuai permintaan & Apakah kapasitas diambil dari kumpulan bersama, dan
+      sampai tingkat mana lokasinya dapat dipilih? \\
+    \hline
+    \textit{Rapid elasticity} & Kapasitas bertambah dan berkurang dengan cepat, bahkan
+      otomatis, mengikuti beban & Berapa lama kapasitas dapat dilipatgandakan, lalu
+      dikembalikan seperti semula? \\
+    \hline
+    \textit{Measured service} & Pemakaian diukur, dilaporkan, dan menjadi dasar tagihan &
+      Apakah tagihan mengikuti pemakaian nyata, dan laporannya dapat dibaca pelanggan? \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Satu karakteristik perlu diberi perhatian khusus. Pada \textit{resource pooling}, NIST
+mencatat bahwa pelanggan umumnya tidak tahu dan tidak mengendalikan lokasi persis sumber
+daya yang dipakainya, tetapi mungkin dapat menentukan lokasi pada tingkat yang lebih
+tinggi, misalnya negara atau pusat data \cite{nist800-145}. Kalimat ini menjadi titik awal
+pembahasan lokasi data pada bagian akhir bab: kendali atas lokasi tidak hilang, tetapi
+bergeser dari "rak server mana" menjadi "negara dan \textit{region} mana".
+
+Analoginya adalah listrik di rumah. Penghuni menyalakan pendingin ruangan tanpa menelepon
+perusahaan listrik, dan pemakaian naik saat itu juga. Stop kontak tersedia di setiap
+ruangan. Pembangkitnya dipakai bersama jutaan pelanggan lain. Tagihan dihitung dari
+meteran. Bandingkan dengan genset sewaan bulanan: kapasitasnya tetap, biayanya tetap, dan
+menambah daya berarti menelepon pemilik genset lalu menunggu truk datang. Pusat data yang
+sekadar diberi label \textit{cloud} sering lebih mirip genset sewaan yang ditempeli logo
+perusahaan listrik.
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Misalkan kampanye vaksinasi influenza membuat janji temu lewat Medikara+ naik dari
+        rata-rata sekitar 933 menjadi sekitar 1.500 per hari selama satu bulan. Dengan
+        \textit{rapid elasticity}, kapasitas ditambah selama sebulan itu lalu dilepas. Tanpa
+        elastisitas, Medikara harus menyiapkan kapasitas untuk 1.500 janji temu per hari
+        sepanjang tahun, padahal kapasitas itu hanya terpakai penuh sekitar 30 hari.
+  \item Misalkan laboratorium rujukan perlu mengolah ulang 40.000 hasil pemeriksaan untuk
+        audit mutu. Pekerjaan itu memakai 20 server selama 6 jam. Dengan \textit{measured
+        service}, yang dibayar adalah 120 jam-server. Dengan server milik sendiri, 20 server
+        itu dibeli dan dirawat walaupun setelah audit hampir tidak dipakai.
+\end{enumerate}
+
+Dua hal pada bagian ini sering tertukar, yaitu virtualisasi dan \textit{cloud}.
+Pembagiannya begini. Virtualisasi adalah teknik memecah satu server fisik menjadi beberapa
+mesin virtual. Teknik ini memungkinkan \textit{resource pooling}, tetapi belum menjamin
+empat karakteristik lainnya. Pusat data yang tervirtualisasi tetapi masih melayani
+permintaan lewat tiket, berkapasitas tetap, dan menagih biaya tetap adalah pusat data
+tervirtualisasi, bukan \textit{cloud}. Perbedaan ini penting karena keduanya menghasilkan
+perbandingan biaya dan risiko yang berbeda.
+
+\begin{kasus}[title={Kasus Medikara Health: Menguji "SIMRS Cloud" Milik Vendor}]
+  Misalkan vendor SIMRS untuk rumah sakit Depok dan Bogor menawarkan pemindahan SIMRS kedua
+  rumah sakit ke pusat data milik vendor dengan nama "SIMRS \textit{Cloud}". Tim teknologi
+  informasi (TI) Medikara memakai pertanyaan pada Tabel \ref{tab:ch02-lima-karakteristik}
+  untuk menguji tawaran itu, lalu mencatat temuannya pada Tabel \ref{tab:ch02-uji-vendor}.
+
+  Hasilnya, hanya satu karakteristik yang terpenuhi penuh dan satu terpenuhi sebagian.
+  Layanan ini lebih tepat disebut \textit{managed hosting}, yaitu server yang disewa dan
+  dikelola pihak lain. Keputusan menyebutnya dengan nama yang tepat punya dua konsekuensi.
+  Pertama, harga tawaran tidak boleh dibandingkan langsung dengan harga \textit{cloud}
+  publik, karena yang dibeli berbeda. Kedua, kontraknya dinilai sebagai alih daya ke vendor,
+  sehingga pelajaran dari insiden kebocoran lewat vendor pada 2025 berlaku penuh: hak audit,
+  kontrol akses petugas vendor, dan lokasi data harus tertulis di kontrak. Penilaian risiko
+  pihak ketiga secara rinci dibahas di IT40813.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Hasil uji lima karakteristik terhadap tawaran "SIMRS \textit{Cloud}" (skenario
+           rekaan)}
+  \label{tab:ch02-uji-vendor}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.9cm}}
+    \hline
+    \textbf{Karakteristik} & \textbf{Temuan} & \textbf{Terpenuhi?} \\
+    \hline
+    \textit{On-demand self-service} & Penambahan server lewat tiket, dikerjakan paling
+      lambat 10 hari kerja & Tidak \\
+    \hline
+    \textit{Broad network access} & Hanya dapat diakses dari jaringan rumah sakit lewat
+      sambungan privat; klinik dan ponsel tidak bisa & Sebagian \\
+    \hline
+    \textit{Resource pooling} & Server fisik dipakai bersama 14 rumah sakit pelanggan vendor
+      & Ya \\
+    \hline
+    \textit{Rapid elasticity} & Kapasitas tetap sesuai kontrak; menambah kapasitas
+      memerlukan adendum & Tidak \\
+    \hline
+    \textit{Measured service} & Biaya tetap per tempat tidur per bulan, tanpa laporan
+      pemakaian & Tidak \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \section{Model Layanan dan Shared Responsibility Model}
 
-% TODO
-% Cakupan: IaaS, PaaS, dan SaaS (FaaS disinggung, dibahas rinci di Bab 8); shared responsibility model dan bagian keamanan yang tetap menjadi tanggung jawab pelanggan; contoh layanan sehari-hari untuk tiap model.
-% Kasus Medikara: memetakan surel kantor, ERP keuangan, dan Medikara+ ke model layanan masing-masing.
+Setelah tahu sebuah layanan memang \textit{cloud}, pertanyaan berikutnya muncul: bagian mana
+yang disewa, dan bagian mana yang tetap dikelola sendiri? NIST membedakan tiga model layanan
+\cite{nist800-145}. Pada \textit{Infrastructure as a Service} (IaaS), pelanggan menyewa
+daya olah, penyimpanan, dan jaringan, lalu memasang dan mengelola sendiri sistem operasi
+serta aplikasinya. Pada \textit{Platform as a Service} (PaaS), penyedia juga mengelola
+sistem operasi dan lingkungan menjalankan aplikasi, sehingga pelanggan cukup membawa
+aplikasi dan mengatur konfigurasinya. Pada \textit{Software as a Service} (SaaS), pelanggan
+langsung memakai aplikasi milik penyedia dan hanya mengatur pengaturan yang disediakan untuk
+pengguna.
+
+Ada satu model yang populer setelah definisi NIST terbit, yaitu \textit{Function as a
+Service} (FaaS). Pada FaaS, pelanggan hanya menulis potongan kode yang dijalankan ketika
+sebuah kejadian terjadi, misalnya berkas hasil laboratorium diunggah. Penyedia mengurus
+seluruh server, dan tagihan dihitung per eksekusi. FaaS dibahas rinci di Bab 8 bersama
+\textit{container} dan Kubernetes.
+
+Analoginya adalah cara bepergian. Memiliki mobil sendiri berarti membeli, merawat, dan
+menyetir sendiri, mirip pusat data milik sendiri. Menyewa mobil lepas kunci berarti mobil
+disediakan, tetapi pengemudi, bensin, dan rute diurus sendiri; itulah IaaS. Menyewa mobil
+beserta sopirnya berarti cukup menentukan tujuan dan jadwal; itulah PaaS. Naik taksi daring
+berarti tinggal memakai layanan angkutnya; itulah SaaS. Pada keempat cara itu, penumpang
+tetap bertanggung jawab atas barang bawaannya dan atas siapa yang diajak naik. Kalimat
+terakhir ini adalah inti \textit{shared responsibility model}.
+
+Tabel \ref{tab:ch02-contoh-layanan} memperlihatkan bagian yang disediakan penyedia dan
+bagian yang tetap dikelola pelanggan, beserta contoh yang biasa ditemui di tempat kerja.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Model layanan, bagian yang disediakan penyedia, dan bagian yang tetap dikelola
+           pelanggan}
+  \label{tab:ch02-contoh-layanan}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Model} & \textbf{Disediakan penyedia} & \textbf{Tetap dikelola pelanggan} &
+      \textbf{Contoh sehari-hari} \\
+    \hline
+    IaaS & Server virtual, penyimpanan, jaringan, gedung & Sistem operasi, aplikasi, data,
+      akun, aturan jaringan & Mesin virtual untuk server laporan, penyimpanan arsip \\
+    \hline
+    PaaS & Ditambah sistem operasi, basis data terkelola, lingkungan aplikasi & Kode
+      aplikasi, konfigurasi, data, akun & Basis data terkelola, platform untuk menjalankan
+      aplikasi web \\
+    \hline
+    SaaS & Seluruh aplikasi siap pakai & Konfigurasi pengguna, data, akun & Surel dan
+      kolaborasi, aplikasi penggajian \\
+    \hline
+    FaaS & Lingkungan yang menjalankan fungsi per kejadian & Kode fungsi, data, hak akses
+      fungsi & Fungsi pengirim pengingat jadwal kontrol pasien \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Pembagian kerja itu dirumuskan penyedia sebagai \textit{shared responsibility model}.
+Amazon Web Services (AWS) meringkasnya sebagai keamanan \textit{of the cloud}, yaitu
+infrastruktur yang dijaga penyedia, dan keamanan \textit{in the cloud}, yaitu segala sesuatu
+yang dipasang dan diatur pelanggan \cite{c02-aws-shared}. Microsoft menegaskan bahwa pada
+semua model, data, akun, identitas, dan perangkat pengguna tetap menjadi tanggung jawab
+pelanggan \cite{c02-azure-shared}. Gambar \ref{fig:ch02-tanggung-jawab} menyusun pembagian
+itu per lapisan, mengikuti dokumen Microsoft tersebut.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch02-tanggung-jawab.tex}
+  \caption{Pembagian tanggung jawab per lapisan pada pusat data sendiri, IaaS, PaaS, dan
+           SaaS, disederhanakan dari \cite{c02-azure-shared}}
+  \label{fig:ch02-tanggung-jawab}
+\end{figure}
+
+Gambar itu memperlihatkan pola yang konsisten. Makin ke kanan, makin banyak lapisan yang
+berpindah ke penyedia. Namun dua lapisan teratas tidak pernah berpindah. Pelanggan yang
+memakai SaaS sekalipun tetap harus mengatur siapa yang boleh masuk, mencabut akun karyawan
+yang keluar, dan menentukan data apa yang boleh diunggah.
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Misalkan Medikara memakai layanan surel dan kolaborasi berbentuk SaaS untuk sekitar
+        4.800 karyawan. Penyedia mengurus server dan pembaruan keamanannya. Misalkan audit
+        internal menemukan 312 akun milik karyawan yang sudah keluar masih aktif. Temuan itu
+        sepenuhnya tanggung jawab Medikara, karena pengelolaan akun berada di lapisan yang
+        selalu dipegang pelanggan.
+  \item Misalkan basis data Medikara+ berjalan sebagai PaaS. Penyedia sudah menambal sistem
+        operasi dan mesin basis data tepat waktu. Namun petugas vendor membuka akses publik
+        ke basis data uji selama 3 hari agar pengujian lebih mudah. Pengaturan akses
+        jaringan itu ada di sisi pelanggan, sehingga penyedia tidak dapat disalahkan bila
+        data bocor lewat celah tersebut.
+\end{enumerate}
+
+Dua hal pada \textit{shared responsibility model} sering tertukar: tanggung jawab teknis dan
+akuntabilitas. Pembagiannya begini. Tanggung jawab teknis, misalnya menambal sistem operasi,
+dapat dialihkan ke penyedia lewat pilihan model layanan. Akuntabilitas atas data pasien
+tidak dapat dialihkan. Menurut UU 27/2022 tentang Pelindungan Data Pribadi (PDP), organisasi
+yang menentukan tujuan pemrosesan data adalah pengendali data, dan kewajibannya tetap
+melekat walaupun pemrosesannya dikerjakan pihak lain \cite{uu27-2022-pdp}. Ringkasnya,
+pekerjaan dapat dialihkan, akuntabilitas tidak.
+
+\begin{pendalaman}
+  Garis tanggung jawab sebenarnya ditentukan per layanan, bukan per penyedia. AWS memberi
+  contoh berikut \cite{c02-aws-shared}. Amazon EC2 termasuk IaaS, sehingga pelanggan
+  mengelola sistem operasi tamu beserta pembaruan keamanannya, perangkat lunak yang
+  dipasang, dan konfigurasi \textit{firewall} bawaan (\textit{security group}) di tiap
+  mesin. Untuk layanan yang lebih abstrak seperti Amazon S3 dan Amazon DynamoDB, penyedia
+  mengoperasikan infrastruktur, sistem operasi, dan platformnya, sedangkan pelanggan
+  mengelola data, pilihan enkripsi, klasifikasi aset, dan hak akses. Ada pula kendali
+  bersama, misalnya pengelolaan tambalan dan konfigurasi, yang dikerjakan penyedia pada
+  infrastruktur dan oleh pelanggan pada sistem tamu serta aplikasinya.
+
+  Akibatnya, satu sistem yang memakai lima layanan dapat memiliki lima garis tanggung jawab
+  yang berbeda. Cara membacanya: buka halaman keamanan tiap layanan, cari bagian yang
+  menjelaskan konfigurasi yang wajib dilakukan pelanggan, lalu catat sebagai daftar kendali
+  yang diperiksa pada setiap perubahan. Daftar ini kelak menjadi bahan \textit{guardrail}
+  tata kelola di Bab 14.
+\end{pendalaman}
+
+\begin{kasus}[title={Kasus Medikara Health: Memetakan Surel, ERP, dan Medikara+}]
+  Tim memetakan tiga sistem yang sudah berjalan ke model layanannya, lalu mencatat tanggung
+  jawab yang tetap dipegang Medikara. Hasilnya ada pada Tabel \ref{tab:ch02-peta-layanan}.
+  Detail sistem di bawah ini adalah skenario rekaan.
+
+  Pemetaan ini punya dua konsekuensi. Pertama, Medikara+ ternyata melibatkan tiga pihak:
+  Medikara sebagai pemilik layanan, vendor sebagai pembuat dan pengelola aplikasi, dan
+  penyedia \textit{cloud} sebagai pemilik infrastruktur. Kontrak dengan vendor harus
+  mengatur hal yang tidak tercakup kontrak vendor dengan penyedia, terutama akses petugas
+  vendor ke data pasien. Kedua, model layanan ERP (\textit{Enterprise Resource Planning})
+  keuangan belum diputuskan. Keputusan itu ditunda sampai penilaian portofolio aplikasi
+  dengan pendekatan 7R di Bab 4.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pemetaan tiga sistem Medikara ke model layanan dan tanggung jawab yang tetap
+           dipegang Medikara (skenario rekaan)}
+  \label{tab:ch02-peta-layanan}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Sistem} & \textbf{Model layanan} & \textbf{Tanggung jawab yang tetap di Medikara}
+      \\
+    \hline
+    Surel kantor & SaaS, sekitar 4.800 akun & Siklus hidup akun, autentikasi multifaktor,
+      aturan berbagi dokumen ke luar organisasi, masa simpan surel \\
+    \hline
+    ERP keuangan & Saat ini di server milik sendiri; kandidat SaaS atau IaaS & Seluruh
+      lapisan selama masih di server sendiri; bila pindah, data, akun, dan pemisahan
+      wewenang persetujuan pembayaran \\
+    \hline
+    Medikara+ & Bagi Medikara mirip SaaS; vendor menjalankannya di atas IaaS penyedia
+      publik & Data pasien, hak audit dan lokasi data dalam kontrak, persetujuan akses
+      petugas vendor, pemantauan akun administrator \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \section{Model Penerapan: Public, Private, Hybrid, dan Multi-Cloud}
 
-% TODO
-% Cakupan: public, private, hybrid, dan community cloud menurut NIST; multi-cloud sebagai praktik industri; trade-off biaya, keterampilan, dan ketergantungan pada penyedia; data survei industri tentang tingkat adopsi hybrid cloud.
-% Kasus Medikara: pilihan model penerapan untuk SIMRS di lima rumah sakit dengan versi berbeda.
+Model layanan menjawab apa yang disewa. Pertanyaan berikutnya: infrastruktur itu milik
+siapa, dan dipakai bersama siapa? NIST membedakan empat model penerapan \cite{nist800-145}.
+\textit{Public cloud} terbuka untuk umum dan berada di fasilitas penyedia. \textit{Private
+cloud} dipakai khusus oleh satu organisasi, walaupun pemilik dan pengelolanya dapat
+organisasi itu sendiri, pihak ketiga, atau gabungan keduanya, dan letaknya dapat di dalam
+atau di luar lokasi organisasi. \textit{Community cloud} dipakai bersama sekelompok
+organisasi yang punya kepentingan sama, misalnya syarat keamanan atau kepatuhan yang
+serupa. \textit{Hybrid cloud} adalah gabungan dua atau lebih infrastruktur yang tetap
+terpisah, tetapi dihubungkan sehingga data dan aplikasi dapat berpindah di antaranya.
+
+Istilah kelima, \textit{multi-cloud}, tidak ada dalam definisi NIST. Istilah ini lahir dari
+praktik industri dan berarti satu organisasi memakai layanan dari lebih dari satu penyedia
+\textit{cloud} publik. Gambar \ref{fig:ch02-model-penerapan} memperlihatkan kelima pola
+tersebut.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch02-model-penerapan.tex}
+  \caption{Empat model penerapan menurut NIST SP 800-145 dan \textit{multi-cloud} sebagai
+           praktik industri}
+  \label{fig:ch02-model-penerapan}
+\end{figure}
+
+Analoginya adalah tempat tinggal. Rumah milik sendiri seperti \textit{private cloud}:
+seluruhnya diatur sendiri, seluruh biayanya juga ditanggung sendiri. Apartemen sewaan
+seperti \textit{public cloud}: gedungnya milik pengelola, penghuninya banyak, tetapi setiap
+unit terkunci. Rumah susun milik koperasi pegawai seperti \textit{community cloud}.
+Keluarga yang punya rumah di Bogor dan menyewa unit apartemen di Jakarta untuk hari kerja
+menjalankan \textit{hybrid cloud}, karena barang dapat dipindah di antara keduanya.
+Keluarga yang menyewa dua apartemen dari dua pengelola berbeda menjalankan
+\textit{multi-cloud}.
+
+Dua hal pada bagian ini sering tertukar, yaitu \textit{hybrid cloud} dan
+\textit{multi-cloud}. Pembagiannya begini. \textit{Hybrid} menggabungkan infrastruktur
+privat dengan infrastruktur publik. \textit{Multi-cloud} memakai lebih dari satu penyedia
+publik. Satu organisasi dapat menjalankan keduanya sekaligus. Laporan Flexera 2026, yang
+disusun dari survei terhadap 753 pengambil keputusan \textit{cloud}, mencatat 73\%
+organisasi menjalankan \textit{hybrid cloud} dan 88\% memakai lebih dari satu penyedia
+\cite{flexera2026}. Angka ini perlu dibaca hati-hati. Respondennya adalah organisasi
+yang sudah memakai \textit{cloud}, dan \textit{multi-cloud} sering terjadi tanpa
+direncanakan: surel dari satu penyedia, analitik dari penyedia lain, aplikasi SaaS dari
+penyedia ketiga.
+
+Tabel \ref{tab:ch02-trade-off-penerapan} merangkum \textit{trade-off} tiap model dari empat
+sisi yang biasa ditanyakan manajemen.
+
+\begin{table}[!htb]
+  \centering
+  \caption{\textit{Trade-off} model penerapan dari sisi biaya, keterampilan, ketergantungan,
+           dan kendali lokasi data}
+  \label{tab:ch02-trade-off-penerapan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Model} & \textbf{Biaya} & \textbf{Keterampilan tim} & \textbf{Ketergantungan} &
+      \textbf{Kendali lokasi data} \\
+    \hline
+    \textit{Public} & Rendah di awal, naik mengikuti pemakaian & Satu platform, banyak bahan
+      belajar & Tinggi pada satu penyedia & Dipilih per \textit{region} \\
+    \hline
+    \textit{Private} & Tinggi di awal, investasi perangkat & Mengelola seluruh lapisan sendiri
+      & Rendah pada penyedia, tinggi pada tim sendiri & Penuh \\
+    \hline
+    \textit{Community} & Dibagi antaranggota & Perlu tata kelola bersama & Pada kesepakatan
+      komunitas & Sesuai kesepakatan \\
+    \hline
+    \textit{Hybrid} & Dua struktur biaya sekaligus & Dua lingkungan dan penghubungnya &
+      Sedang & Data sensitif dapat tetap di sisi privat \\
+    \hline
+    \textit{Multi-cloud} & Biaya transfer data antarpenyedia & Dua konsol, dua model
+      identitas, dua tagihan & Rendah pada satu penyedia & Perlu dicek per penyedia \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Misalkan sistem informasi laboratorium rujukan berjalan di \textit{private cloud}
+        dengan kapasitas 2.000 hasil pemeriksaan per jam. Saat skrining kesehatan karyawan
+        sebuah perusahaan mitra, permintaan naik menjadi 5.500 hasil per jam selama 3 hari.
+        Dengan pola \textit{hybrid}, pembuatan berkas laporan hasil dipindahkan sementara ke
+        \textit{public cloud}, sedangkan basis data pasien tetap di sisi privat. NIST
+        menyebut pola pemindahan beban seperti ini sebagai \textit{cloud bursting}
+        \cite{nist800-145}.
+  \item Misalkan Medikara menjalankan Medikara+ pada penyedia A dan analitik data pada
+        penyedia B. Tim platform yang berisi 6 orang harus menguasai dua konsol, dua cara
+        mengelola identitas, dan dua format tagihan. Setiap data yang dikirim dari penyedia A
+        ke penyedia B juga dikenai biaya transfer data keluar, yang dibahas di Bab 3.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Model Penerapan untuk SIMRS di Lima Rumah Sakit}]
+  Kelima rumah sakit Medikara menjalankan SIMRS monolitik di ruang server masing-masing,
+  dengan versi yang berbeda karena berasal dari akuisisi. Tim menimbang empat opsi pada
+  Tabel \ref{tab:ch02-opsi-simrs}. Kondisi yang disebut di tabel adalah skenario rekaan.
+
+  Tim mengusulkan opsi C sebagai model transisi. SIMRS tetap dekat dengan rumah sakit selama
+  versinya belum diseragamkan, sedangkan layanan integrasi ke BPJS (Badan Penyelenggara
+  Jaminan Sosial) Kesehatan dan SATUSEHAT, Medikara+, serta analitik dipindahkan ke
+  \textit{region} Jakarta. Usulan ini punya dua konsekuensi. Pertama, Medikara harus
+  membangun sambungan jaringan yang andal antara lima rumah sakit dan \textit{region}
+  Jakarta. Kedua, opsi C bukan tujuan akhir. Arah selanjutnya ditentukan setelah penilaian
+  7R di Bab 4 dan diagnosis arsitektur di Bab 7.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Opsi model penerapan untuk SIMRS lima rumah sakit Medikara (skenario rekaan)}
+  \label{tab:ch02-opsi-simrs}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Opsi} & \textbf{Kelebihan} & \textbf{Kelemahan} \\
+    \hline
+    A. Tetap di lima ruang server & Tanpa migrasi; layanan tetap berjalan saat internet
+      putus & Perangkat berumur 6 sampai 9 tahun; lima tim kecil mengurus hal yang sama \\
+    \hline
+    B. \textit{Private cloud} terpusat & Satu tempat untuk diamankan dan diaudit & Lima versi
+      SIMRS tetap berbeda; seluruh rumah sakit bergantung pada satu sambungan \\
+    \hline
+    C. \textit{Hybrid}: SIMRS dekat rumah sakit, layanan pendukung di \textit{region}
+      Jakarta & Operasi pelayanan tidak bergantung pada internet; layanan baru dapat tumbuh
+      di \textit{cloud} & Dua lingkungan harus dikelola; perlu penghubung yang aman \\
+    \hline
+    D. Seluruhnya di \textit{public cloud} & Elastis, tanpa ruang server & Misalkan sambungan
+      rumah sakit Bandung putus 4 kali setahun dengan total 19 jam; instalasi gawat darurat
+      tidak boleh berhenti selama itu \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \section{Region, Availability Zone, dan Region Cloud di Indonesia}
 
-% TODO
-% Cakupan: arti region dan availability zone; dampaknya pada latensi, ketersediaan, dan lokasi data; region yang beroperasi di Indonesia per Oktober 2026 (AWS Jakarta, Google Cloud Jakarta, Azure Indonesia Central, Oracle Batam) dan layanan yang belum tentu tersedia di region tersebut.
-% Pendalaman teknis: membaca daftar layanan per region dan perbedaan jumlah zona antarpenyedia.
+Model penerapan menjawab milik siapa. Pertanyaan berikutnya lebih konkret: di kota mana
+server itu berada? Penyedia \textit{cloud} publik membagi infrastrukturnya menjadi
+\textit{region}, yaitu wilayah geografis yang berisi beberapa \textit{availability zone}
+(AZ). Satu AZ terdiri atas satu atau lebih pusat data dengan pasokan listrik, pendingin, dan
+jaringan sendiri. AZ dalam satu \textit{region} terhubung dengan jaringan berlatensi rendah,
+sehingga aplikasi dapat dijalankan di beberapa zona sekaligus
+\cite{c02-aws-regions,c02-gcp-zones}. Oracle memakai istilah \textit{availability domain},
+dan sebagian \textit{region}-nya hanya memiliki satu \textit{availability domain} yang
+dibagi lagi menjadi beberapa \textit{fault domain} \cite{c02-oci-regions}.
+
+Pilihan \textit{region} menentukan tiga hal sekaligus. Pertama, latensi, yaitu waktu tempuh
+data antara pengguna dan server. Kedua, ketersediaan, karena jumlah zona menentukan seberapa
+jauh sistem dapat bertahan bila satu pusat data terganggu. Ketiga, lokasi data, karena
+\textit{region} menentukan di negara mana data berada. Gambar \ref{fig:ch02-region-zona}
+memperlihatkan ketiganya.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch02-region-zona.tex}
+  \caption{\textit{Region} berisi beberapa \textit{availability zone}; pilihan
+           \textit{region} menentukan latensi, ketersediaan, dan lokasi data}
+  \label{fig:ch02-region-zona}
+\end{figure}
+
+Analoginya adalah bank dengan beberapa kantor cabang di satu kota. Kota itu adalah
+\textit{region}. Setiap kantor cabang punya genset dan jalur listrik sendiri, seperti AZ.
+Bila satu cabang kebanjiran, cabang lain di kota yang sama tetap melayani nasabah. Nasabah
+juga dapat memilih kota tempat rekeningnya dikelola, dan pilihan itu menentukan aturan kota
+mana yang berlaku.
+
+Latensi punya batas fisik. Cahaya di dalam serat optik merambat sekitar 200.000 kilometer
+per detik, sehingga setiap 1.000 kilometer jarak menambah sekitar 10 milidetik waktu
+pulang-pergi, belum termasuk waktu antre di perangkat jaringan. Jarak tidak dapat
+dikompensasi dengan membeli server yang lebih cepat.
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Misalkan tim TI Medikara mengukur waktu pulang-pergi dari rumah sakit Bandung:
+        rata-rata 9 milidetik ke \textit{region} Jakarta, 24 milidetik ke \textit{region}
+        Singapura, dan 190 milidetik ke \textit{region} di pantai barat Amerika Serikat.
+        Satu halaman SIMRS yang mengirim 40 permintaan secara berurutan akan menunggu sekitar
+        0,36 detik bila servernya di Jakarta, tetapi sekitar 7,6 detik bila servernya di
+        Amerika Serikat. Selisih itu terasa langsung oleh petugas pendaftaran.
+  \item Misalkan sistem antrean klinik dijalankan di satu AZ saja, lalu zona itu terganggu
+        selama 3 jam. Selama 3 jam itu, 18 klinik kembali ke antrean manual. Bila sistem
+        dijalankan di dua AZ, layanan berpindah ke zona lain, tetapi biaya server kira-kira
+        berlipat dua karena ada dua salinan yang selalu siap. Rincian strategi ketersediaan
+        dibahas di Bab 12.
+\end{enumerate}
+
+Per Oktober 2026, empat penyedia global mengoperasikan \textit{region} di Indonesia, seperti
+tercantum pada Tabel \ref{tab:ch02-region-indonesia}. Beberapa penyedia lain, termasuk
+penyedia lokal, juga mengoperasikan pusat data di Indonesia; tim yang mempertimbangkannya
+perlu memeriksa daftar \textit{region} resmi masing-masing penyedia.
+
+\begin{table}[!htb]
+  \centering
+  \caption{\textit{Region} \textit{cloud} milik empat penyedia global di Indonesia, per
+           Oktober 2026}
+  \label{tab:ch02-region-indonesia}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}p{2.3cm}}
+    \hline
+    \textbf{Penyedia} & \textbf{Nama dan kode \textit{region}} & \textbf{Mulai beroperasi} &
+      \textbf{Jumlah zona} \\
+    \hline
+    AWS & Asia Pacific (Jakarta), \texttt{ap-southeast-3} & Desember 2021
+      \cite{c02-aws-jakarta} & 3 AZ \\
+    \hline
+    Google Cloud & Jakarta, \texttt{asia-southeast2} & Juni 2020 \cite{c02-gcp-jakarta} & 3
+      zona \\
+    \hline
+    Microsoft Azure & Indonesia Central, \texttt{indonesiacentral} & Tersedia April 2025,
+      diresmikan Mei 2025 \cite{c02-azure-indonesia} & 3 AZ \\
+    \hline
+    Oracle Cloud & Indonesia North (Batam), \texttt{ap-batam-1} & Mei 2025
+      \cite{c02-oci-batam} & 1 \textit{availability domain} \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Tabel itu menyimpan satu jebakan. Adanya \textit{region} Jakarta tidak berarti seluruh
+layanan penyedia tersedia di Jakarta. Layanan baru biasanya lebih dahulu hadir di
+\textit{region} tertua penyedia, lalu menyebar bertahap. Daftar layanan per \textit{region}
+diterbitkan penyedia dan perlu diperiksa sebelum keputusan diambil
+\cite{c02-aws-regional-services}. Kenyataan ini punya dua konsekuensi. Pertama,
+\textit{workload} yang membutuhkan layanan yang belum ada di Jakarta terpaksa memakai
+\textit{region} luar negeri, dan pada saat itu pertanyaan lokasi data muncul. Kedua, jumlah
+zona berbeda antarpenyedia. \textit{Region} dengan satu \textit{availability domain} tidak
+dapat memberi perlindungan antarzona yang sama dengan \textit{region} tiga zona, sehingga
+rancangan ketersediaannya harus berbeda.
+
+\begin{pendalaman}
+  Jumlah zona dan katalog layanan dapat dibaca langsung lewat \textit{command line}
+  penyedia. Listing \ref{lst:ch02-cek-zona} memperlihatkan perintah untuk AWS dan Google
+  Cloud. Seluruh perintah hanya membaca katalog dan tidak membuat sumber daya berbayar.
+  \textit{Region} Jakarta pada AWS harus diaktifkan lebih dahulu di pengaturan akun,
+  sehingga perintah pertama memeriksa statusnya. Katalog layanan AWS dibaca dari parameter
+  publik \textit{global infrastructure} di AWS Systems Manager \cite{c02-aws-ssm-global}.
+
+\begin{lstlisting}[language=bash, caption={Membaca zona dan katalog layanan \textit{region}
+Jakarta, tersedia di \berkas{sources/chapter02/cek-zona-region.sh}},
+label={lst:ch02-cek-zona}]
+# Status opt-in region Jakarta pada akun AWS.
+aws ec2 describe-regions --all-regions --region "$REGION_AWS_PEMBANDING" \
+  --region-names "$REGION_AWS_JAKARTA" \
+  --query 'Regions[].[RegionName,OptInStatus]' --output text
+
+# Katalog layanan AWS, satu nama per baris.
+for REGION in "$REGION_AWS_JAKARTA" "$REGION_AWS_PEMBANDING"; do
+  aws ssm get-parameters-by-path --region "$REGION_AWS_PEMBANDING" \
+    --path "$JALUR_KATALOG/$REGION/services" \
+    --query 'Parameters[].Value' --output text \
+    | tr '\t' '\n' | sort > "layanan-aws-$REGION.txt"
+done
+
+# Nama zona Google Cloud di region Jakarta.
+gcloud compute zones list --filter="region:$REGION_GOOGLE_JAKARTA" \
+  --format="value(name)"
+\end{lstlisting}
+
+  Dua berkas daftar layanan itu lalu dibandingkan dengan
+  \berkas{sources/chapter02/bandingkan_katalog_region.py}, yang mencetak layanan yang ada di
+  \textit{region} pembanding tetapi belum ada di Jakarta. Untuk Google Cloud dan penyedia
+  lain, daftar layanan per \textit{region} disalin dari halaman lokasi resmi ke berkas
+  teks, satu nama per baris, lalu dibandingkan dengan skrip yang sama. Nama layanan tidak
+  dapat dibandingkan lintas penyedia secara langsung, karena tiap penyedia memberi nama
+  berbeda untuk layanan yang serupa. Perbandingan lintas penyedia dilakukan per kategori
+  kebutuhan, misalnya "basis data relasional terkelola", setelah daftar selisih per
+  penyedia tersusun.
+\end{pendalaman}
 
 \section{Lokasi Data dan Kedaulatan Data dalam Regulasi Indonesia}
 
-% TODO
-% Cakupan: PP 71/2019 Pasal 20 dan 21 tentang lokasi pengelolaan data untuk PSE lingkup publik dan privat; Permenkominfo 5/2020 tentang PSE Lingkup Privat; Permenkes 24/2022 Pasal 20 tentang media penyimpanan rekam medis elektronik termasuk cloud yang tersertifikasi; UU 27/2022 dan PP 33/2026 tentang transfer data pribadi lintas negara disinggung singkat (dibahas rinci di IT40813).
-% Kasus Medikara: rekam medis elektronik, data klaim BPJS Kesehatan, dan data karyawan sebagai tiga jenis data dengan kendala berbeda.
-% Catatan: status regulasi dicek ulang di JDIH sebelum naskah ditulis, termasuk rencana revisi PP 71/2019 dan rancangan Perpres pusat data.
+\textit{Region} Jakarta menjawab di mana server berada. Pertanyaan berikutnya bersifat
+hukum: data mana yang boleh berada di luar Indonesia, dan dengan syarat apa? Sebelum masuk
+ke aturannya, tiga istilah perlu dipisahkan, karena ketiganya sering tertukar.
+Pembagiannya ada pada Tabel \ref{tab:ch02-istilah-lokasi}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga istilah lokasi data yang sering tertukar}
+  \label{tab:ch02-istilah-lokasi}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.9cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Istilah} & \textbf{Pertanyaan yang dijawab} & \textbf{Contoh} \\
+    \hline
+    Residensi data (\textit{data residency}) & Di negara mana data disimpan dan diolah
+      secara fisik? & Rekam medis disimpan di \textit{region} Jakarta \\
+    \hline
+    Kedaulatan data (\textit{data sovereignty}) & Hukum negara mana yang berlaku atas data,
+      dan siapa yang dapat memaksa akses ke data itu? & Data di \textit{region} luar negeri
+      dapat diminta aparat negara tempat data berada \\
+    \hline
+    Lokalisasi data (\textit{data localization}) & Apakah ada aturan yang mewajibkan data,
+      atau salinannya, tetap di dalam negeri? & Pasal 20 PP 71/2019 untuk penyelenggara
+      lingkup publik; Pasal 966 PP 28/2024 untuk pusat data kesehatan \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Analoginya adalah arsip kertas sebuah perusahaan. Gudang tempat arsip disimpan adalah
+residensi. Bila gudang itu berada di negara lain, aparat negara itu dapat menyegelnya
+menurut hukum setempat; itulah kedaulatan. Aturan yang mewajibkan arsip tertentu tetap
+berada di gudang dalam negeri adalah lokalisasi. Ketiganya berhubungan, tetapi jawabannya
+dapat berbeda untuk arsip yang sama.
+
+Pertanyaan kemudian muncul: aturan mana yang mengikat Medikara? Jawabannya berlapis.
+Lapisan pertama berlaku untuk semua sistem elektronik, lapisan berikutnya khusus sektor
+kesehatan, lalu lapisan data pribadi, dan terakhir kontrak. Gambar
+\ref{fig:ch02-alur-lokasi-data} menyusun lapisan itu sebagai urutan pertanyaan, sekaligus
+merangkum isi pokok tiap aturan yang dibahas di bawah ini.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch02-alur-lokasi-data.tex}
+  \caption{Urutan pertanyaan untuk menentukan lokasi data yang diizinkan bagi satu
+           \textit{workload}}
+  \label{fig:ch02-alur-lokasi-data}
+\end{figure}
+
+\subsection*{PP 71/2019 dan Permenkominfo 5/2020}
+
+PP 71/2019 tentang Penyelenggaraan Sistem dan Transaksi Elektronik (PSTE) membedakan
+Penyelenggara Sistem Elektronik (PSE) lingkup publik dan lingkup privat \cite{pp71-2019}.
+PSE lingkup publik adalah instansi penyelenggara negara atau institusi yang ditunjuknya.
+Menurut Pasal 20, PSE lingkup publik wajib mengelola, memproses, dan menyimpan sistem dan
+data elektroniknya di wilayah Indonesia, kecuali teknologi penyimpanannya tidak tersedia di
+dalam negeri menurut kriteria sebuah komite yang dibentuk menteri. PSE lingkup publik yang
+memakai layanan pihak ketiga juga wajib mengklasifikasikan datanya berdasarkan risiko.
+
+PSE lingkup privat, yaitu orang, badan usaha, dan masyarakat, diatur Pasal 21. PSE lingkup
+privat boleh mengelola, memproses, dan menyimpan sistem dan data elektroniknya di dalam
+maupun di luar wilayah Indonesia. Bila memilih luar negeri, PSE tersebut wajib memastikan
+efektivitas pengawasan oleh kementerian atau lembaga serta penegakan hukum, dan wajib
+memberikan akses terhadap sistem dan datanya untuk keperluan itu. Untuk sektor keuangan,
+ketentuannya diatur lebih lanjut oleh otoritas pengatur dan pengawas sektor keuangan.
+
+Peraturan Menteri Komunikasi dan Informatika (Permenkominfo) 5/2020, yang diubah dengan
+Permenkominfo 10/2021, merinci kewajiban PSE lingkup privat \cite{c02-permenkominfo5-2020}.
+Dua kewajiban yang relevan untuk bab ini adalah pendaftaran sistem elektronik dan pemberian
+akses ke sistem serta data elektronik untuk pengawasan dan penegakan hukum. Rencana revisi
+PP 71/2019 masih dievaluasi Kementerian Komunikasi dan Digital (Komdigi) per Oktober 2026.
+Karena itu, status kedua aturan perlu dicek ulang di JDIH (Jaringan Dokumentasi dan
+Informasi Hukum) setiap kali matriks diperbarui.
+
+\subsection*{Permenkes 24/2022 tentang Rekam Medis}
+
+Permenkes 24/2022 mewajibkan fasilitas pelayanan kesehatan menyelenggarakan rekam medis
+elektronik \cite{permenkes24-2022}. Pasal 20 mengatur penyimpanannya. Rekam medis
+elektronik disimpan pada media penyimpanan berbasis digital, dan penyimpanannya harus
+menjamin keamanan, keutuhan, kerahasiaan, dan ketersediaan data. Media itu dapat berupa
+server, komputasi awan (\textit{cloud computing}) yang tersertifikasi sesuai peraturan
+perundang-undangan, atau media digital lain yang diakui sesuai perkembangan teknologi.
+Fasilitas pelayanan kesehatan juga wajib memiliki cadangan data yang disimpan di tempat
+berbeda, dibuat secara berkala, dan dituangkan dalam standar prosedur operasionalnya. Pasal
+39 menetapkan masa simpan rekam medis elektronik paling singkat 25 tahun sejak kunjungan
+terakhir pasien.
+
+Pasal 20 membuka pintu bagi \textit{cloud}, tetapi menyisakan pertanyaan yang tidak
+dijawab pasal itu sendiri: sertifikasi apa yang dimaksud, dan siapa yang menerbitkannya?
+Penyedia \textit{cloud} umumnya memegang sertifikasi internasional seperti ISO/IEC 27001,
+27017, dan 27018. Apakah sertifikasi itu cukup untuk memenuhi Pasal 20 harus dijawab lewat
+aturan turunan atau konfirmasi tertulis dari Kementerian Kesehatan, bukan lewat asumsi tim.
+
+\subsection*{PP 28/2024: Aturan Khusus Data Kesehatan}
+
+Pasal 21 PP 71/2019 adalah aturan umum. Untuk data kesehatan, PP 28/2024 lebih khusus. Pasal 966
+ayat (2) menyatakan pangkalan data kesehatan berupa pusat data yang berada di dalam wilayah
+Indonesia. Ayat (5) mengizinkan jasa pihak lain bila dilaksanakan di dalam wilayah Indonesia,
+berdasarkan perjanjian kerja sama, dengan data yang dimiliki dan dikendalikan penuh oleh
+penyelenggara. Pasal 972 mengatur transfer ke luar wilayah hukum untuk tujuan spesifik dan
+terbatas, dengan izin Menteri, serta memenuhi syarat transfer data pribadi
+\cite{pp28-2024-kesehatan}. Bab ini mengikuti pembacaan IT40813 Bab 3. Salinan cadangan
+diperlakukan sebagai bagian dari penyimpanan, walaupun Pasal 966 tidak menyebut lokasi cadangan
+secara tersendiri. Perlakuan itu penafsiran, dan kasus nyata tetap perlu dinilai penasihat hukum.
+
+\subsection*{UU 27/2022 tentang PDP dan PP 33/2026}
+
+UU 27/2022 tentang PDP berlaku penuh sejak masa penyesuaian dua tahunnya berakhir pada
+Oktober 2024 \cite{uu27-2022-pdp}. Dua ketentuan langsung menyentuh lokasi data. Pertama,
+data dan informasi kesehatan termasuk data pribadi yang bersifat spesifik, sehingga
+pemrosesannya menuntut pelindungan lebih ketat. Kedua, Pasal 56 mengatur transfer data
+pribadi ke luar wilayah hukum Indonesia. Pengendali wajib memastikan negara tujuan memiliki
+tingkat pelindungan yang setara atau lebih tinggi. Bila tidak, pengendali wajib memastikan
+pelindungan yang memadai dan bersifat mengikat. Bila keduanya tidak terpenuhi, pengendali
+wajib mendapat persetujuan subjek data. Aturan pelaksananya, PP 33/2026, menurut ringkasan
+firma hukum ditetapkan 16 Juli 2026 dan berlaku 16 Januari 2027 \cite{pp33-2026}. Teks
+resminya perlu dibaca di JDIH sebelum dikutip. Pembahasan rinci UU PDP, penilaian dampak,
+dan risiko pihak ketiga ada di IT40813.
+
+Membaca aturan berlapis menuntut satu prinsip: lapisan yang paling ketat menentukan hasil
+akhir. PP 71/2019 mengizinkan PSE lingkup privat menyimpan data di luar negeri, tetapi izin
+itu belum menjawab PP 28/2024 untuk data kesehatan, syarat Permenkes untuk rekam medis, dan syarat
+UU PDP untuk transfer data pribadi. Boleh menurut satu aturan belum berarti boleh menurut seluruh aturan.
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Dengan sekitar 1,2 juta kunjungan per tahun dan masa simpan paling singkat 25 tahun,
+        Medikara akan menyimpan catatan dari sekitar 30 juta kunjungan. Misalkan rata-rata
+        catatan satu kunjungan tanpa citra radiologi berukuran 0,5 megabyte; totalnya
+        sekitar 15 terabyte. Kontrak \textit{cloud} umumnya berjangka 1 sampai 3 tahun, jauh
+        lebih pendek dari 25 tahun. Rencana keluar dari penyedia, termasuk cara memindahkan
+        15 terabyte itu, harus disiapkan sejak awal.
+  \item Misalkan aplikasi penggajian berbentuk SaaS untuk 4.800 karyawan menyimpan datanya
+        di \textit{region} Singapura. Data gaji dan rekening adalah data pribadi. Transfernya ke
+        Singapura harus memenuhi Pasal 56 UU PDP, sehingga Medikara perlu menilai tingkat
+        pelindungan di negara tujuan atau menyiapkan perjanjian yang mengikat sebelum kontrak
+        ditandatangani. Hasil pemeriksaan kesehatan berkala karyawan adalah data kesehatan yang
+        bersifat spesifik, sehingga juga tunduk pada PP 28/2024 Pasal 966 dan 972 dan sebaiknya
+        tidak ikut disimpan pada aplikasi itu.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Tiga Jenis Data, Tiga Kendala}]
+  Medikara Health adalah badan usaha swasta, sehingga termasuk PSE lingkup privat. Tim
+  menerapkan urutan pada Gambar \ref{fig:ch02-alur-lokasi-data} untuk tiga jenis data, dan
+  hasilnya tercantum pada Tabel \ref{tab:ch02-tiga-data}.
+
+  Hasil ini punya dua konsekuensi. Pertama, rekam medis elektronik ditempatkan di Indonesia
+  karena PP 28/2024 Pasal 966, walaupun PP 71/2019 sebagai aturan umum tidak melarang luar
+  negeri. Pertanyaan sertifikasi tetap perlu dijawab untuk memilih penyedia di Indonesia. Kedua,
+  data karyawan di luar data kesehatan adalah satu-satunya jenis data yang secara wajar
+  dapat berada di luar negeri, asalkan syarat transfer UU PDP terpenuhi. Daftar pertanyaan
+  terbuka pada kolom terakhir menjadi bahan diskusi dengan tim hukum dan masuk ke
+  \textit{risk register} di IT40813.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kendala lokasi untuk tiga jenis data Medikara Health}
+  \label{tab:ch02-tiga-data}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Jenis data} & \textbf{Aturan yang mengikat} & \textbf{Usulan lokasi} &
+      \textbf{Pertanyaan terbuka} \\
+    \hline
+    Rekam medis elektronik & PP 28/2024 Pasal 966 dan 972; PP 71/2019 Pasal 21; Permenkes
+      24/2022 Pasal 20 dan 39; UU PDP & Indonesia, cadangan di lokasi berbeda di Indonesia & Sertifikasi \textit{cloud} apa
+      yang diakui Kementerian Kesehatan? \\
+    \hline
+    Data klaim BPJS Kesehatan & PP 28/2024 Pasal 966; UU PDP (diagnosis dan nomor peserta);
+      perjanjian kerja sama dengan BPJS Kesehatan & Indonesia & Apakah perjanjian kerja sama
+      mengatur lokasi dan keamanan data klaim? \\
+    \hline
+    Data karyawan di luar data kesehatan & PP 71/2019 Pasal 21; UU PDP Pasal 56 bila keluar negeri & Indonesia atau
+      luar negeri dengan syarat & Di negara mana vendor SaaS menyimpan data, dan apa dasar
+      transfernya? \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \section{Aktivitas: Matriks Kendala Penempatan Workload}
 
-% TODO
-% Tujuan aktivitas: menghasilkan matriks yang menunjukkan model layanan, model penerapan, dan lokasi data yang diizinkan untuk tiap workload organisasi.
-% Peran dalam tim: anggota berlatar hukum, kesehatan, atau bisnis menelusuri jenis data dan aturan yang mengikat; anggota teknis menilai model layanan dan model penerapan yang masuk akal; seluruh anggota memeriksa konsistensi matriks.
-% Langkah: (1) daftar 8 sampai 12 workload; (2) tentukan jenis data tiap workload; (3) cocokkan dengan aturan yang berlaku; (4) usulkan model layanan dan model penerapan; (5) tandai lokasi data yang diizinkan dan pertanyaan yang belum terjawab.
-% Luaran dan tonggak capstone: C1, matriks kendala penempatan workload.
-% Berkas sources yang direncanakan: sources/chapter02/templat-matriks-penempatan-workload.xlsx, sources/chapter02/ringkasan-regulasi-lokasi-data.md
+\subsection*{Tujuan}
+
+Tim menghasilkan matriks yang menunjukkan model layanan, model penerapan, dan lokasi data
+yang diizinkan untuk setiap \textit{workload} organisasi. Matriks ini menjadi batasan bagi
+seluruh keputusan arsitektur berikutnya: \textit{workload} yang datanya wajib di Indonesia
+tidak boleh muncul di rancangan yang memakai \textit{region} luar negeri.
+
+\subsection*{Pembagian Peran}
+
+\begin{itemize}
+  \item Anggota berlatar hukum, kesehatan, atau bisnis menelusuri jenis data tiap
+        \textit{workload} dan aturan yang mengikatnya, dengan
+        \berkas{sources/chapter02/ringkasan-regulasi-lokasi-data.md} sebagai titik awal.
+  \item Anggota berlatar teknis menilai model layanan dan model penerapan yang masuk akal,
+        termasuk ketersediaan layanan di \textit{region} Jakarta.
+  \item Seluruh anggota memeriksa konsistensi matriks: tidak ada baris yang usulan lokasinya
+        bertentangan dengan aturan pada baris yang sama.
+\end{itemize}
+
+\subsection*{Langkah Kerja}
+
+\begin{enumerate}
+  \item Daftar 8 sampai 12 \textit{workload} organisasi, misalnya SIMRS, ERP keuangan,
+        aplikasi pasien, sistem laboratorium, surel, penggajian, dan pelaporan manajemen.
+        Pakai profil organisasi dari Bab 1.
+  \item Tentukan jenis data tiap \textit{workload} dan klasifikasinya: tanpa data pribadi,
+        data pribadi umum, data pribadi spesifik, atau rekam medis elektronik.
+  \item Cocokkan setiap \textit{workload} dengan aturan yang berlaku mengikuti urutan pada
+        Gambar \ref{fig:ch02-alur-lokasi-data}, lalu tulis pasal yang dirujuk.
+  \item Usulkan model layanan dan model penerapan, beserta alasan singkat yang menyebut
+        \textit{trade-off}-nya.
+  \item Tandai lokasi data yang diizinkan dan tulis pertanyaan yang belum terjawab, lengkap
+        dengan nama anggota yang akan menelusurinya.
+\end{enumerate}
+
+Tabel \ref{tab:ch02-contoh-matriks} memperlihatkan contoh lima baris matriks untuk Medikara
+Health. Kolom lengkapnya, termasuk alasan, pertanyaan terbuka, dan status, ada di templat.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh lima baris matriks kendala penempatan \textit{workload} Medikara Health}
+  \label{tab:ch02-contoh-matriks}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{1.45cm}
+      >{\raggedright\arraybackslash}p{1.75cm}}
+    \hline
+    \textbf{\textit{Workload}} & \textbf{Jenis data} & \textbf{Aturan} & \textbf{Model
+      layanan} & \textbf{Model penerapan} & \textbf{Lokasi diizinkan} \\
+    \hline
+    SIMRS rumah sakit & Rekam medis elektronik & PP 28/2024 Pasal 966; Permenkes 24/2022
+      Pasal 20, 39; UU PDP & IaaS (transisi) & \textit{Hybrid} & Indonesia \\
+    \hline
+    Integrasi klaim BPJS Kesehatan & Diagnosis, tindakan, nomor peserta & PP 28/2024 Pasal 966;
+      UU PDP; perjanjian kerja sama & PaaS & \textit{Public}, \textit{region} Jakarta & Indonesia \\
+    \hline
+    Medikara+ & Data pasien, jadwal, telekonsultasi & PP 28/2024 Pasal 966; UU PDP; Permenkes
+      24/2022 untuk catatan konsultasi & SaaS dari vendor & \textit{Public} & Indonesia \\
+    \hline
+    Penggajian & Data karyawan, tanpa data kesehatan & UU PDP Pasal 56 & SaaS & \textit{Public}
+      & Luar negeri dengan syarat \\
+    \hline
+    Situs profil perusahaan & Informasi publik & PP 71/2019 Pasal 21 & PaaS &
+      \textit{Public} & Bebas \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\subsection*{Luaran dan Kaitan dengan Capstone}
+
+Luarannya adalah matriks kendala penempatan \textit{workload} untuk tonggak C1 Konteks dan
+Strategi, ditambah satu halaman catatan yang merangkum tiga pertanyaan terbuka paling
+penting. Matriks ini dipakai lagi pada Bab 3 untuk memperkirakan biaya per
+\textit{workload}, dan pada Bab 4 sebagai batasan usulan 7R. Pertanyaan terbuka yang
+menyangkut risiko diserahkan ke tim IT40813 untuk dicatat di \textit{risk register}.
+
+\subsection*{Kriteria Penilaian}
+
+\begin{itemize}
+  \item Kelengkapan: 8 sampai 12 \textit{workload}, setiap baris terisi dan menyebut pasal
+        yang dirujuk.
+  \item Ketepatan: klasifikasi data dan aturan yang dipilih sesuai dengan jenis datanya.
+  \item Konsistensi: usulan lokasi tidak bertentangan dengan aturan pada baris yang sama.
+  \item Kejujuran analisis: pertanyaan yang belum terjawab ditulis terang, bukan diisi
+        dengan asumsi.
+\end{itemize}
+
+\subsection*{Berkas Pendukung}
+
+Templat matriks tersedia di
+\berkas{sources/chapter02/templat-matriks-penempatan-workload.xlsx}. Lembar Petunjuk
+menjelaskan arti setiap kolom, sedangkan lembar Matriks memuat contoh Medikara dan baris
+kosong dengan daftar pilihan. Ringkasan aturan ada di
+\berkas{sources/chapter02/ringkasan-regulasi-lokasi-data.md}, dan lembar isian ketiga
+latihan ada di \berkas{sources/chapter02/lembar-latihan-bab02.md}. Tim yang memakai
+organisasi nyata wajib memperoleh izin organisasi dan menganonimkan namanya. Data pribadi
+pasien atau karyawan tidak boleh dimasukkan ke matriks.
+
+\subsection*{Pendalaman Teknis (opsional)}
+
+Anggota berlatar teknis membandingkan katalog layanan \textit{region} Jakarta pada dua
+penyedia dengan perintah dan skrip di kotak pendalaman seksi \textit{region}, lalu mencatat
+layanan yang dibutuhkan tetapi belum tersedia pada kolom catatan matriks.
 
 \section{Ringkasan}
 
-% TODO
+Kata \textit{cloud} dipakai untuk banyak hal yang berbeda, sehingga organisasi memerlukan
+alat uji sebelum membandingkan tawaran. NIST SP 800-145 menyediakan alat itu dalam bentuk
+lima karakteristik esensial: \textit{on-demand self-service}, \textit{broad network access},
+\textit{resource pooling}, \textit{rapid elasticity}, dan \textit{measured service}. Layanan
+yang hanya memenuhi sebagian, seperti "SIMRS \textit{Cloud}" pada kasus Medikara, lebih
+tepat diperlakukan sebagai \textit{managed hosting} dan dinilai sebagai alih daya ke vendor.
+
+Model layanan menentukan lapisan mana yang disewa. Makin jauh dari IaaS menuju SaaS, makin
+banyak lapisan yang dikelola penyedia. Namun data, akun, identitas, dan perangkat pengguna
+tetap dipegang pelanggan pada model apa pun. Tanggung jawab teknis dapat dialihkan lewat
+pilihan model, sedangkan akuntabilitas atas data pasien tetap melekat pada Medikara sebagai
+pengendali data.
+
+Model penerapan menentukan milik siapa infrastruktur itu dan dipakai bersama siapa. NIST
+mengenal \textit{public}, \textit{private}, \textit{community}, dan \textit{hybrid cloud},
+sedangkan \textit{multi-cloud} adalah praktik industri. Setiap pilihan membawa
+\textit{trade-off} pada biaya, keterampilan tim, ketergantungan pada penyedia, dan kendali
+atas lokasi data. Untuk SIMRS lima rumah sakit, pola \textit{hybrid} dipilih sebagai model
+transisi, bukan tujuan akhir.
+
+\textit{Region} dan \textit{availability zone} membuat lokasi menjadi keputusan yang
+konkret. Empat penyedia global sudah mengoperasikan \textit{region} di Indonesia, tetapi
+tidak semua layanan tersedia di sana dan jumlah zonanya berbeda. Latensi dibatasi jarak
+fisik, sehingga \textit{region} yang jauh langsung terasa oleh petugas di loket
+pendaftaran.
+
+Lokasi data di Indonesia diatur berlapis: PP 71/2019 untuk semua sistem elektronik,
+PP 28/2024 untuk data kesehatan, Permenkes 24/2022 untuk rekam medis, UU PDP untuk data pribadi
+dengan PP 33/2026 yang masih dipantau, lalu kontrak dengan pihak lain. Lapisan yang paling ketat menentukan hasil akhir, dan pertanyaan
+yang belum terjawab harus ditulis terang, bukan ditutup dengan asumsi. Pesan utama bab ini:
+sebelum memilih penyedia, organisasi harus tahu apa yang dibeli, siapa memegang bagian mana,
+dan data mana yang boleh berada di mana.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Klasifikasi Layanan dan Tanggung Jawab yang Tersisa}
+
+Latihan ini membuktikan bahwa model layanan apa pun selalu menyisakan tanggung jawab
+keamanan bagi organisasi.
+
 \begin{enumerate}
-  \item Klasifikasikan lima layanan yang dipakai sehari-hari di tempat kerja ke dalam IaaS, PaaS, atau SaaS, lalu tunjukkan tanggung jawab keamanan yang tetap dipegang organisasi.
-  \item Medikara Health ingin menyimpan cadangan rekam medis elektronik di region luar negeri karena harganya lebih murah. Analisis pertanyaan regulasi dan risiko yang harus terjawab sebelum keputusan diambil.
-  \item Bandingkan \textit{hybrid cloud} dan \textit{multi-cloud} dari sisi biaya, keterampilan tim, dan ketergantungan pada penyedia.
+  \item Pilih lima layanan yang dipakai sehari-hari di tempat kerja atau di Medikara Health.
+  \item Tentukan model layanannya (IaaS, PaaS, SaaS, atau FaaS) dengan memakai Tabel
+        \ref{tab:ch02-contoh-layanan}.
+  \item Untuk setiap layanan, tulis lapisan yang dikelola penyedia dengan memakai Gambar
+        \ref{fig:ch02-tanggung-jawab}.
+  \item Tulis tanggung jawab keamanan yang tetap dipegang organisasi, sekonkret mungkin.
+  \item Tandai satu tanggung jawab per layanan yang menurut pengamatan belum dijalankan
+        dengan baik.
+\end{enumerate}
+
+Tabel \ref{tab:ch02-lat1-contoh} berisi contoh terisi untuk Medikara Health, sedangkan
+Tabel \ref{tab:ch02-lat1-hasil} adalah lembar isiannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1: contoh klasifikasi lima layanan Medikara Health}
+  \label{tab:ch02-lat1-contoh}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.6cm}}
+    \hline
+    \textbf{Layanan} & \textbf{Model} & \textbf{Tanggung jawab yang tetap di organisasi} &
+      \textbf{Belum berjalan baik} \\
+    \hline
+    Surel dan kolaborasi, 4.800 akun & SaaS & Siklus hidup akun, autentikasi multifaktor,
+      aturan berbagi & 312 akun mantan karyawan masih aktif \\
+    \hline
+    Basis data terkelola Medikara+ & PaaS & Akses jaringan, akun basis data, enkripsi dan
+      kuncinya & Akses publik ke basis data uji \\
+    \hline
+    Mesin virtual server laporan & IaaS & Tambalan sistem operasi, aturan \textit{firewall},
+      cadangan & Tambalan tertunda 2 bulan \\
+    \hline
+    Aplikasi penggajian & SaaS & Hak akses bagian sumber daya manusia, persetujuan transfer
+      data & Lokasi data belum diketahui \\
+    \hline
+    Fungsi pengingat jadwal kontrol & FaaS & Kode fungsi, hak akses fungsi ke data pasien &
+      Hak akses terlalu luas \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1: lembar isian klasifikasi layanan}
+  \label{tab:ch02-lat1-hasil}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.6cm}}
+    \hline
+    \textbf{Layanan} & \textbf{Model} & \textbf{Tanggung jawab yang tetap di organisasi} &
+      \textbf{Belum berjalan baik} \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada tabel isian, model layanan mana yang paling banyak menyisakan tanggung jawab
+        yang belum berjalan baik? Apakah hasil itu sejalan dengan anggapan bahwa SaaS
+        paling aman?
+  \item Tanggung jawab mana yang muncul di lebih dari satu baris? Apa artinya bagi prioritas
+        perbaikan kontrol akses yang menjadi temuan audit Medikara?
+\end{enumerate}
+
+\subsection*{Latihan 2: Cadangan Rekam Medis di Region Luar Negeri}
+
+Latihan ini membuktikan bahwa keputusan lokasi data tidak dapat diambil hanya dari selisih
+harga. Misalkan Medikara menerima dua penawaran untuk cadangan rekam medis elektronik
+sebesar 15 terabyte: Rp38 juta per bulan di \textit{region} Jakarta dan Rp29 juta per bulan
+di sebuah \textit{region} luar negeri. Selisihnya Rp9 juta per bulan, atau Rp108 juta per
+tahun.
+
+\begin{enumerate}
+  \item Hitung selisih biaya per tahun dan bandingkan dengan biaya yang muncul bila
+        cadangan harus dipulihkan, misalnya biaya transfer data keluar.
+  \item Telusuri setiap lapisan aturan pada Gambar \ref{fig:ch02-alur-lokasi-data} dan
+        tulis pertanyaan regulasi yang muncul.
+  \item Tulis risiko di luar regulasi: kedaulatan data, waktu pemulihan, ketergantungan
+        pada penyedia, dan reputasi setelah insiden 2025.
+  \item Untuk setiap pertanyaan dan risiko, tentukan dasar rujukannya, status jawabannya,
+        dan pihak yang harus menjawab.
+  \item Tulis rekomendasi sementara dalam satu paragraf.
+\end{enumerate}
+
+Tabel \ref{tab:ch02-lat2-contoh} berisi contoh daftar pertanyaan dan risiko, sedangkan
+Tabel \ref{tab:ch02-lat2-hasil} adalah lembar isiannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2: contoh daftar pertanyaan sebelum memindahkan cadangan ke luar
+           negeri}
+  \label{tab:ch02-lat2-contoh}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}p{1.9cm}}
+    \hline
+    \textbf{Pertanyaan atau risiko} & \textbf{Dasar rujukan} & \textbf{Status} &
+      \textbf{Penjawab} \\
+    \hline
+    Apakah cadangan di luar negeri sejalan dengan pusat data di dalam wilayah Indonesia? &
+      PP 28/2024 Pasal 966 ayat (2) dan (5); Pasal 972 bila dibaca sebagai transfer & Kendala
+      utama, perlu tafsir & Tim hukum \\
+    \hline
+    Apakah pengawasan dan akses aparat Indonesia tetap terjamin? & PP 71/2019 Pasal 21 ayat
+      2 dan 3 & Belum terjawab & Tim hukum \\
+    \hline
+    Apakah layanan penyimpanan di \textit{region} itu termasuk \textit{cloud}
+      tersertifikasi? & Permenkes 24/2022 Pasal 20 & Belum terjawab & Kementerian
+      Kesehatan, penyedia \\
+    \hline
+    Apakah negara tujuan memiliki pelindungan data setara? & UU PDP Pasal 56 & Perlu kajian &
+      Tim hukum \\
+    \hline
+    Berapa lama memulihkan 15 terabyte dari luar negeri? & Rencana pemulihan, Bab 12 & Perlu
+      uji & Tim TI \\
+    \hline
+    Bagaimana persepsi pasien bila diketahui data dikirim ke luar negeri? & Insiden 2025 &
+      Risiko tinggi & Direksi \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2: lembar isian pertanyaan dan risiko}
+  \label{tab:ch02-lat2-hasil}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}p{1.9cm}}
+    \hline
+    \textbf{Pertanyaan atau risiko} & \textbf{Dasar rujukan} & \textbf{Status} &
+      \textbf{Penjawab} \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots & \dots \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Berapa banyak pertanyaan berstatus "belum terjawab" pada tabel isian? Apakah
+        penghematan Rp108 juta per tahun sebanding dengan biaya untuk menjawab seluruhnya?
+  \item Pasal 20 Permenkes 24/2022 mewajibkan cadangan di tempat berbeda. Apakah AZ lain di
+        \textit{region} Jakarta, atau \textit{region} lain di Indonesia, sudah memenuhi
+        syarat itu? Jelaskan dengan membaca Tabel \ref{tab:ch02-region-indonesia}.
+  \item Pertanyaan mana yang jawabannya dapat membalik rekomendasi sementara?
+\end{enumerate}
+
+\subsection*{Latihan 3: Hybrid Cloud dan Multi-Cloud}
+
+Latihan ini membuktikan bahwa \textit{hybrid cloud} dan \textit{multi-cloud} menyelesaikan
+masalah yang berbeda, sehingga perbandingannya harus memakai kriteria yang sama. Misalkan
+tim platform Medikara berisi 6 orang dan baru berpengalaman pada satu penyedia publik.
+
+\begin{enumerate}
+  \item Tetapkan satu skenario \textit{hybrid} dan satu skenario \textit{multi-cloud} untuk
+        organisasi pilihan tim atau untuk Medikara.
+  \item Bandingkan keduanya dari sisi biaya, keterampilan tim, dan ketergantungan pada
+        penyedia, ditambah satu kriteria pilihan tim.
+  \item Beri nilai 1 sampai 5 untuk setiap kriteria, dengan 5 berarti paling menguntungkan
+        bagi organisasi, lalu tulis alasannya.
+  \item Jumlahkan nilainya, lalu periksa apakah hasilnya berubah bila bobot kriteria
+        keterampilan dilipatduakan.
+\end{enumerate}
+
+Tabel \ref{tab:ch02-lat3-contoh} berisi contoh perbandingan untuk Medikara Health, sedangkan
+Tabel \ref{tab:ch02-lat3-hasil} adalah lembar isiannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3: contoh perbandingan \textit{hybrid cloud} dan \textit{multi-cloud}
+           untuk Medikara Health}
+  \label{tab:ch02-lat3-contoh}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{\textit{Hybrid}: SIMRS dekat rumah sakit, layanan pendukung
+      di \textit{region} Jakarta} & \textbf{\textit{Multi-cloud}: Medikara+ di penyedia A,
+      analitik di penyedia B} \\
+    \hline
+    Biaya & 3: dua struktur biaya, tetapi ruang server lama tetap terpakai & 2: biaya
+      transfer data antarpenyedia setiap hari \\
+    \hline
+    Keterampilan tim & 3: satu penyedia publik ditambah keahlian yang sudah ada & 1: 6 orang
+      harus menguasai dua penyedia sekaligus \\
+    \hline
+    Ketergantungan pada penyedia & 3: bagian inti tetap di tangan sendiri & 4: tidak
+      bergantung pada satu penyedia \\
+    \hline
+    Kendali lokasi data & 4: rekam medis tetap di sisi privat & 3: dua kontrak lokasi data
+      harus diperiksa \\
+    \hline
+    Jumlah & 13 & 10 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3: lembar isian perbandingan \textit{hybrid cloud} dan
+           \textit{multi-cloud}}
+  \label{tab:ch02-lat3-hasil}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{\textit{Hybrid}: \dots} & \textbf{\textit{Multi-cloud}:
+      \dots} \\
+    \hline
+    Biaya & \dots & \dots \\
+    \hline
+    Keterampilan tim & \dots & \dots \\
+    \hline
+    Ketergantungan pada penyedia & \dots & \dots \\
+    \hline
+    \dots & \dots & \dots \\
+    \hline
+    Jumlah & \dots & \dots \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Kriteria mana yang paling menentukan selisih nilai pada tabel isian? Apakah
+        kesimpulannya tetap sama bila bobot keterampilan dilipatduakan?
+  \item Data Flexera 2026 menyebut 88\% organisasi memakai lebih dari satu penyedia. Apakah
+        angka itu menjadi alasan yang cukup bagi Medikara untuk memilih \textit{multi-cloud}?
+        Jelaskan dengan membaca hasil tabel isian.
 \end{enumerate}

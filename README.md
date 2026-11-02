@@ -6,26 +6,28 @@ Mata kuliah ini membahas cara organisasi memindahkan, membangun, dan menjalankan
 
 Kelas ini berisi mahasiswa berlatar campuran. Mahasiswa berlatar bisnis, manajemen, akuntansi, hukum, kesehatan, dan bidang lain tidak dituntut bisa memprogram. Mahasiswa berlatar CS (*Computer Science*), SE (*Software Engineering*), atau TI (teknologi informasi) mendapat pendalaman teknis opsional di setiap pertemuan. IT40713 dijalankan bersama tiga mata kuliah lain sebagai satu proyek capstone, yaitu penyusunan Cetak Biru Transformasi Digital untuk satu organisasi nyata: [IT40513 Enterprise Architecture & Digital Blueprint](https://github.com/alfa-yohannis/enterprise-architecture-digital-blueprint), [IT40613 Digital Platform & API Economy](https://github.com/alfa-yohannis/digital-platform-api-economy), dan [IT40813 IT Governance, Risk & Compliance](https://github.com/alfa-yohannis/it-governance-risk-compliance). Bagian cetak biru yang menjadi tanggung jawab mata kuliah ini adalah strategi *cloud*, penilaian portofolio aplikasi, arsitektur target berbasis *cloud-native*, serta rencana operasi dan modernisasinya. Tatap muka hanya berlangsung hari Sabtu untuk membahas progres proyek, sehingga modul dan slide disusun agar dapat dipelajari mandiri.
 
+**Berkas siap pakai.** [Modul PDF](module/cloud-native-microservices-architecture.pdf) memuat 14 bab. Slide setiap sesi tersedia melalui kolom Slide pada Peta Pertemuan di bawah. Seluruh PDF dibuat dengan XeLaTeX dan BibTeX dari sumber di repositori ini.
+
 ## Peta Pertemuan
 
-Urutan pertemuan mengikuti empat tonggak capstone. Tiga pertemuan pertama membangun bahasa bersama dan konteks strategi. Empat pertemuan berikutnya dipakai untuk membaca kondisi saat ini sebelum UTS (Ujian Tengah Semester). Setelah UTS, tim merancang arsitektur target, lalu menutup semester dengan rencana operasi, peta jalan modernisasi, dan tata kelolanya menjelang UAS (Ujian Akhir Semester). Kolom terakhir menunjukkan artefak yang disumbangkan ke tonggak capstone.
+Urutan pertemuan mengikuti empat tonggak capstone. Tiga pertemuan pertama membangun bahasa bersama dan konteks strategi. Empat pertemuan berikutnya dipakai untuk membaca kondisi saat ini sebelum UTS (Ujian Tengah Semester). Setelah UTS, tim merancang arsitektur target, lalu menutup semester dengan rencana operasi, peta jalan modernisasi, dan tata kelolanya menjelang UAS (Ujian Akhir Semester). Kolom Luaran Capstone menunjukkan artefak yang disumbangkan ke tonggak capstone, dan kolom Slide menautkan PDF slide sesi itu.
 
-| # | Pertemuan | Aktivitas | Luaran Capstone |
-| --- | --- | --- | --- |
-| 1 | **Orientasi dan Bahasa Bersama Cloud-Native** | Membentuk tim campuran, memilih organisasi, dan memetakan masalah teknologi informasi yang dirasakan | C1: profil organisasi dan daftar pemicu modernisasi |
-| 2 | Model Layanan, Model Penerapan, dan Lokasi Data | Memetakan *workload* ke model layanan dan model penerapan dengan memperhitungkan aturan lokasi data | C1: matriks kendala penempatan *workload* |
-| 3 | Ekonomi Cloud, FinOps, dan Keberlanjutan | Menyusun perkiraan TCO (*Total Cost of Ownership*) kasar dan metrik biaya per unit layanan | C1: model biaya awal dan sasaran nilai *cloud* |
-| 4 | Kerangka Adopsi Cloud dan Strategi Migrasi 7R | Menilai kesiapan dengan enam perspektif CAF (*Cloud Adoption Framework*) dan memberi usulan 7R untuk setiap aplikasi | C2: penilaian kesiapan dan portofolio aplikasi 7R |
-| 5 | Prinsip Cloud-Native dan Twelve-Factor App | Menilai dua sampai tiga aplikasi inti dengan kartu skor *twelve-factor* | C2: kartu skor kesenjangan *cloud-native* |
-| 6 | Domain-Driven Design dan Batas Layanan | Menjalankan lokakarya EventStorming untuk satu alur layanan pasien | C2: peta domain dan *context map* kondisi saat ini |
-| 7 | Monolit, Modular Monolith, dan Microservices | Mendiagnosis keterkaitan pada aplikasi inti dan menulis ADR (*Architecture Decision Record*) pertama | C2: diagnosis arsitektur dan ADR gaya arsitektur, ditinjau menjelang UTS |
-| 8 | Container, Kubernetes, dan Serverless | Memilih *runtime* untuk setiap kandidat layanan dengan matriks keputusan | C3: matriks keputusan *runtime* per layanan |
-| 9 | Komunikasi Antarlayanan dan Event-Driven Architecture | Memodelkan alur janji temu sebagai rangkaian *event* | C3: peta interaksi layanan dan katalog *event* |
-| 10 | Data dalam Microservices: Saga dan Outbox | Merancang kepemilikan data dan satu saga lintas layanan | C3: peta kepemilikan data dan rancangan saga |
-| 11 | Observability, SRE, dan SLO | Menetapkan SLI (*Service Level Indicator*), SLO (*Service Level Objective*), dan *error budget* untuk perjalanan pasien yang kritis | C3: SLO layanan kritis dan rancangan *observability* |
-| 12 | Resiliensi dan Disaster Recovery | Menetapkan RTO (*Recovery Time Objective*), RPO (*Recovery Point Objective*), dan strategi pemulihan per layanan | C4: rencana resiliensi dan DR (*Disaster Recovery*) |
-| 13 | DevOps, GitOps, dan Platform Engineering | Memetakan alur perubahan dan merancang topologi tim serta platform internal | C4: model operasi *delivery* dan peta jalan platform internal |
-| 14 | Peta Jalan Modernisasi dan Tata Kelola Cloud | Menyusun gelombang modernisasi bergaya *strangler fig* beserta *guardrail* tata kelolanya | C4: peta jalan modernisasi dan presentasi capstone |
+| # | Pertemuan | Aktivitas | Luaran Capstone | Slide |
+| --- | --- | --- | --- | --- |
+| 1 | **Orientasi dan Bahasa Bersama Cloud-Native** | Membentuk tim campuran, memilih organisasi, dan memetakan masalah teknologi informasi yang dirasakan | C1: profil organisasi dan daftar pemicu modernisasi | [PDF](slides/session01/session01.pdf) |
+| 2 | Model Layanan, Model Penerapan, dan Lokasi Data | Memetakan *workload* ke model layanan dan model penerapan dengan memperhitungkan aturan lokasi data | C1: matriks kendala penempatan *workload* | [PDF](slides/session02/session02.pdf) |
+| 3 | Ekonomi Cloud, FinOps, dan Keberlanjutan | Menyusun perkiraan TCO (*Total Cost of Ownership*) kasar dan metrik biaya per unit layanan | C1: model biaya awal dan sasaran nilai *cloud* | [PDF](slides/session03/session03.pdf) |
+| 4 | Kerangka Adopsi Cloud dan Strategi Migrasi 7R | Menilai kesiapan dengan enam perspektif CAF (*Cloud Adoption Framework*) dan memberi usulan 7R untuk setiap aplikasi | C2: penilaian kesiapan dan portofolio aplikasi 7R | [PDF](slides/session04/session04.pdf) |
+| 5 | Prinsip Cloud-Native dan Twelve-Factor App | Menilai dua sampai tiga aplikasi inti dengan kartu skor *twelve-factor* | C2: kartu skor kesenjangan *cloud-native* | [PDF](slides/session05/session05.pdf) |
+| 6 | Domain-Driven Design dan Batas Layanan | Menjalankan lokakarya EventStorming untuk satu alur layanan pasien | C2: peta domain dan *context map* kondisi saat ini | [PDF](slides/session06/session06.pdf) |
+| 7 | Monolit, Modular Monolith, dan Microservices | Mendiagnosis keterkaitan pada aplikasi inti dan menulis ADR (*Architecture Decision Record*) pertama | C2: diagnosis arsitektur dan ADR gaya arsitektur, ditinjau menjelang UTS | [PDF](slides/session07/session07.pdf) |
+| 8 | Container, Kubernetes, dan Serverless | Memilih *runtime* untuk setiap kandidat layanan dengan matriks keputusan | C3: matriks keputusan *runtime* per layanan | [PDF](slides/session08/session08.pdf) |
+| 9 | Komunikasi Antarlayanan dan Event-Driven Architecture | Memodelkan alur janji temu sebagai rangkaian *event* | C3: peta interaksi layanan dan katalog *event* | [PDF](slides/session09/session09.pdf) |
+| 10 | Data dalam Microservices: Saga dan Outbox | Merancang kepemilikan data dan satu saga lintas layanan | C3: peta kepemilikan data dan rancangan saga | [PDF](slides/session10/session10.pdf) |
+| 11 | Observability, SRE, dan SLO | Menetapkan SLI (*Service Level Indicator*), SLO (*Service Level Objective*), dan *error budget* untuk perjalanan pasien yang kritis | C3: SLO layanan kritis dan rancangan *observability* | [PDF](slides/session11/session11.pdf) |
+| 12 | Resiliensi dan Disaster Recovery | Menetapkan RTO (*Recovery Time Objective*), RPO (*Recovery Point Objective*), dan strategi pemulihan per layanan | C4: rencana resiliensi dan DR (*Disaster Recovery*) | [PDF](slides/session12/session12.pdf) |
+| 13 | DevOps, GitOps, dan Platform Engineering | Memetakan alur perubahan dan merancang topologi tim serta platform internal | C4: model operasi *delivery* dan peta jalan platform internal | [PDF](slides/session13/session13.pdf) |
+| 14 | Peta Jalan Modernisasi dan Tata Kelola Cloud | Menyusun gelombang modernisasi bergaya *strangler fig* beserta *guardrail* tata kelolanya | C4: peta jalan modernisasi dan presentasi capstone | [PDF](slides/session14/session14.pdf) |
 
 Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. **Bagian I** (Pertemuan 1 sampai 3) menyiapkan C1: alasan organisasi melirik *cloud*, batasan regulasi yang mengikat, dan gambaran biayanya. **Bagian II** (Pertemuan 4 sampai 7) menyiapkan C2: portofolio aplikasi dinilai dengan kacamata kesiapan, prinsip *cloud-native*, batas domain, dan gaya arsitektur. Artefaknya ditinjau menjelang UTS. **Bagian III** (Pertemuan 8 sampai 11) menyiapkan C3: *runtime*, pola komunikasi, kepemilikan data, dan target keandalan untuk arsitektur target. **Bagian IV** (Pertemuan 12 sampai 14) menyiapkan C4: cara sistem dipulihkan, cara perubahan dikirim, dan urutan modernisasi beserta *guardrail* tata kelolanya. Hasilnya dipresentasikan menjelang UAS. Topik yang menjadi milik mata kuliah lain hanya disinggung singkat dan diberi keterangan tempat pembahasan rincinya.
 
@@ -38,11 +40,11 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 #### Pertemuan 01 · Orientasi dan Bahasa Bersama Cloud-Native
 
 **Tujuan.**
-1. Menjelaskan dengan bahasa sehari-hari istilah dasar sistem informasi: aplikasi, *server*, basis data, jaringan, pusat data, dan *cloud*.
+1. Menjelaskan dengan bahasa sehari-hari istilah dasar sistem informasi: aplikasi, server, basis data, jaringan, pusat data, dan *cloud*.
 2. Mengaitkan keputusan teknologi dengan nilai bisnis, biaya, risiko, dan regulasi.
 3. Merumuskan masalah teknologi informasi di organisasi pilihan tim sebagai pemicu modernisasi.
 
-**Topik.** Cara kerja mata kuliah, tatap muka Sabtu, dan proyek capstone bersama tiga mata kuliah lain. Bahasa bersama bagi mahasiswa non-teknis: aplikasi, *server*, basis data, jaringan, pusat data, dan *cloud*. Bahasa bersama bagi mahasiswa teknis: nilai bisnis, struktur biaya, risiko, dan kepatuhan. Kualitas sistem yang saling tarik-menarik: ketersediaan, skalabilitas, keamanan, biaya, dan kecepatan perubahan. Arti *cloud-native* bagi organisasi dan mitos yang sering menyertainya.
+**Topik.** Cara kerja mata kuliah, tatap muka Sabtu, dan proyek capstone bersama tiga mata kuliah lain. Bahasa bersama bagi mahasiswa non-teknis: aplikasi, server, basis data, jaringan, pusat data, dan *cloud*. Bahasa bersama bagi mahasiswa teknis: nilai bisnis, struktur biaya, risiko, dan kepatuhan. Kualitas sistem yang saling tarik-menarik: ketersediaan, skalabilitas, keamanan, biaya, dan kecepatan perubahan. Arti *cloud-native* bagi organisasi dan mitos yang sering menyertainya.
 
 **Aktivitas.** Tim campuran dibentuk, berisi tiga sampai lima orang dengan sedikitnya satu anggota berlatar teknis dan satu anggota berlatar non-teknis. Tim memilih organisasi nyata, sebaiknya tempat kerja salah satu anggota, dengan izin dan data yang dianonimkan. Tim yang tidak punya akses memakai kasus Medikara Health. Anggota non-teknis memimpin wawancara singkat atau penelusuran dokumen tentang masalah layanan yang dirasakan pengguna dan manajemen. Anggota teknis memetakan sistem yang terlibat dalam setiap masalah. Luarannya adalah profil organisasi satu halaman dan daftar lima sampai sepuluh pemicu modernisasi, misalnya antrean panjang, aplikasi yang sering tidak tersedia, atau biaya integrasi yang tinggi. *Pendalaman teknis (opsional):* membuat akun *free tier* di satu penyedia *cloud*, lalu menelusuri konsol dan kalkulator harganya tanpa menjalankan sumber daya berbayar.
 
@@ -114,7 +116,7 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 
 **Latihan.**
 1. Medikara+ sering lambat setiap kali program vaksinasi diumumkan. Faktor mana dalam Twelve-Factor App yang paling relevan untuk masalah ini? Jelaskan alasannya.
-2. Jelaskan dengan bahasa non-teknis mengapa aplikasi yang menyimpan sesi pengguna di memori *server* sulit diskalakan.
+2. Jelaskan dengan bahasa non-teknis mengapa aplikasi yang menyimpan sesi pengguna di memori server sulit diskalakan.
 3. Apakah semua aplikasi organisasi perlu memenuhi dua belas faktor? Berikan satu contoh aplikasi yang tidak perlu dan jelaskan alasannya.
 
 #### Pertemuan 06 · Domain-Driven Design dan Batas Layanan
@@ -176,7 +178,7 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 
 **Topik.** Komunikasi sinkron dan asinkron. *Request/response*. Antrean pesan dan *publish/subscribe*. *Event broker*. Tiga pola *event*: *event notification*, *event-carried state transfer*, dan *event sourcing*. *Choreography* dan *orchestration*. Pengiriman *at-least-once* dan *consumer* yang idempoten. *Service mesh* pada tingkat konsep. Gaya API (*Application Programming Interface*), desain kontrak, dan *API gateway* disinggung singkat (dibahas rinci di IT40613).
 
-**Aktivitas.** Tim memodelkan alur janji temu Medikara+ atau alur sejenis di organisasi pilihan: pasien membuat janji, jadwal dokter terkunci, pengingat terkirim, hasil laboratorium tersedia, dan tagihan terbit. Anggota non-teknis menuliskan kejadian bisnis dan pihak yang perlu mengetahuinya. Anggota teknis menentukan pola komunikasi untuk setiap interaksi beserta alasannya. Luarannya adalah peta interaksi layanan dan katalog *event* untuk C3. *Pendalaman teknis (opsional):* menjalankan RabbitMQ atau Apache Kafka secara lokal, lalu mengirim dan menerima satu *event* `JanjiTemuDibuat`.
+**Aktivitas.** Tim memodelkan alur janji temu Medikara+ atau alur sejenis di organisasi pilihan: pasien membuat janji, jadwal dokter terkunci, pengingat terkirim, hasil laboratorium tersedia, dan tagihan terbit. Anggota non-teknis menuliskan kejadian bisnis dan pihak yang perlu mengetahuinya. Anggota teknis menentukan pola komunikasi untuk setiap interaksi beserta alasannya. Luarannya adalah peta interaksi layanan dan katalog *event* untuk C3. *Pendalaman teknis (opsional):* menjalankan RabbitMQ secara lokal, lalu mengirim dan menerima satu *event* `JanjiTemuDibuat`.
 
 **Latihan.**
 1. Layanan notifikasi mati selama satu jam. Apa akibatnya pada alur janji temu yang memakai komunikasi sinkron, dan apa bedanya bila alur itu memakai *event*?
@@ -213,7 +215,7 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 **Latihan.**
 1. Hitung waktu tidak tersedia yang diizinkan dalam satu bulan untuk SLO ketersediaan 99,5 persen dan 99,9 persen. Jelaskan dampak selisihnya bagi biaya.
 2. Mengapa target SLO 100 persen hampir selalu merupakan keputusan yang buruk?
-3. Usulkan satu SLI untuk layanan janji temu yang mencerminkan pengalaman pasien, bukan sekadar kondisi *server*.
+3. Usulkan satu SLI untuk layanan janji temu yang mencerminkan pengalaman pasien, bukan sekadar kondisi server.
 
 ### Bagian IV. Operasi, Peta Jalan, dan Tata Kelola (12 sampai 14)
 
@@ -226,7 +228,7 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 
 **Topik.** Mode kegagalan dalam sistem terdistribusi. Pola resiliensi: *timeout*, *retry* dengan *backoff*, *circuit breaker*, *bulkhead*, dan *graceful degradation*. Penerapan *multi-AZ* dan *multi-region*. RTO (*Recovery Time Objective*) dan RPO (*Recovery Point Objective*). Strategi DR (*Disaster Recovery*): *backup and restore*, *pilot light*, *warm standby*, dan *multi-site active-active*. Cadangan yang tidak dapat diubah sebagai pertahanan terhadap *ransomware*. Pelajaran dari insiden PDNS 2 (Pusat Data Nasional Sementara 2) Surabaya pada 2024. *Chaos engineering* dan *game day*. Kelangsungan bisnis dan ISO 22301 disinggung singkat (dibahas rinci di IT40813).
 
-**Aktivitas.** Tim menetapkan RTO dan RPO untuk layanan kritis dari Pertemuan 11, memilih strategi DR untuk masing-masing, lalu memperkirakan biaya tambahannya. Anggota non-teknis memimpin analisis dampak bisnis: kerugian per jam, dampak pada keselamatan pasien, dan kewajiban regulasi. Anggota teknis memetakan pola resiliensi dan arsitektur DR. Tim menyusun satu skenario uji pemulihan, misalnya region utama tidak tersedia selama empat jam. Luarannya adalah rencana resiliensi dan DR beserta jadwal uji pemulihan untuk C4. *Pendalaman teknis (opsional):* mensimulasikan kegagalan satu layanan dan mengamati perilaku *circuit breaker* dengan pustaka resiliensi.
+**Aktivitas.** Tim menetapkan RTO dan RPO untuk layanan kritis dari Pertemuan 11, memilih strategi DR untuk masing-masing, lalu memperkirakan biaya tambahannya. Anggota non-teknis memimpin analisis dampak bisnis: kerugian per jam, dampak pada keselamatan pasien, dan kewajiban regulasi. Anggota teknis memetakan pola resiliensi dan arsitektur DR. Tim menyusun satu skenario uji pemulihan, misalnya region utama tidak tersedia selama empat jam. Luarannya adalah rencana resiliensi dan DR beserta jadwal uji pemulihan untuk C4. *Pendalaman teknis (opsional):* mensimulasikan kegagalan satu layanan dan mengamati perilaku *circuit breaker* dengan skrip simulasi.
 
 **Latihan.**
 1. Jelaskan perbedaan RTO dan RPO dengan contoh layanan rekam medis elektronik.
@@ -242,7 +244,7 @@ Pertemuan dikelompokkan ke dalam empat Bagian, satu Bagian untuk satu tonggak. *
 
 **Topik.** Budaya dan praktik DevOps. Metrik DORA: frekuensi *deployment*, *lead time* perubahan, tingkat kegagalan perubahan, dan waktu pemulihan. Temuan laporan DORA 2025 bahwa AI memperkuat kondisi organisasi, baik kekuatan maupun kelemahannya. Alur CI/CD. Strategi rilis *blue-green* dan *canary*. IaC (*Infrastructure as Code*). Empat prinsip OpenGitOps. *Platform engineering* dan IDP (*Internal Developer Platform*): *golden path*, *self-service*, dan *platform as a product* menurut CNCF Platforms White Paper. Team Topologies: empat tipe tim dan tiga mode interaksi. Keamanan rantai pasok perangkat lunak disinggung singkat (dibahas rinci di IT40813).
 
-**Aktivitas.** Tim memetakan alur perubahan saat ini, dari permintaan fitur sampai berjalan di produksi, lalu menandai antrean dan langkah manual. Anggota non-teknis memimpin pemetaan waktu tunggu dan rantai persetujuan. Anggota teknis merancang alur CI/CD dan GitOps target. Tim lalu menyusun topologi tim target, yaitu tim *stream-aligned*, tim platform, dan tim *enabling*, beserta tiga sampai lima kapabilitas platform internal yang diprioritaskan. Luarannya adalah model operasi *delivery* dan peta jalan platform internal untuk C4. *Pendalaman teknis (opsional):* membuat *pipeline* CI sederhana dengan GitHub Actions, lalu menyinkronkan *manifest* Kubernetes dengan Argo CD atau Flux.
+**Aktivitas.** Tim memetakan alur perubahan saat ini, dari permintaan fitur sampai berjalan di produksi, lalu menandai antrean dan langkah manual. Anggota non-teknis memimpin pemetaan waktu tunggu dan rantai persetujuan. Anggota teknis merancang alur CI/CD dan GitOps target. Tim lalu menyusun topologi tim target, yaitu tim *stream-aligned*, tim platform, dan tim *enabling*, beserta tiga sampai lima kapabilitas platform internal yang diprioritaskan. Luarannya adalah model operasi *delivery* dan peta jalan platform internal untuk C4. *Pendalaman teknis (opsional):* membuat *pipeline* CI sederhana dengan GitHub Actions, lalu menyinkronkan *manifest* Kubernetes dengan Argo CD.
 
 **Latihan.**
 1. Organisasi yang merilis perubahan setiap tiga bulan sering menganggap rilis yang jarang lebih aman. Kritisi anggapan ini dengan merujuk temuan DORA.
@@ -297,12 +299,24 @@ PT Medikara Nusa Sehat, disingkat Medikara Health, adalah organisasi **fiktif** 
 
 ## Struktur Repositori
 
-- `figures/`: gambar untuk modul dan slide. `figures/logo_universitas.png` dan `figures/building.png` adalah symlink.
-- `module/`: naskah modul LaTeX. Berkas utama `cloud-native-microservices-architecture.tex` memuat `titlepage.tex` dan `chapter01.tex` sampai `chapter14.tex`. Rujukan inti ada di `references.bib`, sedangkan rujukan khusus satu bab ada di `bib/chapterNN.bib`. Folder `module/fonts` adalah symlink.
-- `slides/`: slide per pertemuan di `slides/sessionNN/`, memakai `slides/preamble.tex` bersama. Folder `slides/theme` adalah symlink.
-- `sources/`: berkas pendukung per bab di `sources/chapterNN/`, misalnya lembar kerja, templat, data kasus, dan berkas teknis opsional yang dirujuk dari naskah modul.
+- `figures/`: gambar untuk modul dan slide, yaitu diagram TikZ `chNN-nama.tex`, ilustrasi JPG opsional `chNN-nama.jpg`, serta `logo_universitas.png` dan `building.png`. Daftar lengkapnya ada di [`figures/README.md`](figures/README.md).
+- `module/`: naskah modul LaTeX. Berkas utama `cloud-native-microservices-architecture.tex` memuat `titlepage.tex` dan `chapter01.tex` sampai `chapter14.tex`. Rujukan inti dan rujukan lintas bab ada di `references.bib`, sedangkan rujukan khusus satu bab ada di `bib/chapterNN.bib`. Folder `module/fonts` berisi font Titillium Web. PDF siap pakai ada di `module/cloud-native-microservices-architecture.pdf`.
+- `slides/`: slide per pertemuan di `slides/sessionNN/`, memakai `slides/preamble.tex` bersama. Folder `slides/theme` berisi tema Beamer. PDF siap pakai ada di `slides/sessionNN/sessionNN.pdf`.
+- `sources/`: berkas pendukung per bab di `sources/chapterNN/`, misalnya lembar kerja, templat, data kasus, dan berkas teknis opsional yang dirujuk dari naskah modul. Ringkasannya ada di [`sources/README.md`](sources/README.md).
+- `tools/`: `build.py` membangun modul dan slide, `check-materials.py` memeriksa kelengkapan materi.
 
-Modul dan slide dikompilasi dengan XeLaTeX. Modul dikompilasi di folder `module`:
+Font, tema, logo, dan foto gedung adalah berkas asli di dalam repositori, bukan symlink, sehingga kompilasi tidak membutuhkan repositori lain. Ilustrasi JPG bersifat opsional. Bab dan slide memasangnya bersyarat dengan `\IfFileExists`, sehingga kompilasi tetap bersih bila berkasnya tidak ada, dan diagram TikZ sudah cukup untuk memahami materi.
+
+Dari akar repositori, seluruh materi diperiksa lalu dibangun dengan:
+
+```bash
+python tools/check-materials.py
+python tools/build.py --engine xelatex
+```
+
+Pilihan `--scope module` atau `--scope slides` membangun bagian tertentu. Di VS Code, ekstensi LaTeX Workshop memakai resep di `.vscode/settings.json`.
+
+Modul juga dapat dikompilasi manual di folder `module`:
 
 ```bash
 cd module
@@ -319,8 +333,6 @@ cd slides/session01
 xelatex session01
 xelatex session01
 ```
-
-`module/fonts`, `slides/theme`, `figures/logo_universitas.png`, dan `figures/building.png` adalah symlink ke repo advanced-software-engineering (target `/data2/projects/advanced-software-engineering/...`). Pada mesin yang tidak memiliki repo tersebut di lokasi itu, atau pada Windows yang tidak mengaktifkan symlink, keempat aset tersebut perlu disalin dari repo advanced-software-engineering sebelum kompilasi.
 
 ## Rujukan Utama
 
@@ -369,7 +381,7 @@ Versi dan status di bawah ini diperiksa pada 30 Oktober 2026.
 
 - PP 71/2019 tentang Penyelenggaraan Sistem dan Transaksi Elektronik. Berlaku. Pasal 20 dan 21 mengatur lokasi pengelolaan data untuk lingkup publik dan privat. Rencana revisinya masih dalam tahap evaluasi Kementerian Komunikasi dan Digital (Komdigi). <https://peraturan.bpk.go.id/Details/122030/pp-no-71-tahun-2019>
 - Permenkominfo 5/2020 tentang Penyelenggara Sistem Elektronik Lingkup Privat, diubah dengan Permenkominfo 10/2021. Berlaku. <https://peraturan.bpk.go.id/Details/203049>
-- Permenkes 24/2022 tentang Rekam Medis. Berlaku. Pasal 20 mengizinkan penyimpanan rekam medis elektronik di *server*, *cloud computing* yang tersertifikasi, atau media digital lain. <https://peraturan.bpk.go.id/Details/245544>
+- Permenkes 24/2022 tentang Rekam Medis. Berlaku. Pasal 20 mengizinkan penyimpanan rekam medis elektronik di server, *cloud computing* yang tersertifikasi, atau media digital lain. <https://peraturan.bpk.go.id/Details/245544>
 - UU 27/2022 tentang Pelindungan Data Pribadi. Berlaku. <https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022>
 - PP 33/2026 sebagai aturan pelaksana UU PDP, ditetapkan 16 Juli 2026 dan berlaku 16 Januari 2027 menurut ringkasan firma hukum. Teks resminya perlu dicek ulang di JDIH (Jaringan Dokumentasi dan Informasi Hukum) sebelum dikutip. <https://www.allenandgledhill.com/perspectives/publications/knowledge-updates-indonesia/2026/indonesia-data-protection-regulation-33-introduces-new-operational-requirements/>
 - Region *cloud* di Indonesia: AWS Asia Pacific (Jakarta) sejak Desember 2021 <https://aws.amazon.com/blogs/aws/now-open-aws-asia-pacific-jakarta-region/>, Google Cloud Jakarta sejak Juni 2020 <https://cloud.google.com/blog/products/infrastructure/new-google-cloud-region-in-jakarta-now-open>, Microsoft Azure Indonesia Central sejak 2025 <https://news.microsoft.com/id-id/2025/05/27/microsoft-opens-indonesia-central/>, dan Oracle Cloud Indonesia North (Batam) sejak 2025 <https://docs.oracle.com/iaas/releasenotes/oci/new-region-batam.htm>.
@@ -385,46 +397,75 @@ Versi dan status di bawah ini diperiksa pada 30 Oktober 2026.
 
 | Singkatan | Kepanjangan |
 | --- | --- |
+| 2PC | Two-Phase Commit |
+| ACID | Atomicity, Consistency, Isolation, Durability |
 | ADR | Architecture Decision Record |
 | AI | Artificial Intelligence |
+| AMQP | Advanced Message Queuing Protocol |
 | API | Application Programming Interface |
+| AS | Amerika Serikat |
 | AWS | Amazon Web Services |
 | AZ | Availability Zone |
 | BPJS | Badan Penyelenggara Jaminan Sosial |
+| BSSN | Badan Siber dan Sandi Negara |
 | CAF | Cloud Adoption Framework |
 | CapEx | Capital Expenditure |
 | CCoE | Cloud Center of Excellence |
+| CDC | Change Data Capture |
 | CI/CD | Continuous Integration / Continuous Delivery |
+| CISA | Cybersecurity and Infrastructure Security Agency |
 | CNCF | Cloud Native Computing Foundation |
 | CQRS | Command Query Responsibility Segregation |
 | CS | Computer Science |
 | DDD | Domain-Driven Design |
 | DORA | DevOps Research and Assessment |
+| DPR | Dewan Perwakilan Rakyat |
 | DR | Disaster Recovery |
+| EC2 | Elastic Compute Cloud |
 | ERP | Enterprise Resource Planning |
 | FaaS | Function as a Service |
 | FHIR | Fast Healthcare Interoperability Resources |
 | FOCUS | FinOps Open Cost and Usage Specification |
+| GB | Gigabyte |
 | HL7 | Health Level Seven |
+| HTTP | HyperText Transfer Protocol |
 | IaaS | Infrastructure as a Service |
 | IaC | Infrastructure as Code |
 | IDP | Internal Developer Platform |
+| IEC | International Electrotechnical Commission |
+| IEEE | Institute of Electrical and Electronics Engineers |
+| IGD | Instalasi Gawat Darurat |
+| ISO | International Organization for Standardization |
 | JDIH | Jaringan Dokumentasi dan Informasi Hukum |
+| JSON | JavaScript Object Notation |
+| K8s | Kubernetes |
 | Komdigi | Kementerian Komunikasi dan Digital |
 | KPI | Key Performance Indicator |
 | MEAP | Manning Early Access Program |
+| MPI | Master Patient Index |
+| mTLS | Mutual Transport Layer Security |
+| NIK | Nomor Induk Kependudukan |
 | NIST | National Institute of Standards and Technology |
+| OPA | Open Policy Agent |
 | OpEx | Operational Expenditure |
 | PaaS | Platform as a Service |
 | PDNS | Pusat Data Nasional Sementara |
 | PDP | Pelindungan Data Pribadi |
 | Permenkes | Peraturan Menteri Kesehatan |
 | Permenkominfo | Peraturan Menteri Komunikasi dan Informatika |
+| Perpres | Peraturan Presiden |
 | PP | Peraturan Pemerintah |
 | PSE | Penyelenggara Sistem Elektronik |
 | PSTE | Penyelenggaraan Sistem dan Transaksi Elektronik |
+| PT | Perseroan Terbatas |
+| REST | Representational State Transfer |
 | RPO | Recovery Point Objective |
+| RS | Rumah Sakit |
+| RT | Rukun Tetangga |
 | RTO | Recovery Time Objective |
+| RW | Rukun Warga |
+| S2 | Strata 2 |
+| S3 | Simple Storage Service |
 | SaaS | Software as a Service |
 | SCI | Software Carbon Intensity |
 | SE | Software Engineering |
@@ -432,6 +473,11 @@ Versi dan status di bawah ini diperiksa pada 30 Oktober 2026.
 | SLA | Service Level Agreement |
 | SLI | Service Level Indicator |
 | SLO | Service Level Objective |
+| SLSA | Supply-chain Levels for Software Artifacts |
+| SNS | Simple Notification Service |
+| SP | Special Publication |
+| SQL | Structured Query Language |
+| SQS | Simple Queue Service |
 | SRE | Site Reliability Engineering |
 | TCO | Total Cost of Ownership |
 | TI | Teknologi Informasi |
@@ -439,3 +485,4 @@ Versi dan status di bawah ini diperiksa pada 30 Oktober 2026.
 | UTS | Ujian Tengah Semester |
 | UU | Undang-Undang |
 | VM | Virtual Machine |
+| YAML | YAML Ain't Markup Language |

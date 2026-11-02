@@ -1,0 +1,36 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  keadaan/.style={draw, rounded corners, align=center, text width=2.9cm,
+    minimum height=1.2cm},
+  ket/.style={font=\tiny, align=center, text width=2.4cm}
+]
+  % Tiga keadaan circuit breaker.
+  \node[keadaan, fill=blue!8] (tutup) at (0,0)
+    {\textbf{Tertutup}\\{\tiny\mdseries permintaan diteruskan,\\kegagalan
+    beruntun dihitung}};
+  \node[keadaan, fill=red!22] (buka) at (7.0,0)
+    {\textbf{Terbuka}\\{\tiny\mdseries permintaan langsung ditolak,\\jalur
+    cadangan dipakai}};
+  \node[keadaan, fill=orange!12] (setengah) at (3.5,-2.6)
+    {\textbf{Setengah terbuka}\\{\tiny\mdseries satu permintaan uji\\diteruskan
+    ke tujuan}};
+
+  % Perpindahan antarkeadaan beserta syaratnya.
+  \draw[panah] (tutup.north east) to[bend left=20]
+    node[above, ket] {5 kegagalan berturut-turut} (buka.north west);
+  \draw[panah] (buka.south) to[bend left=20]
+    node[right, ket, xshift=4pt] {30 detik berlalu} (setengah.east);
+  \draw[panah, red!60!black] (setengah.north east) to[bend left=12]
+    node[above left, ket, xshift=8pt] {uji gagal} (buka.south west);
+  \draw[panah, praditagreen] (setengah.west) to[bend left=20]
+    node[left, ket, xshift=-4pt] {uji berhasil} (tutup.south);
+
+  % Yang terasa oleh petugas loket pada tiap keadaan.
+  \node[draw, rounded corners, fill=green!10, align=left, text width=10.0cm,
+    font=\tiny, inner sep=4pt] at (3.5,-4.45)
+    {\textbf{Yang terasa di loket.} Tertutup: kepesertaan terbaca dalam sekitar
+    1 detik. Terbuka: jawaban datang seketika, pasien tetap didaftarkan, dan
+    kepesertaan ditandai ``periksa ulang''. Tanpa pemutus: setiap pasien
+    menunggu sampai batas waktu habis, dan kolam koneksi ikut tertahan.};
+\end{tikzpicture}

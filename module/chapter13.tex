@@ -1,63 +1,1178 @@
 \chapter{DevOps, GitOps, dan Platform Engineering}
+\label{ch:ch13}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
-  \item Menjelaskan praktik DevOps dan metrik DORA (DevOps Research and Assessment) untuk mengukur kinerja pengiriman perangkat lunak.
-  \item Menjelaskan alur CI/CD (\textit{Continuous Integration / Continuous Delivery}) dan empat prinsip GitOps.
+  \item Menjelaskan praktik DevOps dan metrik DORA (DevOps Research and Assessment) untuk mengukur
+        kinerja pengiriman perangkat lunak.
+  \item Menjelaskan alur CI/CD (\textit{Continuous Integration / Continuous Delivery}) dan empat
+        prinsip GitOps.
   \item Merancang topologi tim dan peran platform internal bagi organisasi.
 \end{itemize}
 
 \section{Pendahuluan}
+\label{sec:ch13-pendahuluan}
 
-% TODO
-% Cakupan: satu perubahan kecil di Medikara Health butuh tiga bulan karena harus melewati banyak tiket dan persetujuan manual; arsitektur cloud-native tidak memberi manfaat bila cara mengirim perubahan tetap lambat.
+Pada Senin, 15 Desember 2025, bagian pendaftaran RS Medikara Jakarta meminta satu perubahan kecil
+pada SIMRS (Sistem Informasi Manajemen Rumah Sakit): kolom nomor telepon keluarga yang dapat
+dihubungi dalam keadaan darurat. Pengembang memperkirakan pemrogramannya selesai dalam dua hari.
+Kolom itu baru muncul di layar petugas pendaftaran pada Sabtu malam, 21 Maret 2026, atau 96 hari
+kemudian. Di antara dua tanggal itu, permintaan tersebut melewati tiket layanan bantuan,
+persetujuan kepala instalasi rekam medis, rapat komite perubahan bulanan, antrean pengembang, uji
+manual, uji regresi triwulanan, dan jendela rilis tiga bulanan. Waktu kerja yang sesungguhnya
+sekitar sepuluh hari. Sisanya, 86 hari, habis untuk menunggu.
+
+Kisah ini memperlihatkan masalah yang tidak selesai dengan teknologi baru. Medikara Health dapat
+memindahkan SIMRS ke \textit{cloud}, menatanya menjadi modul (Bab 7), dan menjalankan layanan barunya di
+\textit{container} (Bab 8). Bila setiap perubahan tetap menunggu 96 hari, pasien dan petugas tidak
+merasakan bedanya. Arsitektur \textit{cloud-native} menjanjikan perubahan yang sering dan dapat
+diprediksi (Bab 5). Janji itu hanya terwujud bila cara organisasi mengirim perubahan ikut berubah:
+siapa yang menyetujui, apa yang diotomatisasi, bagaimana tim disusun, dan siapa yang menyediakan
+jalan bagi tim lain.
+
+\IfFileExists{../figures/ch13-diagram-konsep.png}{%
+Gambar \ref{fig:ch13-antrean-dan-jalur} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch13-diagram-konsep.png}
+  \caption{GitOps dan platform internal memperpendek jalur perubahan}
+  \label{fig:ch13-antrean-dan-jalur}
+\end{figure}
+}{}
+
+Bab ini disusun dalam lima langkah: DevOps dan metrik DORA untuk mengukur pengiriman, CI/CD dan
+strategi rilis, Infrastructure as Code (IaC) dan GitOps, \textit{platform engineering} dan
+Internal Developer Platform (IDP), serta Team Topologies. Rujukan utamanya adalah laporan DORA
+2025 \cite{dora2025}, panduan metrik DORA \cite{dora-metrics}, buku Forsgren, Humble, dan Kim
+\cite{c13-forsgren2018}, buku Humble dan Farley tentang \textit{continuous delivery}
+\cite{c13-humble2010}, prinsip OpenGitOps \cite{opengitops}, \textit{Platforms White Paper} dari
+Cloud Native Computing Foundation (CNCF) \cite{cncf-platforms}, dan buku Team Topologies edisi
+kedua \cite{skelton2025}. Hasil bab ini adalah model operasi \textit{delivery} dan peta jalan
+platform internal untuk tonggak capstone C4 Peta Jalan dan Tata Kelola.
 
 \section{DevOps dan Metrik DORA}
+\label{sec:ch13-dora}
 
-% TODO
-% Cakupan: DevOps sebagai budaya dan praktik; metrik DORA (frekuensi deployment, lead time perubahan, tingkat kegagalan perubahan, waktu pemulihan); temuan laporan DORA 2025 bahwa AI memperkuat kekuatan maupun kelemahan organisasi; anggapan keliru bahwa rilis yang jarang lebih aman.
-% Kasus Medikara: perkiraan metrik DORA kondisi saat ini untuk SIMRS dan Medikara+.
+Pertanyaan pertama: bagaimana mengetahui apakah cara sebuah organisasi mengirim perubahan sudah
+baik? Kesan rapat tidak cukup. Organisasi membutuhkan istilah yang sama dan ukuran yang dapat
+dihitung dari data.
+
+\subsection{DevOps sebagai Budaya dan Praktik}
+
+DevOps adalah cara kerja yang menyatukan tanggung jawab membangun perangkat lunak
+(\textit{development}) dan menjalankannya (\textit{operations}). Pada cara kerja lama, kedua
+pekerjaan itu dipisah. Tim pengembang dinilai dari fitur yang selesai, sedangkan tim operasi
+dinilai dari sistem yang stabil. Akibatnya kedua tim punya kepentingan yang berlawanan: yang satu
+ingin sering berubah, yang lain ingin jarang berubah. DevOps bukan nama jabatan dan bukan nama
+alat. Forsgren, Humble, dan Kim merangkum hasil riset bertahun-tahun menjadi 24 kapabilitas dalam
+lima kelompok: \textit{continuous delivery}, arsitektur, produk dan proses, manajemen ramping dan
+pemantauan, serta budaya \cite{c13-forsgren2018}. Kapabilitas itu bersama-sama mendorong kinerja
+pengiriman perangkat lunak, yang kemudian berkaitan dengan kinerja organisasi.
+
+Analoginya seperti rumah makan yang dapurnya dipisah tembok dari ruang makan. Juru masak hanya
+menerima kertas pesanan dan tidak pernah mendengar keluhan tamu. Pelayan mendengar keluhan, tetapi
+tidak boleh masuk dapur. Ketika sup terlalu asin, keluhan itu baru sampai ke dapur keesokan harinya
+lewat catatan manajer. DevOps membuka pintu di tembok itu: juru masak ikut melihat piring yang
+kembali, dan pelayan tahu kapan menu baru siap.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Misalkan tim pengembang SIMRS Jakarta dinilai dari jumlah permintaan yang selesai,
+        sedangkan tim infrastruktur pusat dinilai dari jam henti layanan. Sepanjang 2025 tim
+        infrastruktur menolak 9 dari 31 permintaan pemasangan di luar jendela rilis, dan sembilan
+        perbaikan kecil itu menunggu rata-rata 47 hari. Kedua tim benar menurut ukurannya.
+  \item Vendor Medikara+ menjalankan 37 langkah manual setiap memasang versi baru (Bab 5).
+        Misalkan laporan gangguan sampai ke pengembang vendor lewat surel layanan bantuan,
+        rata-rata dua hari setelah gangguan. Kesalahan yang sama pun terulang.
+\end{enumerate}
+
+\subsection{Metrik DORA}
+
+DORA adalah program riset tentang kemampuan organisasi mengirim perangkat lunak. DORA mengukur kinerja pengiriman dengan metrik yang dihitung dari data, bukan dari kesan.
+Panduan DORA yang terbaru memuat lima metrik dalam dua kelompok \cite{dora-metrics}. Kelompok
+pertama, \textit{throughput}, mengukur kecepatan aliran perubahan. Kelompok kedua,
+\textit{instability}, mengukur seberapa sering perubahan menimbulkan masalah. Empat metrik pertama
+dikenal sebagai empat kunci (\textit{four keys}) dan sudah dipakai sejak buku Forsgren, Humble, dan
+Kim \cite{c13-forsgren2018}. Metrik kelima, tingkat pengerjaan ulang, ditambahkan kemudian. Tabel
+\ref{tab:ch13-metrik-dora} merangkum kelimanya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lima metrik DORA dan cara menghitungnya dari data organisasi, diringkas dari panduan
+           DORA \cite{dora-metrics}}
+  \label{tab:ch13-metrik-dora}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Metrik} & \textbf{Kelompok} & \textbf{Pertanyaan yang dijawab} & \textbf{Cara
+      menghitung} \\ \hline
+    Lead time perubahan (\textit{change lead time}) & \textit{Throughput} & Berapa lama perubahan
+      yang sudah ditulis menunggu sampai dipakai? & Selisih waktu \textit{commit} dan waktu
+      berjalan di produksi, dirata-rata per perubahan \\ \hline
+    Frekuensi \textit{deployment} (\textit{deployment frequency}) & \textit{Throughput} & Seberapa
+      sering perubahan sampai ke pengguna? & Jumlah \textit{deployment} ke produksi per bulan,
+      dari catatan rilis \\ \hline
+    Waktu pemulihan (\textit{failed deployment recovery time}) & \textit{Throughput} & Berapa
+      lama layanan terganggu bila \textit{deployment} gagal? & Waktu dari \textit{deployment}
+      gagal sampai layanan pulih, dari catatan insiden \\ \hline
+    Tingkat kegagalan perubahan (\textit{change fail rate}) & \textit{Instability} & Berapa bagian
+      \textit{deployment} yang langsung butuh perbaikan? & \textit{Deployment} yang butuh
+      tindakan segera dibagi seluruh \textit{deployment} \\ \hline
+    Tingkat pengerjaan ulang (\textit{deployment rework rate}) & \textit{Instability} & Berapa
+      bagian \textit{deployment} yang tidak direncanakan karena insiden? & \textit{Deployment}
+      darurat akibat insiden dibagi seluruh \textit{deployment} \\ \hline
+  \end{tabularx}
+\end{table}
+
+Analoginya seperti menilai jasa kurir. Pelanggan peduli pada empat hal: seberapa sering kurir
+berangkat, berapa lama paket sampai, berapa banyak paket yang rusak, dan berapa lama penggantinya
+dikirim bila paket rusak. Kurir yang berangkat sebulan sekali dengan truk penuh belum tentu lebih
+aman daripada kurir yang berangkat setiap hari dengan sepeda motor. Ukurannya harus dibaca
+bersama, bukan satu per satu.
+
+Dua hal pada \textit{lead time} sering tertukar. Pembagiannya begini. \textit{Lead time} versi
+DORA dihitung sejak \textit{commit}, yaitu sejak perubahan ditulis dan disimpan di sistem kendali
+versi. Manajemen dan pengguna merasakan \textit{lead time} permintaan, yaitu sejak permintaan
+diajukan. Pada kisah kolom nomor telepon keluarga, 52,5 hari dari 96 hari habis sebelum
+pemrograman dimulai. Bagian itu tidak terlihat dalam metrik DORA. Kedua ukuran dibutuhkan:
+\textit{lead time} DORA untuk menilai jalur teknis, dan \textit{lead time} permintaan untuk
+menilai antrean persetujuan dan prioritas. Aktivitas bab ini memetakan keduanya.
+
+\subsection{Rilis yang Jarang Tidak Membuat Lebih Aman}
+
+Banyak organisasi menganggap rilis yang jarang lebih aman: makin jarang sistem disentuh, makin
+kecil peluang rusak. Riset DORA berulang kali menunjukkan bahwa kecepatan dan stabilitas bukan
+pilihan yang saling meniadakan \cite{dora-metrics}. Organisasi berkinerja tinggi merilis lebih
+sering, sekaligus lebih jarang gagal dan lebih cepat pulih \cite{c13-forsgren2018}. Penjelasannya
+ada pada ukuran rilis. Rilis yang jarang selalu berukuran besar, karena perubahan menumpuk selama
+menunggu jendela rilis berikutnya.
+
+Analoginya seperti mencuci piring. Rumah tangga yang mencuci piring setiap selesai makan hanya
+menghadapi beberapa piring. Sisa makanan masih lunak, dan piring yang retak langsung ketahuan.
+Rumah tangga yang menumpuk piring selama seminggu menghadapi tumpukan besar dengan sisa makanan yang
+sudah mengeras, dan piring retak baru ketahuan ketika tumpukan dibongkar.
+
+Hitungan sederhana memperlihatkan pengaruh ukuran rilis. Misalkan setiap perubahan punya peluang
+1 persen menimbulkan masalah di produksi. Peluang satu rilis berisi $n$ perubahan bebas masalah
+adalah $0{,}99^n$. Hasilnya ada di Tabel \ref{tab:ch13-ukuran-rilis}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pengaruh ukuran rilis bila setiap perubahan berpeluang 1 persen menimbulkan masalah
+           (asumsi pengajaran)}
+  \label{tab:ch13-ukuran-rilis}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Perubahan per rilis} & \textbf{Peluang rilis bermasalah} & \textbf{Perubahan yang
+      dicurigai bila gagal} & \textbf{Perubahan baik yang ikut dibatalkan bila
+      \textit{rollback}} \\ \hline
+    60 (rilis triwulanan) & $1 - 0{,}99^{60} \approx 45{,}3$ persen & 60 & 59 \\ \hline
+    8 (rilis bulanan) & $1 - 0{,}99^{8} \approx 7{,}7$ persen & 8 & 7 \\ \hline
+    1 (rilis per perubahan) & 1 persen & 1 & 0 \\ \hline
+  \end{tabularx}
+\end{table}
+
+Tabel itu punya tiga konsekuensi. Pertama, rilis besar hampir separuhnya bermasalah walaupun
+setiap perubahan dibuat dengan hati-hati. Kedua, tim harus mencari satu penyebab di antara 60
+perubahan, sehingga pemulihan lama. Ketiga, membatalkan rilis besar ikut membatalkan 59 perubahan
+yang baik, sehingga tim memilih memperbaiki di tempat pada malam hari.
+
+\subsection{Temuan DORA 2025: AI sebagai Penguat}
+
+Laporan DORA 2025, \textit{State of AI-assisted Software Development}, disusun dari survei
+terhadap hampir 5.000 profesional teknologi. Sekitar 90 persen responden memakai kecerdasan
+artifisial (\textit{Artificial Intelligence}, AI) dalam pekerjaannya \cite{dora2025}. Temuan
+utamanya: peran utama AI adalah penguat (\textit{amplifier}). AI memperbesar kekuatan dan
+kelemahan yang sudah ada di organisasi. Hasil terbesar dari investasi AI datang dari perhatian
+pada sistem organisasi yang mendasarinya, bukan pada alatnya. Laporan itu juga memperkenalkan
+DORA AI Capabilities Model berisi tujuh kapabilitas dasar yang memperkuat dampak positif AI, serta
+tujuh profil tim untuk membaca kinerja pengiriman \cite{dora2025}.
+
+Analoginya seperti memberi kurir mobil yang lebih cepat, padahal jalurnya macet di gerbang tol.
+Mobil yang lebih cepat tidak memperpendek antrean di gerbang. Kurir hanya sampai lebih cepat di
+ujung antrean.
+
+Dua contoh hitungan di Medikara Health:
+\begin{enumerate}
+  \item Misalkan asisten pemrograman AI memangkas pemrograman kolom nomor telepon keluarga dari
+        dua hari menjadi satu hari. \textit{Lead time} permintaan hanya turun dari 96 menjadi 95
+        hari, karena hambatannya ada di persetujuan dan antrean.
+  \item Misalkan dengan AI pengembang menghasilkan 30 persen lebih banyak perubahan, sementara
+        jendela rilis tetap triwulanan. Isi rilis naik dari 60 menjadi 78 perubahan, dan peluang
+        rilis bermasalah naik menjadi $1 - 0{,}99^{78} \approx 54{,}3$ persen. Kelemahan yang
+        sudah ada justru diperkuat.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Metrik DORA SIMRS Jakarta dan Medikara+}]
+  Tim transformasi menghitung metrik DORA dari catatan rilis dan insiden 2025 (data contoh di
+  \berkas{sources/chapter13/contoh-riwayat-deployment.csv}, dihitung dengan
+  \berkas{sources/chapter13/hitung-metrik-dora.py}). Hasilnya ada di Tabel
+  \ref{tab:ch13-dora-medikara}. SIMRS Jakarta dirilis tiga bulan sekali pada Sabtu malam dengan
+  henti layanan sekitar empat jam (Bab 7). Medikara+ dirilis vendor sebulan sekali lewat 37
+  langkah manual (Bab 5).
+
+  Hasil ini punya dua konsekuensi. Pertama, data Medikara sendiri tidak mendukung anggapan rilis
+  jarang lebih aman. SIMRS, yang paling jarang dirilis, justru paling sering gagal (43 persen),
+  dengan pemulihan median 9 jam karena membatalkan rilis berisi sekitar 60 perubahan menuntut
+  pemulihan basis data. Kedua, Medikara+ lebih baik, tetapi masih bergantung pada jadwal vendor
+  dan langkah manual. Sasaran awal untuk C4: \textit{deployment} SIMRS bulanan lalu mingguan,
+  tingkat kegagalan di bawah 15 persen, dan pemulihan di bawah satu jam.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Metrik DORA SIMRS Jakarta dan Medikara+ tahun 2025 (rekaan)}
+  \label{tab:ch13-dora-medikara}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Metrik} & \textbf{SIMRS RS Jakarta} & \textbf{Medikara+} \\ \hline
+    \textit{Deployment} per tahun & 7 (4 terjadwal, 3 darurat) & 14 (12 terjadwal, 2 darurat) \\
+      \hline
+    Perubahan per rilis terjadwal & 60,5 & 7,8 \\ \hline
+    \textit{Lead time} perubahan rata-rata & 55 hari (sekitar 8 minggu) & 29 hari (sekitar 4
+      minggu) \\ \hline
+    Tingkat kegagalan perubahan & 3 dari 7 (43 persen) & 2 dari 14 (14 persen) \\ \hline
+    Waktu pemulihan median & 9 jam & 5 jam \\ \hline
+    Tingkat pengerjaan ulang & 3 dari 7 (43 persen) & 2 dari 14 (14 persen) \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{CI/CD dan Strategi Rilis}
+\label{sec:ch13-cicd}
 
-% TODO
-% Cakupan: continuous integration, continuous delivery, dan continuous deployment; tahapan pipeline; strategi rilis blue-green dan canary; keamanan rantai pasok perangkat lunak disinggung singkat (dibahas rinci di IT40813).
-% Pendalaman teknis: membuat pipeline CI sederhana dengan GitHub Actions.
+Pertanyaan berikutnya: bagaimana memperkecil ukuran rilis tanpa menambah beban kerja manual?
+Rilis mingguan dengan 37 langkah manual berarti 52 kali menjalankan 37 langkah dalam setahun.
+Jawabannya adalah otomasi jalur dari \textit{commit} sampai produksi, yang dikenal sebagai CI/CD.
+
+\subsection{Continuous Integration, Continuous Delivery, dan Continuous Deployment}
+
+\textit{Continuous integration} adalah praktik menggabungkan perubahan setiap pengembang ke cabang
+utama sesering mungkin, sedikitnya sekali sehari. Setiap penggabungan memicu \textit{build} dan uji
+otomatis. Bila hasilnya gagal, perbaikan didahulukan di atas pekerjaan lain. \textit{Continuous
+delivery} melangkah lebih jauh: setiap perubahan yang lolos seluruh tahap selalu dalam keadaan siap
+dirilis, sehingga rilis ke produksi menjadi keputusan bisnis yang dijalankan dengan satu tombol.
+Humble dan Farley menyebut rangkaian tahap otomatis itu \textit{deployment pipeline}, yaitu proses
+otomatis yang membawa setiap perubahan dari \textit{commit} sampai rilis \cite{c13-humble2010}.
+\textit{Continuous deployment} menghapus tombol itu: setiap perubahan yang lolos langsung berjalan
+di produksi. Gambar \ref{fig:ch13-pipeline} memperlihatkan tahap-tahap \textit{pipeline} dan
+cakupan ketiga istilah.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch13-pipeline-cicd.tex}
+  \caption{Tahap \textit{pipeline} CI/CD dan cakupan \textit{continuous integration},
+           \textit{continuous delivery}, serta \textit{continuous deployment}}
+  \label{fig:ch13-pipeline}
+\end{figure}
+
+Analoginya seperti dapur katering. Juru masak mencicipi setiap masakan begitu matang, sehingga
+rasa yang salah ketahuan saat itu juga (\textit{continuous integration}). Masakan yang lolos
+dicicipi langsung dikemas dan diberi label, siap dikirim kapan pun pemesan meminta
+(\textit{continuous delivery}). Pada katering tertentu, kotak yang sudah siap langsung dikirim
+tanpa menunggu telepon pemesan (\textit{continuous deployment}).
+
+Dua hal pada huruf CD sering tertukar. Pembagiannya begini. \textit{Continuous delivery}
+mempertahankan keputusan manusia sebelum produksi, sedangkan \textit{continuous deployment} tidak.
+Bagi rumah sakit, keduanya dapat dipakai bersamaan. Perubahan tampilan Medikara+ berisiko rendah
+dan cocok dengan \textit{continuous deployment}. Perubahan pada modul resep atau rekam medis cocok
+dengan \textit{continuous delivery}, karena rilisnya mungkin perlu ditandatangani perwakilan
+klinis. Yang dibuang bukan persetujuannya, melainkan pekerjaan manual dan antrean di sekitar
+persetujuan itu.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Misalkan 37 langkah manual rilis Medikara+ menyita dua orang vendor selama empat jam, atau
+        8 jam-orang per rilis. Rilis mingguan secara manual berarti $52 \times 8 = 416$ jam-orang
+        setahun. \textit{Pipeline} menjalankan langkah yang sama sekitar 22 menit, kecuali satu
+        persetujuan, sehingga rilis mingguan menjadi masuk akal.
+  \item Misalkan uji regresi SIMRS melibatkan enam penguji selama lima hari per rilis. Bila 70
+        persen skenario diotomatisasi, uji otomatis berjalan sekitar 40 menit pada setiap
+        \textit{commit}, dan uji manual cukup satu setengah hari untuk skenario klinis berisiko.
+\end{enumerate}
+
+\subsection{Strategi Rilis: Blue-Green dan Canary}
+
+Rilis SIMRS saat ini menghentikan layanan sekitar empat jam. Strategi rilis modern memasang versi
+baru tanpa henti layanan dan menyediakan jalan pulang yang cepat. Dua yang paling banyak dipakai
+adalah \textit{blue-green} dan \textit{canary}, yang keduanya dibahas Humble dan Farley
+\cite{c13-humble2010}. Pada \textit{blue-green}, organisasi menjalankan dua lingkungan produksi
+yang identik. Versi lama melayani pengguna di satu lingkungan, versi baru dipasang dan diuji di
+lingkungan lain, lalu lalu lintas dipindahkan sekaligus. Bila ada masalah, lalu lintas dipindahkan
+kembali dalam hitungan menit. Pada \textit{canary}, versi baru lebih dahulu melayani sebagian kecil
+pengguna. Bila ukuran keandalannya baik, porsinya diperbesar bertahap sampai seluruh pengguna.
+Tabel \ref{tab:ch13-strategi-rilis} membandingkan keduanya dengan cara lama dan cara bergilir
+(\textit{rolling}).
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbandingan strategi rilis}
+  \label{tab:ch13-strategi-rilis}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Strategi} & \textbf{Cara kerja} & \textbf{Pembatalan} & \textbf{Biaya tambahan} &
+      \textbf{Cocok untuk} \\ \hline
+    Serentak dengan henti layanan & Sistem dihentikan, versi baru dipasang, sistem dinyalakan &
+      Lambat, sering perlu pemulihan basis data & Rendah & Sistem kecil dengan jendela henti yang
+      dapat diterima \\ \hline
+    Bergilir (\textit{rolling}) & Server diganti versi baru satu per satu & Sedang, diganti
+      ulang satu per satu & Rendah & Layanan tanpa perubahan skema data yang besar \\ \hline
+    \textit{Blue-green} & Dua lingkungan identik, lalu lintas dipindah sekaligus & Cepat,
+      lalu lintas dipindah kembali & Tinggi: dua lingkungan selama peralihan & Perubahan yang
+      harus dapat dibatalkan dalam hitungan menit \\ \hline
+    \textit{Canary} & Sebagian kecil pengguna lebih dahulu, dipantau, lalu diperluas & Cepat,
+      dampak terbatas & Sedang: pembagian lalu lintas dan pemantauan & Layanan dengan banyak
+      pengguna dan ukuran keandalan yang jelas \\ \hline
+  \end{tabularx}
+\end{table}
+
+Analoginya ada di dunia pertunjukan dan kuliner. \textit{Blue-green} seperti gedung pertunjukan
+dengan dua panggung. Panggung kedua ditata selama pertunjukan di panggung pertama berlangsung, lalu
+penonton cukup diputar kursinya. \textit{Canary} seperti restoran waralaba yang mencoba menu baru
+di satu cabang selama dua minggu sebelum menjualnya di semua cabang.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Pemesanan Medikara+ menerima sekitar 28.000 upaya per 30 hari (Bab 11), atau sekitar
+        933 per hari. Dengan \textit{canary} 5 persen, sekitar 47 pemesanan per hari melewati
+        versi baru. Misalkan versi baru menggagalkan 10 persen pemesanan: dalam satu hari hanya
+        sekitar 5 pemesanan gagal, bukan 93. \textit{Error budget} dari Bab 11 menjadi ukuran
+        yang memutuskan apakah porsi \textit{canary} boleh diperbesar.
+  \item \textit{Blue-green} untuk SIMRS menghapus henti layanan empat jam, tetapi selama peralihan
+        kedua versi memakai basis data yang sama. Setiap perubahan skema harus cocok dengan kedua
+        versi, misalnya kolom baru ditambahkan dahulu dan kolom lama dihapus pada rilis
+        berikutnya. Tanpa disiplin ini, pembatalan cepat hanya ada di atas kertas.
+\end{enumerate}
+
+\subsection{Keamanan Rantai Pasok Perangkat Lunak}
+
+\textit{Pipeline} yang mampu memasang perubahan ke produksi juga menjadi sasaran serangan. Bila
+penyerang dapat mengubah \textit{pipeline}, menyisipkan pustaka palsu, atau mengganti
+\textit{image}, perubahan berbahaya ikut terpasang dengan cara yang terlihat sah. Kerangka
+Supply-chain Levels for Software Artifacts (SLSA) menyusun standar dan kontrol untuk mencegah
+pengubahan tanpa izin dan menjaga keutuhan paket perangkat lunak, bertahap lewat beberapa tingkat
+\cite{c13-slsa}. Tiga kontrol awal yang relevan bagi Medikara adalah: hak mengubah
+\textit{pipeline} dibatasi dan rahasia tidak disimpan di kode; setiap \textit{image} di produksi
+dapat dibuktikan berasal dari \textit{pipeline} resmi; dan pustaka pihak ketiga dipindai sebelum
+dipakai. Insiden kebocoran data pasien lewat vendor pada 2025 mengingatkan bahwa rantai pasok tidak
+berhenti di batas organisasi. Topik ini dibahas rinci di mata kuliah IT40813.
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Pipeline CI dengan GitHub Actions}]
+  GitHub Actions menjalankan \textit{workflow}, yaitu proses otomatis yang dapat dikonfigurasi dan
+  berisi satu atau beberapa \textit{job}. \textit{Workflow} dipicu oleh \textit{event} di
+  repositori, misalnya \textit{pull request}, dan ditulis sebagai berkas YAML di folder
+  \berkas{.github/workflows} \cite{c13-github-actions}. Listing \ref{lst:ch13-ci} membangun
+  layanan jadwal dokter dari Bab 8. Urutannya mengikuti Gambar \ref{fig:ch13-pipeline}: periksa
+  sintaks, bangun \textit{image} bertanda \textit{hash commit}, jalankan uji asap (\textit{smoke
+  test}) terhadap alamat \texttt{/sehat}, lalu kirim \textit{image} ke \textit{registry} hanya dari
+  cabang \texttt{main}.
+
+\begin{lstlisting}[language=yaml, caption={Workflow CI layanan jadwal dokter, tersedia di \berkas{sources/chapter13/contoh-pipeline-gitops/ci-jadwal-dokter.yml}}, label={lst:ch13-ci}]
+# Kegunaan: contoh pipeline CI Bab 13 untuk layanan jadwal dokter Bab 08.
+# Pakai: taruh di .github/workflows/ pada repositori milik sendiri yang
+# berisi app.py dan Dockerfile dari sources/chapter08/contoh-container.
+name: ci-jadwal-dokter
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  # Ganti dengan nama organisasi sendiri, huruf kecil semua.
+  IMAGE: ghcr.io/contoh-medikara/jadwal-dokter
+
+jobs:
+  uji-dan-bangun:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      # Kesalahan sintaks ditolak dalam hitungan detik, sebelum build.
+      - name: Periksa sintaks
+        run: python3 -m py_compile app.py
+      # Tag memakai hash commit agar setiap image dapat ditelusuri.
+      - name: Bangun image
+        run: docker build -t "$IMAGE:${{ github.sha }}" .
+      # Uji asap: container harus menjawab /sehat sebelum boleh dikirim.
+      - name: Uji asap
+        run: |
+          docker run -d -p 8080:8080 --name uji "$IMAGE:${{ github.sha }}"
+          curl --fail --retry 5 --retry-connrefused \
+            http://localhost:8080/sehat
+      # Image hanya dikirim dari cabang main, tidak dari pull request.
+      - name: Kirim image
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:${{ github.sha }}"
+\end{lstlisting}
+
+  Tag \textit{image} memakai \textit{hash commit}, bukan \texttt{latest}, sehingga setiap
+  \textit{image} dapat ditelusuri ke satu \textit{commit}. \textit{Pull request} hanya diuji dan
+  tidak pernah mengirim \textit{image}. Contoh ini dijalankan di akun milik sendiri.
+\end{pendalaman}
 
 \section{Infrastructure as Code dan GitOps}
+\label{sec:ch13-gitops}
 
-% TODO
-% Cakupan: IaC sebagai infrastruktur yang ditulis dan ditinjau seperti kode; empat prinsip OpenGitOps v1.0.0 (declarative, versioned and immutable, pulled automatically, continuously reconciled); jejak audit yang dihasilkan GitOps.
-% Pendalaman teknis: menyinkronkan manifest Kubernetes dengan Argo CD atau Flux.
+CI/CD mengotomatisasi jalur perubahan aplikasi. Pertanyaan kemudian muncul: bagaimana dengan
+server, jaringan, basis data, dan konfigurasi tempat aplikasi itu berjalan? Bila bagian itu tetap
+diubah tangan lewat tiket, antrean hanya berpindah tempat.
+
+\subsection{Infrastructure as Code}
+
+Infrastructure as Code (IaC) adalah praktik mendefinisikan infrastruktur dalam berkas teks yang
+disimpan di sistem kendali versi, ditinjau, diuji, dan diterapkan secara otomatis, sama seperti
+kode aplikasi \cite{c13-morris2025}. Berkas itu umumnya bersifat deklaratif: isinya keadaan yang
+diinginkan, misalnya ``tiga server dengan ukuran ini di \textit{region} Jakarta'', bukan urutan
+perintah untuk membuatnya. Alat IaC membandingkan keadaan yang diinginkan dengan keadaan nyata,
+lalu melakukan perubahan yang diperlukan. Hasilnya, lingkungan dapat dibuat ulang dengan hasil
+yang sama, dan setiap perubahan tercatat beserta pembuat dan peninjaunya.
+
+Analoginya seperti resep tertulis di dapur rumah makan berjaringan. Tanpa resep, rasa masakan
+bergantung pada juru masak yang bertugas, dan rasa di cabang Bandung berbeda dengan rasa di cabang
+Bekasi. Dengan resep tertulis, setiap cabang memasak dengan takaran yang sama. Bila resep diubah,
+perubahan itu ditulis, diberi tanggal, dan disetujui kepala dapur. Juru masak yang diam-diam
+menambah garam di luar resep adalah sumber penyimpangan (\textit{drift}) yang membuat rasa tidak
+lagi dapat diprediksi.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Misalkan membuat lingkungan uji SIMRS baru butuh 11 hari kerja dan empat tiket ke tim
+        jaringan, server, basis data, dan keamanan. Dengan templat IaC yang sudah ditinjau,
+        lingkungan yang sama siap dalam sekitar 35 menit dengan hasil identik setiap kali.
+  \item Misalkan audit internal menemukan 41 perubahan konfigurasi produksi tanpa tiket selama
+        enam bulan, sebagian berupa aturan \textit{firewall}. Dengan IaC, aturan itu hanya berubah
+        lewat berkas yang ditinjau, sehingga pertanyaan ``siapa yang mengubah'' selalu terjawab.
+\end{enumerate}
+
+\subsection{Empat Prinsip OpenGitOps}
+
+GitOps adalah cara mengoperasikan sistem dengan menjadikan repositori Git sumber kebenaran tentang
+keadaan yang diinginkan, lalu menyerahkan penerapannya kepada agen perangkat lunak. Kelompok kerja
+OpenGitOps di bawah CNCF merumuskan empat prinsip dalam versi 1.0.0 \cite{opengitops}. Tabel
+\ref{tab:ch13-prinsip-gitops} menerjemahkan keempatnya beserta artinya bagi auditor.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Empat prinsip OpenGitOps v1.0.0 \cite{opengitops} dan buktinya bagi auditor}
+  \label{tab:ch13-prinsip-gitops}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Prinsip} & \textbf{Bunyi prinsip (terjemahan)} & \textbf{Arti praktis} &
+      \textbf{Bukti bagi auditor} \\ \hline
+    Deklaratif (\textit{declarative}) & Keadaan yang diinginkan dari sistem dinyatakan secara
+      deklaratif & Konfigurasi ditulis sebagai keadaan akhir, bukan urutan perintah & Isi berkas
+      dapat dibaca sebagai pernyataan kontrol \\ \hline
+    Berversi dan tidak berubah (\textit{versioned and immutable}) & Keadaan yang diinginkan
+      disimpan dengan cara yang menjamin tidak berubah, berversi, dan riwayatnya lengkap & Setiap
+      perubahan menjadi versi baru; versi lama tidak ditimpa & Riwayat lengkap: siapa, kapan,
+      apa, dan siapa yang menyetujui \\ \hline
+    Ditarik otomatis (\textit{pulled automatically}) & Agen perangkat lunak menarik deklarasi
+      keadaan yang diinginkan dari sumbernya secara otomatis & Agen di dalam klaster mengambil
+      perubahan; manusia tidak memasang langsung & Hak ubah langsung ke produksi dapat dicabut
+      \\ \hline
+    Direkonsiliasi terus (\textit{continuously reconciled}) & Agen terus mengamati keadaan aktual
+      dan berusaha menerapkan keadaan yang diinginkan & Perubahan manual di luar Git terdeteksi
+      dan dikembalikan & Laporan penyimpangan dan riwayat sinkronisasi \\ \hline
+  \end{tabularx}
+\end{table}
+
+Gambar \ref{fig:ch13-gitops} memperlihatkan siklusnya. Usulan perubahan masuk lewat
+\textit{pull request}, ditinjau, lalu digabungkan ke repositori. Agen GitOps seperti Argo CD atau
+Flux menarik isi repositori, menerapkannya ke klaster, lalu terus membandingkan keadaan aktual
+dengan isi repositori.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch13-siklus-gitops.tex}
+  \caption{Siklus GitOps: perubahan diusulkan lewat Git, ditarik agen, dan direkonsiliasi terus
+           dengan keadaan aktual klaster}
+  \label{fig:ch13-gitops}
+\end{figure}
+
+Analoginya seperti pendingin ruangan dengan termostat. Penghuni menetapkan suhu yang diinginkan,
+misalnya 24 derajat. Sensor terus membandingkan suhu ruangan dengan angka itu. Bila seseorang
+membuka jendela dan ruangan memanas, mesin bekerja lebih keras sampai suhu kembali ke 24 derajat.
+Penghuni tidak perlu menyalakan dan mematikan mesin dengan tangan. Bila suhu yang diinginkan perlu
+diubah, yang diubah adalah angka di termostat, bukan kipas mesinnya.
+
+Dua hal pada GitOps sering tertukar. Pembagiannya begini. \textit{Pipeline} CI/CD biasa bekerja
+dengan cara dorong (\textit{push}): \textit{pipeline} di luar klaster memasang perubahan ke
+produksi, sehingga \textit{pipeline} itu harus memegang kunci akses produksi. GitOps bekerja dengan
+cara tarik (\textit{pull}): agen di dalam klaster yang mengambil perubahan, sehingga kunci akses
+produksi tidak perlu keluar dari klaster. Cara dorong juga tidak memperhatikan apa yang terjadi
+setelah pemasangan. Cara tarik terus merekonsiliasi, sehingga perubahan manual tidak bertahan.
+
+\subsection{Jejak Audit dari GitOps}
+
+Bagi auditor, nilai terbesar GitOps adalah jejak audit yang terbentuk sebagai hasil sampingan kerja
+sehari-hari. Setiap perubahan produksi meninggalkan empat bukti. Pertama, \textit{commit} mencatat
+siapa mengusulkan, kapan, dan apa isinya. Kedua, tinjauan \textit{pull request} mencatat siapa yang
+menyetujui dan apa komentarnya. Ketiga, riwayat sinkronisasi agen mencatat kapan versi itu
+berlaku di produksi. Keempat, laporan penyimpangan mencatat perubahan yang tidak melalui Git.
+Argo CD, misalnya, menandai aplikasi yang keadaan aktualnya menyimpang dari Git sebagai
+\texttt{OutOfSync} dan menyediakan jejak audit untuk \textit{event} aplikasi dan panggilan API
+(Application Programming Interface) \cite{c13-argocd}.
+
+Jejak itu punya batas. Repositori Git menjadi kunci baru, sehingga hak tulis dan aturan peninjauan
+di repositori harus dijaga seketat hak akses produksi. Rahasia seperti kata sandi basis data tidak
+boleh disimpan polos di Git. Akses darurat (\textit{break-glass}) tetap dibutuhkan untuk insiden,
+tetapi setiap pemakaiannya wajib tercatat dan ditinjau.
+
+\begin{kasus}[title={Kasus Medikara Health: GitOps sebagai Jawaban Temuan Audit Kontrol Akses}]
+  Audit internal Medikara menemukan kontrol akses yang lemah. Misalkan 17 akun dari vendor, tim TI
+  rumah sakit, dan tim pusat memegang hak administrator langsung di server produksi, dan dari 41
+  perubahan konfigurasi tanpa tiket selama enam bulan, 9 tidak dapat ditelusuri pembuatnya.
+  Auditor meminta bukti bahwa setiap perubahan produksi diusulkan, disetujui, dan diterapkan oleh
+  orang yang berbeda.
+
+  Tim mengusulkan GitOps untuk layanan baru di belakang Medikara+ lebih dahulu, lalu SIMRS
+  terpadu. Hak ubah langsung dicabut dari 17 akun, kecuali 2 akun darurat yang setiap
+  pemakaiannya memicu peringatan dan wajib ditinjau dalam 24 jam. Setiap perubahan masuk lewat
+  \textit{pull request} dengan dua peninjau, salah satunya dari tim lain.
+
+  Usulan ini punya dua konsekuensi. Pertama, auditor mengambil sampel langsung dari riwayat
+  repositori, dan pertanyaan ``siapa mengubah apa'' terjawab dalam menit, bukan hari. Kedua, ada
+  biaya: vendor dan tim TI rumah sakit harus belajar bekerja lewat Git, dan perubahan darurat
+  menjadi 15 menit lewat \textit{pull request} yang dipercepat, dibanding 2 menit lewat akses
+  langsung. Prosedur darurat harus ditulis sebelum insiden.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Menyinkronkan Manifest dengan Argo CD}]
+  Argo CD adalah alat \textit{continuous delivery} deklaratif berbasis GitOps untuk Kubernetes.
+  Argo CD bekerja sebagai kontroler di dalam klaster yang terus membandingkan keadaan aktual
+  aplikasi dengan keadaan target di Git, dan dapat menerapkan perubahan secara otomatis
+  \cite{c13-argocd}. Listing \ref{lst:ch13-argocd} mendefinisikan satu \textit{Application} untuk
+  layanan jadwal dokter. Repositori konfigurasinya berisi \textit{manifest}
+  \texttt{deployment.yaml} dan \texttt{service.yaml} dari Bab 8.
+
+\begin{lstlisting}[language=yaml, caption={Application Argo CD layanan jadwal dokter, tersedia di \berkas{sources/chapter13/contoh-pipeline-gitops/application-jadwal-dokter.yaml}}, label={lst:ch13-argocd}]
+# Kegunaan: contoh Application Argo CD Bab 13 untuk layanan jadwal dokter.
+# Pakai: kubectl apply -n argocd -f application-jadwal-dokter.yaml pada
+# klaster latihan sendiri (kind/minikube) yang sudah terpasang Argo CD.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jadwal-dokter
+  namespace: argocd
+spec:
+  project: default
+  # Prinsip 1 dan 2: keadaan yang diinginkan tersimpan di Git berversi.
+  source:
+    repoURL: https://github.com/contoh-medikara/konfigurasi-layanan.git
+    targetRevision: main
+    path: jadwal-dokter/produksi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jadwal-dokter
+  # Prinsip 3 dan 4: agen menarik perubahan dan terus merekonsiliasi.
+  syncPolicy:
+    automated:
+      # Sumber daya yang dihapus dari Git ikut dihapus dari klaster.
+      prune: true
+      # Perubahan manual di klaster (drift) dikembalikan ke isi Git.
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+\end{lstlisting}
+
+  Untuk melihat prinsip keempat, ubah jumlah replika dengan \texttt{kubectl scale}, lalu amati
+  Argo CD mengembalikannya ke angka di Git. Flux mencapai hasil yang sama dengan
+  \texttt{GitRepository} dan \texttt{Kustomization}. Percobaan dijalankan di klaster latihan
+  sendiri, bukan di klaster milik organisasi lain.
+\end{pendalaman}
 
 \section{Platform Engineering dan Internal Developer Platform}
+\label{sec:ch13-platform}
 
-% TODO
-% Cakupan: platform engineering dan IDP menurut CNCF Platforms White Paper; golden path, self-service, dan platform as a product; Platform Engineering Maturity Model (investasi, adopsi, antarmuka, operasi, pengukuran); perbedaan tim platform dengan divisi infrastruktur yang melayani tiket.
+Bila setiap tim harus membangun sendiri \textit{pipeline}, templat IaC, agen GitOps, pemantauan,
+dan pengelolaan rahasia, beban setiap tim berlipat dan hasilnya berbeda-beda. Pertanyaan
+berikutnya: siapa yang menyediakan semua itu, dan dengan cara apa?
+
+\subsection{Platform, IDP, dan Platform Engineering}
+
+CNCF mendefinisikan platform untuk komputasi \textit{cloud-native} sebagai kumpulan kapabilitas
+terpadu yang didefinisikan dan disajikan sesuai kebutuhan penggunanya \cite{cncf-platforms}.
+Penggunanya adalah tim pengembang di dalam organisasi, sehingga platform ini sering disebut
+Internal Developer Platform (IDP). \textit{Platform engineering} adalah disiplin membangun dan
+mengelola platform itu. \textit{White paper} CNCF menyebut tujuh sifat platform yang baik:
+diperlakukan sebagai produk, pengalaman pengguna yang baik, dokumentasi dan pengenalan yang
+memadai, swalayan, beban kognitif pengguna yang berkurang, kapabilitas yang opsional dan dapat
+dirangkai, serta aman sejak awal (\textit{secure by default}). Tim platform tidak harus menjalankan
+sendiri server dan jaringan; tanggung jawab utamanya adalah antarmuka dan pengalaman pengguna.
+
+Tiga gagasan paling sering muncul dalam percakapan manajemen. Pertama, \textit{golden path}, yaitu
+paket templat proyek awal beserta dokumentasinya, sehingga tim baru langsung berjalan di jalur yang
+sudah teruji \cite{cncf-platforms}. Kedua, \textit{self-service}: tim pengguna mengambil sendiri
+kapabilitas yang dibutuhkan tanpa menunggu tiket. Ketiga, \textit{platform as a product}: tim
+platform memperlakukan tim pengembang sebagai pelanggan, mendengar kebutuhannya, dan mengukur
+keberhasilan dari pemakaian. Gambar \ref{fig:ch13-platform} memperlihatkan lapisan platform
+internal yang diusulkan untuk Medikara.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch13-lapisan-platform.tex}
+  \caption{Lapisan platform internal Medikara: tim \textit{stream-aligned} memakai antarmuka
+           swalayan di atas kapabilitas dan fondasi yang dikelola tim platform}
+  \label{fig:ch13-platform}
+\end{figure}
+
+Analoginya seperti dapur bersama yang disewakan kepada usaha kuliner kecil. Pengelola menyediakan
+kompor, gudang pendingin, izin higienis, dan kemasan standar. Penyewa tinggal memasak menu
+khasnya. Penyewa boleh membawa alat sendiri, tetapi jalur standar lebih murah dan sudah lolos
+pemeriksaan dinas kesehatan. Pengelola yang baik menanyai penyewa apa yang kurang, bukan menunggu
+surat permohonan.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Misalkan tim farmasi dan laboratorium membutuhkan layanan stok obat. Tanpa platform, tim
+        mengajukan lima tiket untuk repositori, \textit{pipeline}, \textit{namespace}, basis data,
+        dan akses \textit{log}, lalu menunggu 14 hari. Dengan \textit{golden path}, layanan
+        pertama berjalan di \textit{staging} dalam satu hari, lengkap dengan \textit{pipeline},
+        pemantauan, dan Service Level Objective (SLO) dasar dari Bab 11.
+  \item Misalkan tim infrastruktur pusat menerima 12 permintaan lingkungan uji per bulan, dengan
+        tunggu 9 hari dan kerja 6 jam per permintaan. Dengan lingkungan uji swalayan berbasis
+        IaC, tunggu turun menjadi sekitar 30 menit, dan 72 jam kerja per bulan dipakai untuk
+        memperbaiki templat bersama.
+\end{enumerate}
+
+\subsection{Tim Platform Bukan Loket Tiket}
+
+Dua hal pada tim platform sering tertukar. Pembagiannya begini. Divisi infrastruktur tradisional
+melayani tiket satu per satu. Tim platform membangun kapabilitas yang dapat dipakai berulang tanpa
+tiket. Mengganti nama divisi infrastruktur menjadi ``tim platform'' tanpa mengubah cara kerjanya
+hanya menghasilkan loket tiket dengan nama baru. Tabel \ref{tab:ch13-platform-tiket} memperlihatkan
+perbedaannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbedaan divisi infrastruktur yang melayani tiket dengan tim platform}
+  \label{tab:ch13-platform-tiket}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Divisi infrastruktur berbasis tiket} & \textbf{Tim platform} \\
+      \hline
+    Cara melayani & Mengerjakan permintaan satu per satu & Menyediakan kapabilitas swalayan
+      yang dipakai berulang \\ \hline
+    Satuan kerja & Tiket & Produk internal dengan peta jalan \\ \hline
+    Ukuran keberhasilan & Jumlah tiket selesai dan target waktu penyelesaian & Adopsi, kepuasan
+      pengguna, waktu sampai layanan pertama berjalan, metrik DORA tim pengguna \\ \hline
+    Hubungan dengan tim lain & Penjaga gerbang yang menyetujui atau menolak & Penyedia layanan
+      yang mendengar kebutuhan pengguna \\ \hline
+    Akibat bila permintaan naik & Antrean memanjang, perlu tambah orang & Biaya per pemakaian
+      turun \\ \hline
+    Pendanaan & Pusat biaya & Didanai menurut nilai yang dihasilkan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Ada dua jebakan di sisi lain. Jebakan pertama adalah platform yang dibangun lama sebelum ada
+pengguna, sehingga yang jadi tidak cocok dengan kebutuhan. Skelton dan Pais menyarankan memulai
+dari platform tertipis yang masih berguna (\textit{thinnest viable platform}), yang pada awalnya
+bisa sesederhana halaman dokumentasi berisi standar dan templat \cite{skelton2025}. Jebakan kedua
+adalah memaksakan platform lewat perintah. Platform yang baik dipakai karena memudahkan, bukan
+karena diwajibkan.
+
+\subsection{Platform Engineering Maturity Model}
+
+Untuk menilai posisi organisasi, CNCF menerbitkan \textit{Platform Engineering Maturity Model}.
+Model ini memuat lima aspek, yaitu investasi, adopsi, antarmuka, operasi, dan pengukuran, dengan
+empat tingkat kematangan pada setiap aspek \cite{c13-cncf-maturity}. Tabel
+\ref{tab:ch13-maturity} meringkasnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Ringkasan \textit{Platform Engineering Maturity Model} CNCF
+           \cite{c13-cncf-maturity}}
+  \label{tab:ch13-maturity}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{1. \textit{Provisional}} & \textbf{2. \textit{Operationalized}} &
+      \textbf{3. \textit{Scalable}} & \textbf{4. \textit{Optimizing}} \\ \hline
+    Investasi & Sukarela atau sementara & Tim khusus, pusat biaya & Didanai sebagai produk &
+      Ekosistem yang diperluas para spesialis \\ \hline
+    Adopsi & Tidak menentu & Didorong insentif dan perintah & Ditarik oleh nilai & Pengguna ikut
+      berkontribusi \\ \hline
+    Antarmuka & Proses khusus, banyak campur tangan manual & Alat standar dan \textit{golden
+      path} terdokumentasi & Swalayan ``sekali klik'' & Menyatu dengan alat kerja tim \\ \hline
+    Operasi & Dikerjakan bila diminta & Tercatat dan punya pemilik & Diatur terpusat dengan
+      proses baku & Layanan terkelola dengan siklus hidup otomatis \\ \hline
+    Pengukuran & Seadanya & Pengumpulan data yang konsisten & Wawasan dengan ukuran keberhasilan
+      & Gabungan ukuran kuantitatif dan kualitatif \\ \hline
+  \end{tabularx}
+\end{table}
+
+Misalkan penilaian awal menempatkan Medikara di tingkat 1 pada kelima aspek: empat orang
+bersertifikat \textit{cloud} (Bab 4) mengurus platform sambil mengerjakan tugas lain, dan semua
+permintaan masuk lewat tiket. Sasaran yang wajar untuk dua tahun pertama adalah tingkat 2 pada
+semua aspek dan tingkat 3 pada antarmuka, bukan melompat ke tingkat 4.
 
 \section{Team Topologies}
+\label{sec:ch13-topologi}
 
-% TODO
-% Cakupan: empat tipe tim (stream-aligned, platform, enabling, complicated-subsystem) dan tiga mode interaksi (collaboration, X-as-a-Service, facilitating) menurut Skelton dan Pais edisi ke-2 (2025); beban kognitif tim; kaitan dengan hukum Conway (Bab 7).
-% Kasus Medikara: penyatuan tim TI dari lima rumah sakit menjadi tim stream-aligned dan tim platform.
+Platform hanya satu bagian dari jawaban. Pertanyaan yang lebih besar: bagaimana menata seluruh
+tim agar perubahan mengalir cepat tanpa saling menunggu? Bab 7 sudah memperkenalkan hukum Conway:
+struktur sistem meniru struktur komunikasi organisasi. Team Topologies memberi kosakata untuk
+merancang struktur itu dengan sengaja.
+
+\subsection{Empat Tipe Tim dan Beban Kognitif}
+
+Skelton dan Pais membedakan empat tipe tim \cite{skelton2025}. Tim \textit{stream-aligned}
+mengirim perubahan dari awal sampai akhir untuk satu aliran nilai, misalnya satu produk, satu
+perjalanan pengguna, atau satu domain bisnis. Tipe ini adalah mayoritas. Tiga tipe lainnya ada
+untuk mengurangi beban tim \textit{stream-aligned}. Tim platform menyediakan layanan internal
+swalayan. Tim \textit{enabling} membantu tim lain menguasai kemampuan baru, lalu mundur. Tim
+\textit{complicated-subsystem} menjaga bagian yang membutuhkan keahlian langka. Ukuran yang
+dipakai untuk menilai pembagian ini adalah beban kognitif tim, yaitu jumlah hal yang harus
+dipahami dan dijaga satu tim sekaligus. Tim yang menanggung terlalu banyak hal akan melambat,
+seberapa pun pintar anggotanya. Tabel \ref{tab:ch13-tipe-tim} merangkum keempat tipe.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Empat tipe tim menurut Team Topologies \cite{skelton2025}, dengan analogi rumah sakit
+           dan contoh di TI Medikara}
+  \label{tab:ch13-tipe-tim}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Tipe tim} & \textbf{Tugas} & \textbf{Analogi di rumah sakit} & \textbf{Contoh di TI
+      Medikara} \\ \hline
+    \textit{Stream-aligned} & Mengirim perubahan untuk satu aliran nilai dari awal sampai akhir &
+      Tim bangsal yang merawat pasien sejak masuk sampai pulang & Tim rekam medis \\ \hline
+    Platform & Menyediakan layanan internal swalayan agar tim lain tidak memikul beban teknis
+      yang sama & Instalasi sterilisasi pusat yang menyediakan alat steril siap pakai & Tim
+      platform berisi 6 orang \\ \hline
+    \textit{Enabling} & Membantu tim lain menguasai kemampuan baru untuk sementara & Tim
+      pencegahan dan pengendalian infeksi yang melatih bangsal & Tim keamanan aplikasi dan
+      keandalan berisi 2 orang \\ \hline
+    \textit{Complicated-subsystem} & Menjaga bagian yang membutuhkan keahlian langka & Unit
+      fisika medis untuk radioterapi & Tim integrasi FHIR untuk SATUSEHAT dan BPJS \\ \hline
+  \end{tabularx}
+\end{table}
+
+Analoginya ada di rumah sakit itu sendiri. Perawat bangsal tidak mencuci dan menyeterilkan alat
+bedahnya sendiri. Bila itu dilakukan, waktu merawat pasien habis untuk pekerjaan penunjang. Bangsal
+memakai layanan instalasi sterilisasi pusat, dilatih sesekali oleh tim pengendalian infeksi, dan
+merujuk pasien radioterapi ke unit yang punya fisikawan medis. Pembagian itu menjaga beban kerja
+bangsal tetap pada inti tugasnya.
+
+\subsection{Tiga Mode Interaksi}
+
+Team Topologies juga membatasi cara tim berinteraksi menjadi tiga mode \cite{skelton2025}:
+\begin{itemize}
+  \item \textit{Collaboration}: dua tim bekerja berdampingan untuk menemukan sesuatu yang baru.
+        Mode ini mahal dan sebaiknya berjangka waktu.
+  \item \textit{X-as-a-Service}: satu tim memakai layanan tim lain lewat antarmuka yang jelas,
+        dengan koordinasi seminimal mungkin.
+  \item \textit{Facilitating}: satu tim membantu dan melatih tim lain sampai tim itu mandiri.
+\end{itemize}
+Mode interaksi sebaiknya berubah seiring waktu. Kolaborasi yang tidak pernah berakhir adalah tanda
+bahwa batas tanggung jawab belum jelas. Gambar \ref{fig:ch13-topologi} memperlihatkan topologi tim
+target Medikara beserta mode interaksinya.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch13-topologi-tim-medikara.tex}
+  \caption{Topologi tim target TI Medikara: lima tim \textit{stream-aligned} didukung tim
+           platform, tim \textit{enabling}, dan tim \textit{complicated-subsystem}}
+  \label{fig:ch13-topologi}
+\end{figure}
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Misalkan tim integrasi FHIR (Fast Healthcare Interoperability Resources) dan tim rekam
+        medis berkolaborasi tiga bulan untuk memetakan rekam medis ke format FHIR yang diminta
+        SATUSEHAT. Setelah stabil, interaksinya menjadi \textit{X-as-a-Service}: tim rekam medis
+        cukup memanggil API integrasi.
+  \item Misalkan tim \textit{enabling} mendampingi setiap tim \textit{stream-aligned} enam minggu
+        secara bergiliran untuk memasang pemindaian pustaka dan SLO dasar. Lima tim membutuhkan
+        30 minggu, lalu setiap tim menjalankannya sendiri.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Dari Tim TI per Rumah Sakit ke Tim Stream-Aligned dan Tim Platform}]
+  Medikara punya 52 staf TI (Bab 4). Misalkan 26 orang bekerja di lima rumah sakit, yaitu 12
+  pengembang SIMRS dan 14 staf perangkat dan bantuan pengguna (Bab 7), dan 26 orang di kantor
+  pusat untuk ERP (Enterprise Resource Planning), infrastruktur, jaringan, dan layanan bantuan.
+  Bab 7 sudah mengusulkan empat tim domain berisi tiga pengembang dan dua perwakilan unit
+  pengguna. Bab ini melengkapinya menjadi topologi utuh pada Gambar \ref{fig:ch13-topologi}.
+
+  Dari kantor pusat, 15 orang pindah ke tim baru: 6 orang menjadi tim platform, 4 orang membentuk
+  tim Medikara+ bersama satu pemilik produk dari bagian layanan pasien, 3 orang menjadi tim
+  integrasi FHIR, dan 2 orang menjadi tim \textit{enabling}. Sebanyak 11 orang tetap menangani ERP
+  dan layanan bantuan pusat. Tim Medikara+ bekerja bersama vendor, tetapi kepemilikan produk kini
+  ada di tangan Medikara.
+
+  Penataan ini punya tiga konsekuensi. Pertama, beban kognitif turun. Sebelumnya dua sampai tiga
+  pengembang di setiap rumah sakit menjaga sembilan modul SIMRS beserta server dan cadangannya.
+  Kini setiap tim domain menjaga dua sampai tiga modul, dan urusan \textit{pipeline}, klaster,
+  serta pemantauan diambil alih platform. Kedua, tim \textit{enabling} (2 orang) dan tim
+  integrasi (3 orang) berada di bawah ukuran tim yang dianjurkan, sehingga dokumentasi dan rotasi
+  pengetahuan menjadi syarat. Ketiga, tanpa \textit{self-service}, enam orang tim platform yang
+  melayani lima tim akan kembali menjadi loket tiket.
+\end{kasus}
 
 \section{Aktivitas: Model Operasi Delivery dan Peta Jalan Platform Internal}
+\label{sec:ch13-aktivitas}
 
-% TODO
-% Tujuan aktivitas: memetakan alur perubahan saat ini, merancang alur CI/CD dan GitOps target, serta menyusun topologi tim dan kapabilitas platform internal yang diprioritaskan.
-% Peran dalam tim: anggota non-teknis memimpin pemetaan waktu tunggu dan rantai persetujuan; anggota teknis merancang alur CI/CD dan GitOps target; seluruh anggota menyusun topologi tim dan prioritas platform.
-% Langkah: (1) petakan alur perubahan dari permintaan fitur sampai produksi; (2) tandai antrean dan langkah manual; (3) rancang alur target; (4) susun topologi tim target; (5) pilih tiga sampai lima kapabilitas platform internal dan urutannya.
-% Luaran dan tonggak capstone: C4, model operasi delivery dan peta jalan platform internal.
-% Berkas sources yang direncanakan: sources/chapter13/templat-pemetaan-alur-perubahan.xlsx, sources/chapter13/templat-topologi-tim.drawio, sources/chapter13/contoh-pipeline-gitops/ (opsional)
+\textbf{Tujuan.} Tim memetakan alur perubahan saat ini, merancang alur CI/CD dan GitOps target,
+serta menyusun topologi tim dan kapabilitas platform internal yang diprioritaskan. Tim memakai
+organisasi nyata dengan izin tertulis dan data yang dianonimkan, atau memakai kasus Medikara
+Health.
+
+\textbf{Pembagian peran.} Alur perubahan memuat dua jenis hambatan: hambatan organisasi seperti
+persetujuan dan antrean, serta hambatan teknis seperti uji manual dan rilis manual. Tabel
+\ref{tab:ch13-peran} membagi peran agar setiap anggota menyumbang sesuai latar belakangnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pembagian peran dalam Aktivitas Bab 13}
+  \label{tab:ch13-peran}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Peran} & \textbf{Diisi oleh} & \textbf{Tugas} \\ \hline
+    Pemeta waktu tunggu & Anggota non-teknis & Menelusuri satu perubahan dari permintaan sampai
+      produksi, mewawancarai pemberi persetujuan, mencatat waktu tunggu setiap langkah \\ \hline
+    Perancang alur target & Anggota teknis & Merancang tahap CI/CD dan GitOps target, menghitung
+      metrik DORA dari catatan rilis \\ \hline
+    Perancang topologi & Seluruh anggota & Menyusun tim \textit{stream-aligned}, platform, dan
+      \textit{enabling}, lalu memeriksa beban kognitif setiap tim \\ \hline
+    Penyusun peta jalan & Satu anggota yang ditunjuk & Mengurutkan kapabilitas platform dan
+      menjaga konsistensi angka dengan artefak C4 lain \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Petakan alur perubahan saat ini. Pilih satu perubahan kecil yang baru selesai, lalu
+        telusuri dari permintaan pertama sampai berjalan di produksi. Catat setiap langkah,
+        pelakunya, waktu proses, dan waktu tunggu sesudahnya.
+  \item Tandai antrean dan langkah manual. Kelompokkan setiap langkah menjadi kerja, persetujuan,
+        antrean, uji manual, atau rilis manual. Hitung efisiensi alur, yaitu waktu proses dibagi
+        \textit{lead time} permintaan. Lengkapi dengan metrik DORA dari catatan rilis satu tahun.
+  \item Rancang alur target. Tentukan tahap yang diotomatisasi lewat CI/CD, perubahan yang dikelola
+        lewat GitOps, dan persetujuan yang dipertahankan. Setiap persetujuan yang dipertahankan
+        diberi alasan risiko tertulis.
+  \item Susun topologi tim target. Tetapkan tim \textit{stream-aligned} beserta aliran nilainya,
+        tim platform, tim \textit{enabling}, dan bila perlu tim \textit{complicated-subsystem}.
+        Tulis mode interaksi antartim dan jumlah modul atau layanan yang dipegang setiap tim.
+  \item Pilih tiga sampai lima kapabilitas platform internal dan urutannya. Setiap kapabilitas
+        dikaitkan dengan satu hambatan dari langkah 2, diberi pengguna pertama, ukuran
+        keberhasilan, dan triwulan pelaksanaan.
+\end{enumerate}
+
+Tabel \ref{tab:ch13-alur-contoh} adalah contoh hasil langkah 1 dan 2 untuk kisah kolom nomor
+telepon keluarga di Pendahuluan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh pemetaan alur perubahan: kolom nomor telepon keluarga di SIMRS RS Jakarta
+           (rekaan, satuan hari kalender)}
+  \label{tab:ch13-alur-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedleft\arraybackslash}p{0.5cm} >{\raggedright\arraybackslash}X >{\raggedleft\arraybackslash}p{1.4cm} >{\raggedleft\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{No} & \textbf{Langkah} & \textbf{Waktu proses} & \textbf{Waktu tunggu sesudahnya} &
+      \textbf{Jenis langkah} \\ \hline
+    1 & Tiket diajukan dan diklasifikasi layanan bantuan & 0,5 & 4 & Kerja manual \\ \hline
+    2 & Persetujuan kepala instalasi rekam medis & 0,5 & 6 & Persetujuan \\ \hline
+    3 & Persetujuan komite perubahan bulanan & 0,5 & 21 & Persetujuan \\ \hline
+    4 & Antre menunggu pengembang & 0 & 20 & Antrean \\ \hline
+    5 & Pemrograman dan tinjauan kode & 2 & 3 & Kerja \\ \hline
+    6 & Uji fungsional manual & 1 & 28 & Uji manual \\ \hline
+    7 & Uji regresi seluruh SIMRS oleh enam penguji & 5 & 4 & Uji manual \\ \hline
+    8 & Rilis Sabtu malam dengan henti layanan 4 jam & 0,5 & 0 & Rilis manual \\ \hline
+    & \textbf{Jumlah} (\textit{lead time} permintaan 96 hari, efisiensi alur 10,4 persen) &
+      \textbf{10} & \textbf{86} & \\ \hline
+  \end{tabularx}
+\end{table}
+
+Waktu tunggu terbesar ada di jendela uji regresi (28 hari), rapat komite (21 hari), dan antrean
+pengembang (20 hari). Obatnya berbeda-beda: uji otomatis, persetujuan berbasis risiko yang
+membebaskan perubahan formulir dari komite, dan daftar kerja mingguan tim domain. Contoh alur
+target di berkas templat menurunkan \textit{lead time} permintaan dari 96 menjadi sekitar 10 hari.
+
+\textbf{Luaran dan kaitan capstone.} Luarannya adalah model operasi \textit{delivery} dan peta
+jalan platform internal, yaitu berkas templat yang sudah diisi: pemetaan alur saat ini, metrik
+DORA, alur target, topologi tim target, dan tiga sampai lima kapabilitas platform beserta
+urutannya. Keduanya menjadi bagian tonggak C4 Peta Jalan dan Tata Kelola. Metrik DORA dan sasaran
+\textit{lead time} dari Aktivitas ini dipakai lagi pada Bab 14 sebagai ukuran kemajuan peta jalan
+modernisasi.
+
+\textbf{Kriteria penilaian.} Tabel \ref{tab:ch13-penilaian} memuat kriteria dan bobotnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 13}
+  \label{tab:ch13-penilaian}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} >{\centering\arraybackslash}p{1.2cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{Tanda hasil yang baik} \\ \hline
+    Mutu pemetaan alur & 30\% & Satu perubahan nyata ditelusuri dengan tanggal; waktu proses dan
+      waktu tunggu dipisah; sumber data disebut \\ \hline
+    Mutu alur target & 25\% & Tahap otomatis jelas; setiap persetujuan yang dipertahankan punya
+      alasan risiko; jejak audit tergambar \\ \hline
+    Mutu topologi tim & 25\% & Tipe tim dan mode interaksi tepat; beban kognitif diperiksa; risiko
+      tim kecil ditulis \\ \hline
+    Peta jalan platform & 20\% & Setiap kapabilitas terkait hambatan nyata, punya pengguna pertama
+      dan ukuran keberhasilan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Berkas pendukung.}
+\begin{itemize}
+  \item \berkas{sources/chapter13/templat-model-operasi-delivery.md}: templat luaran dengan baris
+        contoh Medikara untuk pemetaan alur, metrik DORA, alur target, topologi tim, dan peta
+        jalan platform.
+  \item \berkas{sources/chapter13/contoh-riwayat-deployment.csv} dan
+        \berkas{sources/chapter13/hitung-metrik-dora.py}: data contoh dan skrip penghitung metrik
+        DORA.
+  \item \berkas{sources/chapter13/contoh-pipeline-gitops/}: contoh \textit{workflow} GitHub
+        Actions dan \textit{Application} Argo CD. Pendalaman teknis opsional merangkai keduanya
+        di akun dan klaster latihan sendiri, lalu mengukur waktu dari \textit{commit} sampai
+        layanan menjawab; langkahnya ada di \berkas{sources/chapter13/README.md}.
+\end{itemize}
+
+\textbf{Etika.} Tiket, catatan rilis, dan bagan organisasi dari organisasi nyata dipakai seizin
+organisasi. Nama orang, data pasien, alamat server, dan kunci akses dihapus sebelum dibagikan ke
+anggota tim. Pemetaan waktu tunggu menilai alur, bukan menilai orang. Hasilnya tidak dipakai untuk
+menyalahkan pemberi persetujuan tertentu.
 
 \section{Ringkasan}
 
-% TODO
+Arsitektur \textit{cloud-native} tidak memberi manfaat bila cara mengirim perubahan tetap lambat.
+Kolom nomor telepon keluarga di SIMRS Jakarta membutuhkan 96 hari, padahal waktu kerjanya hanya 10
+hari. DevOps menyatukan tanggung jawab membangun dan menjalankan perangkat lunak, dan DORA
+memberinya ukuran. Riset DORA menunjukkan bahwa kecepatan dan stabilitas tidak saling meniadakan.
+Rilis yang jarang berukuran besar, dan rilis besar lebih sering gagal serta lebih lama dipulihkan,
+seperti SIMRS Jakarta dengan tingkat kegagalan 43 persen.
+
+Laporan DORA 2025 menambahkan peringatan: AI adalah penguat kekuatan maupun kelemahan yang sudah
+ada. Asisten pemrograman hanya memangkas satu hari dari 96 hari, dan bila jendela rilis tetap
+triwulanan, kode yang lebih banyak justru memperbesar ukuran rilis.
+
+CI/CD mengotomatisasi jalur dari \textit{commit} sampai produksi, dengan atau tanpa keputusan
+manusia sebelum rilis. \textit{Blue-green} dan \textit{canary} menghapus henti layanan dan
+menyediakan jalan pulang yang cepat. IaC menulis infrastruktur sebagai kode yang ditinjau. GitOps
+menambahkan agen yang menarik keadaan yang diinginkan dari Git dan terus merekonsiliasi, sehingga
+jejak audit siapa mengubah apa terbentuk dari kerja sehari-hari.
+
+\textit{Platform engineering} menyediakan kapabilitas itu sebagai produk internal yang swalayan.
+Tim platform diukur dari adopsi dan kemudahan tim pengguna, bukan dari jumlah tiket selesai. Team
+Topologies menata tim menjadi empat tipe dan tiga mode interaksi dengan beban kognitif sebagai
+ukuran. Bagi Medikara, 12 pengembang rumah sakit dan 15 staf pusat ditata menjadi lima tim
+\textit{stream-aligned}, satu tim platform, satu tim \textit{enabling}, dan satu tim
+\textit{complicated-subsystem}.
+
+Pesan utama bab ini: kecepatan dan keamanan pengiriman perubahan ditentukan oleh alur kerja,
+otomasi, dan susunan tim, bukan oleh seberapa jarang organisasi berani merilis.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Rilis Jarang dan Rasa Aman Semu}
+
+Latihan ini membuktikan bahwa anggapan ``rilis yang jarang lebih aman'' dapat diuji dengan data
+rilis organisasi sendiri dan dikritisi dengan temuan DORA. Organisasi yang merilis setiap tiga
+bulan sering memegang anggapan ini.
+
 \begin{enumerate}
-  \item Organisasi yang merilis perubahan setiap tiga bulan sering menganggap rilis yang jarang lebih aman. Kritisi anggapan ini dengan merujuk temuan DORA.
-  \item Apa perbedaan tim platform dengan divisi infrastruktur tradisional yang melayani tiket?
-  \item Jelaskan cara GitOps membantu auditor menelusuri siapa mengubah apa di lingkungan produksi.
+  \item Kumpulkan catatan \textit{deployment} produksi satu tahun untuk satu atau dua aplikasi,
+        atau pakai \berkas{sources/chapter13/contoh-riwayat-deployment.csv}.
+  \item Hitung metrik DORA dengan \berkas{sources/chapter13/hitung-metrik-dora.py} atau secara
+        manual: jumlah \textit{deployment}, \textit{lead time} rata-rata, tingkat kegagalan
+        perubahan, dan waktu pemulihan median.
+  \item Hitung rata-rata perubahan per rilis terjadwal, lalu hitung peluang rilis bermasalah dengan
+        rumus $1 - (1 - p)^n$ dan $p = 1$ persen.
+  \item Bandingkan hasil dengan contoh pada Tabel \ref{tab:ch13-lat1-contoh}, lalu isi Tabel
+        \ref{tab:ch13-lat1-hasil}.
+  \item Tulis satu paragraf yang mengkritisi anggapan rilis jarang lebih aman, dengan merujuk
+        temuan DORA dan angka yang diisi.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, contoh terisi: SIMRS RS Jakarta dan Medikara+ tahun 2025 (rekaan)}
+  \label{tab:ch13-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Ukuran} & \textbf{SIMRS Jakarta} & \textbf{Medikara+} & \textbf{Bacaan} \\ \hline
+    \textit{Deployment} per tahun & 7 & 14 & SIMRS dirilis separuh lebih jarang \\ \hline
+    Perubahan per rilis terjadwal & 60,5 & 7,8 & Rilis SIMRS hampir delapan kali lebih besar \\
+      \hline
+    Peluang rilis bermasalah ($p = 1$ persen) & 45,3 persen & 7,7 persen & Ukuran rilis saja
+      sudah meramalkan perbedaan besar \\ \hline
+    Tingkat kegagalan nyata & 43 persen & 14 persen & Data nyata searah dengan hitungan \\ \hline
+    Waktu pemulihan median & 9 jam & 5 jam & Rilis besar lebih lama dipulihkan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, lembar isian: metrik DORA dan ukuran rilis organisasi pilihan}
+  \label{tab:ch13-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Ukuran} & \textbf{Aplikasi 1} & \textbf{Aplikasi 2} & \textbf{Bacaan} \\ \hline
+    \textit{Deployment} per tahun & \dots & \dots & \dots \\ \hline
+    Perubahan per rilis terjadwal & \dots & \dots & \dots \\ \hline
+    Peluang rilis bermasalah & \dots & \dots & \dots \\ \hline
+    Tingkat kegagalan nyata & \dots & \dots & \dots \\ \hline
+    Waktu pemulihan median & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Bila aplikasi yang paling jarang dirilis juga punya tingkat kegagalan tertinggi, apa
+        penjelasan yang paling masuk akal menurut data yang diisi? Apakah ada penjelasan lain,
+        misalnya mutu vendor atau umur sistem, yang perlu diperiksa?
+  \item Bila SIMRS Jakarta dirilis bulanan dengan jumlah perubahan setahun yang sama, berapa
+        perubahan per rilis dan berapa peluang rilis bermasalahnya? Langkah manual apa yang harus
+        diotomatisasi lebih dahulu agar rilis bulanan tidak menambah beban tim?
+\end{enumerate}
+
+\subsection*{Latihan 2: Tim Platform dan Divisi Infrastruktur yang Melayani Tiket}
+
+Latihan ini membuktikan bahwa perbedaan tim platform dengan divisi infrastruktur berbasis tiket
+dapat dilihat dari data permintaan, bukan dari nama unitnya.
+
+\begin{enumerate}
+  \item Kumpulkan tiket permintaan ke tim infrastruktur selama tiga bulan terakhir, lalu
+        kelompokkan menjadi lima jenis permintaan yang paling sering.
+  \item Untuk setiap jenis, catat jumlah per bulan, waktu tunggu rata-rata, dan waktu kerja tim
+        infrastruktur per permintaan.
+  \item Hitung total hari tunggu per bulan (jumlah dikali waktu tunggu) dan total jam kerja per
+        bulan (jumlah dikali waktu kerja).
+  \item Usulkan bentuk swalayan untuk setiap jenis beserta sasaran waktu tunggunya, dengan contoh
+        pada Tabel \ref{tab:ch13-lat2-contoh}, lalu isi Tabel \ref{tab:ch13-lat2-hasil}.
+  \item Nilai posisi organisasi pada aspek antarmuka dan operasi di Tabel \ref{tab:ch13-maturity},
+        sebelum dan sesudah usulan.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, contoh terisi: lima jenis permintaan ke tim infrastruktur pusat Medikara
+           per bulan (rekaan)}
+  \label{tab:ch13-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedleft\arraybackslash}p{1.0cm} >{\raggedleft\arraybackslash}p{1.2cm} >{\raggedleft\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.4cm}}
+    \hline
+    \textbf{Jenis permintaan} & \textbf{Jumlah} & \textbf{Tunggu (hari)} & \textbf{Kerja (jam)} &
+      \textbf{Bentuk swalayan} & \textbf{Sasaran tunggu} \\ \hline
+    Lingkungan uji baru & 12 & 9 & 6 & Templat IaC lewat portal & 30 menit \\ \hline
+    Repositori dan \textit{pipeline} layanan baru & 3 & 14 & 16 & \textit{Golden path} layanan
+      baru & 2 jam \\ \hline
+    Akses \textit{log} produksi & 25 & 3 & 1 & \textit{Dashboard} pemantauan berbasis peran &
+      Langsung \\ \hline
+    Penambahan kapasitas & 6 & 5 & 3 & Penskalaan otomatis dalam batas kuota & Otomatis \\
+      \hline
+    Sertifikat dan nama domain & 4 & 4 & 2 & Penerbitan otomatis & 10 menit \\ \hline
+    \textbf{Jumlah} & \textbf{50} & \textbf{271 hari tunggu} & \textbf{171 jam} & & \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, lembar isian: permintaan ke tim infrastruktur organisasi pilihan}
+  \label{tab:ch13-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedleft\arraybackslash}p{1.0cm} >{\raggedleft\arraybackslash}p{1.2cm} >{\raggedleft\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.4cm}}
+    \hline
+    \textbf{Jenis permintaan} & \textbf{Jumlah} & \textbf{Tunggu (hari)} & \textbf{Kerja (jam)} &
+      \textbf{Bentuk swalayan} & \textbf{Sasaran tunggu} \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textbf{Jumlah} & \dots & \dots & \dots & & \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Urutkan jenis permintaan menurut total hari tunggu, lalu menurut total jam kerja. Bila
+        kedua urutan berbeda, mana yang dipakai untuk menentukan kapabilitas platform pertama, dan
+        mengapa?
+  \item Pada contoh Medikara, 171 jam kerja per bulan setara dengan sekitar satu orang penuh
+        waktu. Bila kapabilitas swalayan dibangun, pekerjaan apa yang sebaiknya mengisi waktu
+        itu agar tim tidak kembali menjadi loket tiket?
+\end{enumerate}
+
+\subsection*{Latihan 3: GitOps dan Pertanyaan Auditor}
+
+Latihan ini membuktikan cara GitOps membantu auditor menelusuri siapa mengubah apa di lingkungan
+produksi, sekaligus menunjukkan celah yang tetap harus ditutup dengan kontrol lain. Misalkan
+auditor bertanya tentang perubahan batas jumlah koneksi basis data layanan jadwal dokter di
+produksi pada 14 Maret 2026.
+
+\begin{enumerate}
+  \item Tuliskan pertanyaan auditor tentang perubahan itu: siapa yang mengubah, siapa yang
+        menyetujui, kapan berlaku, dan apakah yang berjalan sama dengan yang disetujui.
+  \item Untuk setiap pertanyaan, tuliskan sumber bukti tanpa GitOps di organisasi pilihan.
+  \item Tuliskan sumber bukti dengan GitOps, merujuk Tabel \ref{tab:ch13-prinsip-gitops} dan
+        Gambar \ref{fig:ch13-gitops}.
+  \item Tuliskan celah yang tetap tersisa beserta kontrol tambahannya, dengan contoh pada Tabel
+        \ref{tab:ch13-lat3-contoh}, lalu isi Tabel \ref{tab:ch13-lat3-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, contoh terisi: bukti untuk pertanyaan auditor di Medikara (rekaan)}
+  \label{tab:ch13-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Pertanyaan auditor} & \textbf{Bukti tanpa GitOps} & \textbf{Bukti dengan GitOps} &
+      \textbf{Celah dan kontrol tambahan} \\ \hline
+    Siapa yang mengubah? & Log server bila diaktifkan, sering memakai akun bersama
+      ``admin'' & Penulis \textit{commit} dengan akun Git pribadi yang terautentikasi & Akun Git
+      bersama dilarang; \textit{commit} ditandatangani \\ \hline
+    Siapa yang menyetujui? & Surel atau tiket yang tidak terhubung dengan perubahan teknis &
+      Peninjau \textit{pull request} yang tercatat & Aturan dua peninjau dipaksakan di
+      repositori, bukan sekadar kesepakatan \\ \hline
+    Kapan berlaku di produksi? & Ingatan petugas dan catatan rilis & Riwayat sinkronisasi agen
+      dengan nomor revisi & Log agen disimpan sesuai kebijakan retensi \\ \hline
+    Apakah yang berjalan sama dengan yang disetujui? & Sulit dibuktikan & Status sinkron agen;
+      \textit{drift} dikembalikan dan dicatat & Pemakaian akun darurat dicatat dan ditinjau
+      dalam 24 jam \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, lembar isian: bukti untuk pertanyaan auditor di organisasi pilihan}
+  \label{tab:ch13-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Pertanyaan auditor} & \textbf{Bukti tanpa GitOps} & \textbf{Bukti dengan GitOps} &
+      \textbf{Celah dan kontrol tambahan} \\ \hline
+    Siapa yang mengubah? & \dots & \dots & \dots \\ \hline
+    Siapa yang menyetujui? & \dots & \dots & \dots \\ \hline
+    Kapan berlaku di produksi? & \dots & \dots & \dots \\ \hline
+    Apakah yang berjalan sama dengan yang disetujui? & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Dari empat pertanyaan auditor, mana yang paling sulit dijawab di organisasi pilihan saat
+        ini? Berapa lama waktu yang dibutuhkan untuk menjawabnya tanpa GitOps?
+  \item Celah mana yang tidak dapat ditutup oleh GitOps sendiri dan membutuhkan kontrol
+        organisasi, misalnya pengelolaan akun atau prosedur darurat? Siapa yang sebaiknya
+        memiliki kontrol itu?
 \end{enumerate}

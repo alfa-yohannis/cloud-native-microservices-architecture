@@ -1,0 +1,42 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  lapis/.style={draw=black!40, rounded corners=1pt, minimum height=0.6cm,
+    inner sep=1pt, align=center, anchor=south west},
+  penuh/.style={lapis, minimum width=4.85cm},
+  kolom/.style={lapis, minimum width=1.55cm},
+  kepala/.style={anchor=south, fill=praditagreen!15, minimum width=4.85cm,
+    minimum height=0.6cm, font=\scriptsize\bfseries},
+  catatan/.style={anchor=north, text width=4.85cm, align=center,
+    font=\tiny},
+  bingkai/.style={draw=black!55, dashed, rounded corners=2pt}
+]
+  % Tumpukan kiri: virtual machine
+  \node[kepala] at (2.425, 3.6) {\textit{Virtual machine}};
+  \node[penuh, fill=blue!8] at (0, 0) {Server fisik};
+  \node[penuh, fill=blue!8] at (0, 0.7) {\textit{Hypervisor}};
+  \foreach \k/\nama in {0/A, 1/B, 2/C} {
+    \node[kolom, fill=orange!12] at ({\k*1.65}, 1.4)
+      {\tiny Sistem operasi\\\tiny tamu};
+    \node[kolom, fill=blue!8] at ({\k*1.65}, 2.1) {Pustaka};
+    \node[kolom, fill=green!10] at ({\k*1.65}, 2.8) {Aplikasi \nama};
+    \draw[bingkai] ({\k*1.65-0.05}, 1.35) rectangle ({\k*1.65+1.6}, 3.45);
+  }
+  \node[catatan] at (2.425, -0.1)
+    {Setiap VM membawa sistem operasi sendiri: lebih berat, lebih lambat
+     menyala, isolasinya lebih kuat};
+
+  % Tumpukan kanan: container
+  \node[kepala] at (8.425, 3.6) {\textit{Container}};
+  \node[penuh, fill=blue!8] at (6, 0) {Server fisik};
+  \node[penuh, fill=orange!12] at (6, 0.7)
+    {Sistem operasi host (satu \textit{kernel})};
+  \node[penuh, fill=blue!8] at (6, 1.4) {\textit{Container runtime}};
+  \foreach \k/\nama in {0/A, 1/B, 2/C} {
+    \node[kolom, fill=blue!8] at ({6+\k*1.65}, 2.1) {Pustaka};
+    \node[kolom, fill=green!10] at ({6+\k*1.65}, 2.8) {Aplikasi \nama};
+    \draw[bingkai] ({6+\k*1.65-0.05}, 2.05) rectangle ({6+\k*1.65+1.6}, 3.45);
+  }
+  \node[catatan] at (8.425, -0.1)
+    {Semua \textit{container} berbagi satu \textit{kernel}: ringan, menyala
+     dalam hitungan detik, isolasinya lebih tipis};
+\end{tikzpicture}

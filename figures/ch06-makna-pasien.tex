@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  istilah/.style={draw, rounded corners, fill=orange!12, minimum width=2.4cm,
+    minimum height=0.75cm, align=center, font=\footnotesize\bfseries},
+  konteks/.style={draw, rounded corners, fill=blue!8, text width=3.3cm,
+    minimum height=1.05cm, align=center},
+  atribut/.style={draw, rounded corners, fill=white, text width=3.3cm,
+    minimum height=1.5cm, align=left, font=\tiny},
+  penghubung/.style={draw, rounded corners, fill=green!10, minimum width=11.4cm,
+    minimum height=0.8cm, align=center}
+]
+  % Satu kata yang sama dipakai tiga bagian.
+  \node[istilah] (kata) at (4,1.7) {``pasien''};
+
+  % Tiga bounded context dengan makna masing-masing.
+  \node[konteks] (daftar) at (0,0)
+    {\textbf{Pendaftaran}\\{\tiny\mdseries orang yang dikenali dan boleh dilayani}};
+  \node[konteks] (tagih) at (4,0)
+    {\textbf{Penagihan}\\{\tiny\mdseries pihak yang ditagih beserta penjaminnya}};
+  \node[konteks] (lab) at (8,0)
+    {\textbf{Laboratorium}\\{\tiny\mdseries subjek pemeriksaan pada satu spesimen}};
+
+  \draw[panah] (kata.south west) -- (daftar.north);
+  \draw[panah] (kata.south) -- (tagih.north);
+  \draw[panah] (kata.south east) -- (lab.north);
+
+  % Atribut yang benar-benar dibutuhkan setiap konteks.
+  \node[atribut, below=0.25cm of daftar] (adaftar)
+    {Nama, tanggal lahir, nomor kependudukan, alamat, nomor telepon, kontak darurat};
+  \node[atribut, below=0.25cm of tagih] (atagih)
+    {Penjamin (BPJS Kesehatan, asuransi, perusahaan, pribadi), nomor kepesertaan,
+     hak kelas, plafon, saldo tagihan};
+  \node[atribut, below=0.25cm of lab] (alab)
+    {Nomor permintaan, jenis spesimen, waktu pengambilan, umur dan jenis kelamin untuk
+     nilai rujukan};
+
+  % Yang dibagi antarkonteks hanya identitas penghubung.
+  \node[penghubung] (nrm) at (4,-3.1)
+    {Yang dibagi hanya identitas penghubung: \textbf{nomor rekam medis}};
+  \draw[thick, dashed, praditagreen] (adaftar.south) -- (adaftar.south |- nrm.north);
+  \draw[thick, dashed, praditagreen] (atagih.south) -- (atagih.south |- nrm.north);
+  \draw[thick, dashed, praditagreen] (alab.south) -- (alab.south |- nrm.north);
+
+  % Masalah pada SIMRS lama: semua makna dijejalkan ke satu tabel.
+  \node[draw, rounded corners, fill=red!22, align=center, text width=11.2cm,
+    font=\tiny] at (4,-4.15)
+    {Pada SIMRS lama, ketiga makna disimpan dalam satu tabel \texttt{pasien}, sehingga
+     aturan satu bagian ikut mengikat bagian lain};
+\end{tikzpicture}

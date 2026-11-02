@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  konteks/.style={draw, rounded corners, fill=blue!8, text width=1.9cm,
+    minimum height=0.85cm, align=center},
+  luar/.style={draw, dashed, rounded corners, fill=white, text width=1.8cm,
+    minimum height=0.85cm, align=center},
+  pola/.style={font=\tiny, fill=white, inner sep=1pt, align=center},
+  masalah/.style={-{Stealth[length=2mm]}, thick, dashed, red!70!black}
+]
+  % Bounded context kondisi saat ini di dalam Medikara Health.
+  \node[konteks, fill=white] (erp) at (0,0.9) {Akuntansi\\{\tiny\mdseries ERP keuangan}};
+  \node[konteks] (tagih) at (3.4,0.9) {Penagihan\\{\tiny\mdseries modul SIMRS}};
+  \node[konteks, fill=orange!12] (klaim) at (6.8,0.9) {Klaim\\{\tiny\mdseries jembatan BPJS}};
+  \node[konteks] (medplus) at (0,-1.0) {Janji temu\\{\tiny\mdseries Medikara+, vendor}};
+  \node[konteks] (daftar) at (3.4,-1.0) {Pendaftaran\\{\tiny\mdseries modul SIMRS}};
+  \node[konteks] (rm) at (6.8,-1.0) {Pelayanan klinis\\{\tiny\mdseries rekam medis}};
+  \node[konteks] (apotek) at (3.4,-2.9) {Apotek};
+  \node[konteks] (lab) at (6.8,-2.9) {Laboratorium};
+
+  % Pihak luar yang menentukan modelnya sendiri.
+  \node[luar] (bpjs) at (6.8,2.8)
+    {BPJS\\Kesehatan\\{\tiny\mdseries \textit{open host service}}};
+  \node[luar, text width=1.5cm] (satusehat) at (10.3,-1.0)
+    {SATUSEHAT\\{\tiny\mdseries HL7 FHIR}};
+
+  % Panah menunjuk dari hulu ke hilir; label menyebut pola hubungannya.
+  \draw[panah] (bpjs) -- node[pola] {\textit{conformist}} (klaim);
+  \draw[panah] (tagih) -- node[pola] {\textit{customer-}\\\textit{supplier}} (klaim);
+  \draw[panah] (erp) -- node[pola] {\textit{conformist}} (tagih);
+  \draw[panah] (daftar) -- node[pola] {\textit{customer-supplier}} (tagih);
+  \draw[thick, double, praditagreen!70!black] (daftar) --
+    node[pola] {\textit{shared}\\\textit{kernel}} (rm);
+  \draw[panah] (daftar) -- node[pola] {\textit{conformist}} (medplus);
+  \draw[panah] (satusehat) -- node[pola] {\textit{anticorruption}\\\textit{layer}} (rm);
+  \draw[panah] (lab) -- node[pola] {\textit{customer-supplier}} (rm);
+  \draw[masalah] (rm) -- node[pola, text=red!70!black] {baca basis\\data langsung} (apotek);
+
+  % Batas organisasi.
+  \node[draw, dashed, thick, praditagreen, rounded corners, inner sep=6pt,
+    fit=(erp)(klaim)(apotek)(lab)] (org) {};
+  \node[font=\tiny\bfseries, praditagreen, anchor=north west] at (org.south west)
+    {Medikara Health, kondisi saat ini};
+
+  % Keterangan garis.
+  \draw[panah] (3.6,-3.95) -- ++(0.6,0);
+  \node[anchor=west, font=\tiny] at (4.3,-3.95) {dari hulu ke hilir};
+  \draw[masalah] (6.4,-3.95) -- ++(0.6,0);
+  \node[anchor=west, font=\tiny] at (7.1,-3.95) {tanpa pola, sumber masalah};
+\end{tikzpicture}

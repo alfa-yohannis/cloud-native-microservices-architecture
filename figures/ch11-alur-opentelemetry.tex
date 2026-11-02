@@ -1,0 +1,46 @@
+% Alur telemetri dengan OpenTelemetry. Setiap layanan memakai pustaka OpenTelemetry,
+% mengirim telemetri ke Collector, lalu Collector meneruskannya ke penyimpanan yang
+% dapat diganti tanpa mengubah kode layanan.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  tahap/.style={draw, rounded corners, align=center, minimum height=0.95cm,
+                text width=3.0cm, inner sep=3pt, fill=blue!8},
+  lebar/.style={draw, rounded corners, align=center, minimum height=1.0cm,
+                text width=10.4cm, inner sep=3pt},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  % Baris 1: layanan yang menghasilkan telemetri
+  \node[tahap] (aplikasi) at (-3.8, 0)
+    {Medikara+\\{\tiny\mdseries pustaka OpenTelemetry}};
+  \node[tahap] (janji) at (0, 0)
+    {Layanan janji temu\\{\tiny\mdseries pustaka OpenTelemetry}};
+  \node[tahap] (adaptor) at (3.8, 0)
+    {Adaptor SIMRS\\{\tiny\mdseries pustaka OpenTelemetry}};
+
+  % Baris 2: titik kumpul yang ditekankan
+  \node[lebar, fill=orange!12] (collector) at (0, -2.1)
+    {OpenTelemetry Collector\\{\tiny\mdseries menerima, menyamarkan data pasien,
+     memilih sampel \textit{trace}, lalu meneruskan}};
+
+  % Baris 3: penyimpanan per sinyal
+  \node[tahap] (simpantrace) at (-3.8, -4.2) {Penyimpanan \textit{trace}};
+  \node[tahap] (simpanmetrik) at (0, -4.2) {Penyimpanan metrik};
+  \node[tahap] (simpanlog) at (3.8, -4.2) {Penyimpanan \textit{log}};
+
+  % Baris 4: hasil akhir yang dibaca manusia
+  \node[lebar, fill=green!10] (dasbor) at (0, -6.2)
+    {Dasbor SLO dan \textit{alert}\\{\tiny\mdseries satu sumber data untuk tim teknis,
+     manajemen, dan auditor}};
+
+  \foreach \sumber in {aplikasi, janji, adaptor} {
+    \draw[panah] (\sumber.south) -- (\sumber.south |- collector.north);
+  }
+  \node[font=\tiny, anchor=west, xshift=2pt] at ($(janji.south)!0.5!(janji.south |- collector.north)$)
+    {\textit{trace}, metrik, \textit{log}};
+
+  \foreach \tujuan in {simpantrace, simpanmetrik, simpanlog} {
+    \draw[panah] (\tujuan.north |- collector.south) -- (\tujuan.north);
+    \draw[panah] (\tujuan.south) -- (\tujuan.south |- dasbor.north);
+  }
+\end{tikzpicture}

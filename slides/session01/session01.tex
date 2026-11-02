@@ -1,0 +1,500 @@
+\documentclass[aspectratio=169, table, 12pt]{beamer}
+
+\input{../preamble}
+
+\title{\Huge Orientasi dan Bahasa\\ \vspace{10pt} Bersama Cloud-Native}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Isi Pertemuan}
+  \vspace{10pt}
+  \begin{columns}[t]
+    \column{0.5\textwidth}
+    {\small\tableofcontents[sections={1-4}]}
+
+    \column{0.5\textwidth}
+    {\small\tableofcontents[sections={5-8}]}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\hfill}
+  \centering
+  \LARGE{\textbf{Kalau semua sistem dipindahkan\\ke \textit{cloud}, apakah
+  masalahnya\\selesai?}}
+\end{frame}
+
+\section{Tujuan dan Kerangka Bahasan}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Tujuan dan Kerangka Bahasan}}
+\end{frame}
+
+\begin{frame}{Tujuan Pembelajaran}
+  \vspace{6pt}
+  \begin{itemize}
+    \item Menjelaskan dengan bahasa sehari-hari istilah dasar sistem informasi:
+          aplikasi, server, basis data, jaringan, pusat data, dan \textit{cloud}.
+    \item Mengaitkan keputusan teknologi dengan nilai bisnis, biaya, risiko, dan
+          regulasi.
+    \item Merumuskan masalah teknologi informasi di organisasi pilihan tim sebagai
+          pemicu modernisasi.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Pertanyaan Direksi Medikara Health}
+  \begin{itemize}
+    \item Antrean pendaftaran Senin pagi masih panjang.
+    \item Lima rumah sakit memakai SIMRS dengan versi berbeda: setiap mitra baru
+          butuh lima sambungan.
+    \item Biaya integrasi terus naik.
+    \item Jawaban "pindah ke \textit{cloud}" tidak otomatis menyelesaikan ketiganya:
+          penyebabnya bisa di proses, rancangan aplikasi, atau server.
+    \item Mata kuliah ini melatih cara menimbang pilihan beserta
+          \textit{trade-off}-nya, lalu menuliskan justifikasinya.
+  \end{itemize}
+\end{frame}
+
+\section{Cara Kerja Mata Kuliah dan Capstone}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Cara Kerja Mata Kuliah\\dan Proyek Capstone}}
+\end{frame}
+
+\begin{frame}{Belajar Mandiri, Tatap Muka Sabtu}
+  \begin{itemize}
+    \item Modul dan slide dipelajari mandiri sebelum Sabtu.
+    \item Sabtu dipakai untuk meninjau progres proyek capstone, bukan mengulang
+          isi modul.
+    \item Analogi: bimbingan tugas akhir. Pertemuan membahas draf yang sudah ada.
+    \item Ritme pekan: baca bab, kerjakan Aktivitas bersama tim, bawa draf ke kelas.
+    \item Dengan 8 tim dan 150 menit tatap muka, setiap tim mendapat sekitar 15
+          menit.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Empat Mata Kuliah, Satu Cetak Biru}
+  \centering
+  \resizebox{!}{0.66\textheight}{\input{../../figures/ch01-capstone.tex}}
+\end{frame}
+
+\begin{frame}{Tonggak Capstone dan Artefak IT40713}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}
+                               >{\raggedright\arraybackslash}p{1.7cm}
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Tonggak} & \textbf{Pertemuan} & \textbf{Artefak dari IT40713} \\
+    \hline
+    C1 Konteks dan Strategi & 1 sampai 3 & Profil organisasi, pemicu modernisasi,
+      kendala penempatan \textit{workload}, model biaya awal \\
+    \hline
+    C2 Kondisi Saat Ini & 4 sampai 7 & Kesiapan \textit{cloud}, portofolio aplikasi,
+      kartu skor, peta domain, catatan keputusan \\
+    \hline
+    C3 Kondisi Target & 8 sampai 11 & Pilihan \textit{runtime}, interaksi layanan,
+      kepemilikan data, target keandalan \\
+    \hline
+    C4 Peta Jalan dan Tata Kelola & 12 sampai 14 & Pemulihan bencana, model
+      operasi, peta jalan, \textit{guardrail} \\
+    \hline
+  \end{tabularx}
+
+  \vspace{8pt}
+  \small C2 ditinjau menjelang UTS. C4 dipresentasikan menjelang UAS.
+\end{frame}
+
+\begin{frame}{Organisasi Nyata: Izin dan Anonimisasi}
+  \begin{itemize}
+    \item Tim memilih organisasi nyata, sebaiknya tempat kerja anggota, atau kasus
+          Medikara Health.
+    \item \textbf{Izin}: bolehkah organisasi dipelajari dan ditulis? Diberikan
+          tertulis oleh pejabat berwenang.
+    \item \textbf{Anonimisasi}: apa yang boleh tampil? Nama, angka sensitif, dan
+          data pribadi disamarkan.
+    \item Data pribadi pasien, pelanggan, atau karyawan tidak dipakai sama sekali.
+    \item Tanpa izin sampai Pertemuan 2: pindah ke Medikara Health.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Kasus Medikara Health: Profil Singkat}
+  \begin{itemize}
+    \item Organisasi \textbf{fiktif}, dipakai bersama empat mata kuliah.
+    \item 5 rumah sakit, 18 klinik pratama, 1 laboratorium rujukan, 12 apotek.
+    \item Sekitar 4.800 karyawan dan 1,2 juta kunjungan per tahun (sekitar 3.300 per
+          hari).
+    \item SIMRS \textit{on-premise} berbeda versi, ERP terpusat, Medikara+ buatan
+          vendor, integrasi \textit{point-to-point}.
+    \item Strategi 2026 sampai 2030: "Satu Pasien, Satu Rekam Medis".
+  \end{itemize}
+\end{frame}
+
+\section{Bahasa Bersama Non-Teknis}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Bahasa Bersama untuk\\Mahasiswa Non-Teknis}}
+\end{frame}
+
+\begin{frame}{{\Large Diagram Konsep Bab 1}}
+  \centering
+  \includegraphics[width=0.96\textwidth,height=0.77\textheight,keepaspectratio]{../../figures/ch01-diagram-konsep.png}
+\end{frame}
+
+\begin{frame}{Enam Istilah Dasar}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2cm}
+                               >{\raggedright\arraybackslash}X
+                               >{\raggedright\arraybackslash}p{3.3cm}}
+    \hline
+    \textbf{Istilah} & \textbf{Arti sederhana} & \textbf{Analogi} \\
+    \hline
+    Aplikasi & Program untuk menyelesaikan pekerjaan & Ruang makan dan menu \\
+    \hline
+    Server & Komputer yang menjalankan aplikasi bagi banyak pengguna & Dapur dan koki \\
+    \hline
+    Basis data & Tempat data disimpan teratur & Gudang bahan dan buku stok \\
+    \hline
+    Jaringan & Jalur yang menghubungkan perangkat & Jalan raya \\
+    \hline
+    Pusat data & Ruang server dengan listrik cadangan dan pendingin & Gudang
+      berpendingin dengan genset \\
+    \hline
+    \textit{Cloud} & Layanan komputasi yang disewa sesuai pemakaian & Menyewa mobil \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Cloud sebagai Layanan Komputasi yang Disewa}
+  \begin{itemize}
+    \item NIST: akses lewat jaringan ke kumpulan sumber daya komputasi bersama,
+          disediakan dan dilepas dengan cepat.
+    \item Lima karakteristik: swalayan, akses jaringan luas, penggabungan sumber
+          daya, elastisitas cepat, layanan terukur.
+    \item Analogi: menyewa mobil. Bayar sesuai pakai, tetapi pemakaian harian jarak
+          jauh bisa lebih murah dengan membeli.
+    \item Contoh: puncak Medikara+ Senin pagi 4 kali rata-rata; kapasitas tambahan
+          disewa hanya saat puncak.
+    \item Tanggung jawab atas data dan cara pemakaian tidak ikut berpindah.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Perjalanan Satu Permintaan Janji Temu}
+  \centering
+  \resizebox{0.88\textwidth}{!}{\input{../../figures/ch01-perjalanan-permintaan.tex}}
+\end{frame}
+
+\begin{frame}{Kasus Medikara Health: Keluhan adalah Gejala}
+  \begin{itemize}
+    \item Pasien menunggu 25 detik lalu gagal memesan. Yang terasa: "aplikasinya
+          lambat".
+    \item Penyebabnya bisa di enam titik: sinyal, jaringan, server vendor,
+          penghubung, SIMRS, atau basis data.
+    \item Lima versi SIMRS berarti lima penghubung berbeda.
+    \item Perubahan di satu SIMRS berpotensi merusak satu penghubung.
+    \item Daftar pemicu modernisasi memisahkan keluhan dari dugaan penyebab.
+  \end{itemize}
+\end{frame}
+
+\section{Bahasa Bersama Teknis}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Bahasa Bersama untuk\\Mahasiswa Teknis}}
+\end{frame}
+
+\begin{frame}{Nilai Bisnis dan Cara Manajemen Menilainya}
+  \begin{itemize}
+    \item Nilai bisnis: pendapatan naik, biaya turun, risiko mengecil, pelanggan
+          puas, kepatuhan terjaga.
+    \item Diukur lewat KPI: waktu tunggu, jumlah kunjungan, biaya per kunjungan.
+    \item Analogi: pemilik warung kopi bertanya cangkir tambahan dan masa balik
+          modal, bukan tekanan uap.
+    \item "Memperbarui server SIMRS Bekasi" menjadi "memangkas waktu tunggu dari 70
+          menjadi 30 menit".
+    \item Telekonsultasi: 60 sesi × Rp150.000 = Rp9 juta hilang per jam henti pada
+          jam sibuk.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Dari Bahasa Teknis ke Bahasa Dampak}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+                               >{\raggedright\arraybackslash}p{3.2cm}
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Bahasa teknis} & \textbf{Pertanyaan direksi} & \textbf{Bahasa dampak} \\
+    \hline
+    Server SIMRS Bekasi sering kehabisan memori & Apa akibatnya bagi pasien? &
+      Pendaftaran berhenti 3 kali sebulan, masing-masing sekitar 40 menit \\
+    \hline
+    Integrasi \textit{point-to-point} ke lima SIMRS & Berapa biayanya? & Satu kerja
+      sama baru tertunda sekitar 4 bulan \\
+    \hline
+    Akun vendor tanpa masa berlaku & Seberapa besar risikonya? & Jalur insiden 2025;
+      wajib lapor dalam 3 kali 24 jam \\
+    \hline
+    Laporan dari \textit{spreadsheet} & Apa yang hilang? & Laporan baru siap tanggal
+      12, keputusan terlambat dua pekan \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Struktur Biaya: CapEx dan OpEx}
+  \begin{itemize}
+    \item CapEx: aset dibayar di muka dan disusutkan; OpEx: dibayar selama layanan
+          dipakai.
+    \item Pindah ke \textit{cloud} menggeser sebagian biaya dari CapEx ke OpEx.
+    \item Analogi: membeli mesin fotokopi Rp60 juta atau menyewa dengan tarif per
+          lembar.
+    \item 6 server SIMRS Bandung Rp1,8 miliar (Rp360 juta per tahun selama 5 tahun)
+          dibandingkan \textit{cloud} Rp32 juta per bulan: keputusan menunggu TCO.
+    \item Tagihan Medikara+ naik 46 persen (Rp28 juta menjadi Rp41 juta): perlu label
+          biaya per layanan.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Risiko dan Kepatuhan sebagai Batasan Desain}
+  \begin{itemize}
+    \item UU PDP: data kesehatan termasuk data pribadi spesifik.
+    \item Kegagalan pelindungan wajib diberitahukan paling lambat 3 kali 24 jam;
+          denda administratif paling tinggi 2 persen pendapatan tahunan.
+    \item Permenkes 24/2022: rekam medis elektronik wajib sejak 31 Desember 2023;
+          boleh disimpan di \textit{cloud} tersertifikasi.
+    \item Analogi: tangga darurat ditentukan saat denah digambar, bukan setelah
+          gedung berdiri.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Kasus Medikara Health: Insiden Vendor dan Audit}
+  \begin{itemize}
+    \item 2025: data sebagian pasien Medikara+ terbuka lewat akun uji vendor yang
+          masih aktif.
+    \item Audit internal: akun mantan karyawan masih aktif, akun dipakai bersama.
+    \item Batasan 1: setiap akun punya hak minimum dan masa berlaku.
+    \item Batasan 2: setiap akses ke data pasien tercatat dan dapat diaudit.
+    \item Batasan 3: data terdampak diketahui kurang dari 3 kali 24 jam, sehingga
+          butuh katalog data.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Menulis Rekomendasi untuk Direksi}
+  \begin{itemize}
+    \item Satu halaman, jawaban di depan (prinsip piramida), berbasis dampak.
+    \item Menyebut pilihan lain, \textit{trade-off}, dan keputusan yang diminta.
+    \item Lemah: "migrasi SIMRS ke \textit{microservices} di Kubernetes agar
+          \textit{scalable}".
+    \item Kuat: "setujui uji coba pendaftaran daring terpadu di Bekasi, 3 bulan,
+          Rp420 juta, sasaran 70 menjadi 30 menit".
+    \item Analogi: dokter menjelaskan pilihan tindakan kepada keluarga pasien.
+  \end{itemize}
+\end{frame}
+
+\section{Kualitas Sistem dan Trade-off}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Kualitas Sistem dan\\Trade-off}}
+\end{frame}
+
+\begin{frame}{Lima Kualitas Sistem}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3cm}
+                               >{\raggedright\arraybackslash}X
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kualitas} & \textbf{Pertanyaan} & \textbf{Contoh di Medikara Health} \\
+    \hline
+    Ketersediaan & Bisakah dipakai saat dibutuhkan? & SIMRS instalasi gawat darurat
+      24 jam \\
+    \hline
+    Skalabilitas & Sanggupkah melayani beban yang bertambah? & Lonjakan janji temu
+      Senin pagi \\
+    \hline
+    Keamanan & Terlindungkah data dan akses? & Akun vendor dan mantan karyawan \\
+    \hline
+    Biaya & Berapa yang dibayar untuk hasil itu? & Tagihan \textit{cloud} Medikara+ \\
+    \hline
+    Kecepatan perubahan & Seberapa cepat perubahan sampai ke pengguna? & Fitur
+      menunggu jadwal rilis vendor \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Kualitas Saling Tarik-Menarik}
+  \centering
+  \resizebox{!}{0.68\textheight}{\input{../../figures/ch01-tarik-menarik.tex}}
+\end{frame}
+
+\begin{frame}{Target Ketersediaan dan Waktu Henti}
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+                               >{\raggedright\arraybackslash}X
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Target} & \textbf{Henti per tahun} & \textbf{Henti per bulan (30 hari)} \\
+    \hline
+    99\% & 87,6 jam (sekitar 3,65 hari) & 7,2 jam \\
+    \hline
+    99,5\% & 43,8 jam & 3,6 jam \\
+    \hline
+    99,9\% & 8,76 jam & 43,2 menit \\
+    \hline
+    99,95\% & 4,38 jam & 21,6 menit \\
+    \hline
+    99,99\% & 52,6 menit & 4,3 menit \\
+    \hline
+  \end{tabularx}
+
+  \vspace{8pt}
+  Setiap angka sembilan tambahan memangkas waktu henti, tetapi biayanya naik lebih
+  cepat daripada manfaatnya.
+\end{frame}
+
+\begin{frame}{Menuliskan Alasan Keputusan}
+  \begin{itemize}
+    \item \textbf{Konteks:} telekonsultasi kehilangan sekitar Rp9 juta per jam henti.
+    \item \textbf{Keputusan:} target 99,9 persen, dua lokasi dalam satu region.
+    \item \textbf{Alasan:} 99,99 persen menuntut dua region; biayanya melebihi
+          kerugian yang dicegah.
+    \item \textbf{\textit{Trade-off}:} bila seluruh region terganggu, layanan dapat
+          berhenti beberapa jam.
+    \item \textbf{Tanggal dan pemutus:} Januari 2026, direktur operasional dan kepala
+          divisi TI.
+  \end{itemize}
+\end{frame}
+
+\section{Arti Cloud-Native bagi Organisasi}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Arti Cloud-Native\\bagi Organisasi}}
+\end{frame}
+
+\begin{frame}{Cloud-Hosted dan Cloud-Native}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3cm}
+                               >{\raggedright\arraybackslash}X
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Cloud-hosted}} & \textbf{\textit{Cloud-native}} \\
+    \hline
+    Bentuk aplikasi & Sama seperti di pusat data lama & Dirancang ulang, longgar
+      keterkaitannya \\
+    \hline
+    Menambah kapasitas & Manual & Otomatis mengikuti beban \\
+    \hline
+    Cara rilis & Jarang dan berisiko besar & Sering, kecil, otomatis \\
+    \hline
+    Saat gangguan & Satu kesalahan menghentikan semua & Dibatasi pada satu bagian \\
+    \hline
+    Yang berubah & Lokasi server & Lokasi, rancangan, dan cara kerja tim \\
+    \hline
+  \end{tabularx}
+
+  \vspace{8pt}
+  \small Analogi: warung yang pindah ke mal tanpa mengubah cara kerja tetap punya
+  satu kasir dan antrean panjang.
+\end{frame}
+
+\begin{frame}{Lima Mitos dan Kenyataannya}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.2cm}
+                               >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Mitos} & \textbf{Kenyataan} \\
+    \hline
+    \textit{Cloud} selalu lebih murah & Survei Flexera 2026: sekitar 29 persen belanja
+      \textit{cloud} diperkirakan terbuang \\
+    \hline
+    \textit{Microservices} selalu lebih baik & Segment menggabungkan kembali ratusan
+      layanan kecilnya menjadi satu \\
+    \hline
+    Pindah ke \textit{cloud} otomatis aman & Akun, hak akses, dan konfigurasi tetap
+      tanggung jawab pelanggan \\
+    \hline
+    \textit{Cloud-native} berarti Kubernetes & Definisi CNCF menekankan praktik, bukan
+      alat \\
+    \hline
+    Sekali pindah, urusan selesai & Modernisasi bertahap, dikelola sebagai peta jalan \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Perjalanan Mata Kuliah}
+  \centering
+  \resizebox{0.95\textwidth}{!}{\input{../../figures/ch01-perjalanan-mk.tex}}
+\end{frame}
+
+\begin{frame}{Kasus Medikara Health: Satu Pasien, Satu Rekam Medis}
+  \begin{itemize}
+    \item Di mana rekam medis terpadu disimpan, dan aturan apa yang membatasinya?
+          (Bab 2)
+    \item Berapa biaya infrastruktur per kunjungan pasien? (Bab 3)
+    \item Lima SIMRS diseragamkan, diganti, atau dibungkus? (Bab 4 sampai 7)
+    \item Bagaimana mitra tersambung tanpa \textit{point-to-point} baru? (Bab 9)
+    \item Bagaimana rekam medis dipulihkan bila satu pusat data padam? (Bab 12)
+  \end{itemize}
+\end{frame}
+
+\section{Aktivitas}
+
+\begin{frame}{Aktivitas: Membentuk Tim dan Memetakan Pemicu}
+  \begin{itemize}
+    \item Tim 3 sampai 5 orang, sedikitnya satu anggota teknis dan satu non-teknis.
+    \item Peran: koordinator, pemimpin wawancara (non-teknis), pemeta sistem
+          (teknis), serta penjaga izin dan etika.
+    \item Pemicu modernisasi: masalah nyata, lengkap dengan dampak berangka dan
+          sistem yang terlibat.
+    \item Penilaian: kejelasan masalah 30\%, keterkaitan sistem 25\%, dampak terukur
+          25\%, etika 20\%.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Langkah Kerja dan Luaran}
+  \small
+  \begin{enumerate}
+    \item Bentuk tim dan tetapkan peran.
+    \item Pilih organisasi dan urus izin, atau pakai Medikara Health.
+    \item Wawancarai 3 sampai 5 narasumber, sekitar 20 menit per orang.
+    \item Petakan sistem yang terlibat dalam setiap masalah.
+    \item Tulis profil satu halaman dan 5 sampai 10 pemicu modernisasi (C1).
+  \end{enumerate}
+  \vspace{4pt}
+  {\footnotesize Berkas: \berkas{sources/chapter01/templat-profil-organisasi.md},
+  \berkas{sources/chapter01/lembar-pemicu-modernisasi.md},
+  \berkas{sources/chapter01/panduan-izin-dan-anonimisasi.md}}
+\end{frame}
+
+\section{Ringkasan dan Latihan}
+
+\begin{frame}{Ringkasan}
+  \begin{itemize}
+    \item Pindah ke \textit{cloud} tidak otomatis menyelesaikan masalah; penyebabnya
+          perlu dipisahkan lebih dahulu.
+    \item Empat mata kuliah menyusun satu cetak biru lewat tonggak C1 sampai C4.
+    \item Bahasa bersama: istilah dasar sistem bagi non-teknis, nilai bisnis dan
+          risiko bagi teknis.
+    \item Kualitas sistem saling tarik-menarik; alasan setiap keputusan ditulis.
+    \item \textit{Cloud} adalah alat, bukan tujuan.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Latihan}
+  \begin{enumerate}
+    \item \textbf{\textit{Cloud-hosted} dan \textit{cloud-native}:} bandingkan
+          satu aplikasi pada lima aspek dalam dua skenario.
+    \item \textbf{Dua sisi satu masalah:} antrean Bekasi, sekitar 18 pasien pulang
+          tiap Senin, sekitar Rp327,6 juta per tahun.
+    \item \textbf{Biaya dan ketersediaan:} pilihan 99,5\%, 99,9\%, dan 99,99\% untuk
+          telekonsultasi. Total terendah: 99,9\%, sekitar Rp654,8 juta per tahun.
+  \end{enumerate}
+  \vspace{4pt}
+  {\small Tabel contoh dan lembar isian ada di Bab 1 modul.}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,35 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  kotak/.style={draw=black!45, rounded corners=2pt, text width=2.7cm,
+    minimum height=1.1cm, align=center, inner sep=3pt},
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  label/.style={font=\tiny, fill=white, inner sep=1pt}
+]
+  \node[kotak, fill=praditagreen!15] (ingin) at (0, 0)
+    {\textbf{Keadaan yang diinginkan}\\
+     {\tiny\mdseries manifest: 3 replika \texttt{jadwal-dokter}}};
+  \node[kotak, fill=orange!12] (kontrol) at (4.1, 0)
+    {\textbf{Kontroler membandingkan}\\
+     {\tiny\mdseries diinginkan 3, berjalan 2}};
+  \node[kotak, fill=blue!8] (tindak) at (8.2, 0)
+    {\textbf{Tindakan}\\
+     {\tiny\mdseries buat 1 \textit{pod} baru di \textit{node} lain}};
+  \node[kotak, fill=green!10] (aktual) at (4.1, -2.4)
+    {\textbf{Keadaan aktual di klaster}\\
+     {\tiny\mdseries kembali 3 \textit{pod} berjalan}};
+  \node[kotak, fill=red!22] (ganggu) at (0, -2.4)
+    {\textbf{Gangguan}\\
+     {\tiny\mdseries \textit{node} 2 mati pukul 02.10, 1 \textit{pod} hilang}};
+
+  \draw[panah] (ingin) -- node[label, above=1pt] {dibaca} (kontrol);
+  \draw[panah] (kontrol) -- node[label, above=1pt] {bila berbeda} (tindak);
+  \draw[panah] (tindak.south) to[out=-90, in=0]
+    node[label, pos=0.4, right=2pt] {mengubah} (aktual.east);
+  \draw[panah] (ganggu.east) -- node[label, above=1pt] {mengubah}
+    (aktual.west);
+  \draw[panah] (aktual.north) -- node[label, right=2pt] {diamati terus}
+    (kontrol.south);
+  \node[font=\tiny, text width=2.7cm, align=center, anchor=north]
+    at ([yshift=-0.15cm]ingin.south)
+    {Ditulis tim sekali; kontroler bekerja tanpa henti, siang dan malam};
+\end{tikzpicture}

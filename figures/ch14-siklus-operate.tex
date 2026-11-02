@@ -1,0 +1,38 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  langkah/.style={draw, rounded corners, fill=blue!8, minimum width=2.8cm,
+    minimum height=0.95cm, align=center, text width=2.6cm},
+  tekan/.style={draw, rounded corners, fill=orange!12, minimum width=2.8cm,
+    minimum height=0.95cm, align=center, text width=2.6cm},
+  akhir/.style={draw, rounded corners, fill=green!10, minimum width=2.8cm,
+    minimum height=0.95cm, align=center, text width=2.6cm}
+]
+  % Pusat siklus: data tag yang membuat setiap langkah dapat dijalankan.
+  \node[draw, rounded corners, fill=praditagreen!15, minimum width=3.4cm,
+    minimum height=1.2cm, align=center, text width=3.2cm,
+    font=\scriptsize\bfseries] (tag) at (0,0)
+    {Tag wajib\\{\tiny\mdseries pemilik, layanan, lingkungan, pusat biaya, kelas data}};
+
+  % Enam langkah fase Operate, searah jarum jam.
+  \node[langkah] (anggaran) at (0,2.3) {Anggaran per akun dan layanan};
+  \node[langkah] (pantau) at (4.3,1.2) {Pantau harian terhadap ambang 50, 80, 100\%};
+  \node[tekan] (anomali) at (4.3,-1.2) {Deteksi anomali dan peringatan ke pemilik};
+  \node[tekan] (selidik) at (0,-2.3) {Penyelidikan oleh pemilik layanan};
+  \node[langkah] (tindak) at (-4.3,-1.2) {Tindakan: matikan, ubah ukuran, atau ubah
+    perkiraan};
+  \node[akhir] (tinjau) at (-4.3,1.2) {Tinjauan bulanan biaya per unit};
+
+  \draw[panah] (anggaran.east) -| (pantau.north);
+  \draw[panah] (pantau) -- (anomali);
+  \draw[panah] (anomali.south) |- (selidik.east);
+  \draw[panah] (selidik.west) -| (tindak.south);
+  \draw[panah] (tindak) -- (tinjau);
+  \draw[panah] (tinjau.north) |- (anggaran.west);
+
+  % Data tag dipakai oleh setiap langkah.
+  \draw[gray, dashed] (tag) -- (anggaran);
+  \draw[gray, dashed] (tag) -- (selidik);
+  \draw[gray, dashed] (tag) -- (pantau);
+  \draw[gray, dashed] (tag) -- (tinjau);
+\end{tikzpicture}

@@ -1,0 +1,43 @@
+# Deployment contoh Bab 08: tiga replika layanan jadwal dokter.
+# Pakai: kubectl apply -f deployment.yaml pada klaster lokal kind/minikube.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jadwal-dokter
+  labels:
+    app: jadwal-dokter
+spec:
+  # Keadaan yang diinginkan: selalu tiga pod. Bila satu mati,
+  # kontroler membuat penggantinya tanpa perintah manual.
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jadwal-dokter
+  template:
+    metadata:
+      labels:
+        app: jadwal-dokter
+    spec:
+      containers:
+        - name: jadwal-dokter
+          image: jadwal-dokter:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NAMA_FASILITAS
+              value: "RS Medikara Bandung"
+          # Jatah sumber daya: satu pod tidak boleh menghabiskan node.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+          # Tiga kali /sehat tidak menjawab, container dimulai ulang.
+          livenessProbe:
+            httpGet:
+              path: /sehat
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3

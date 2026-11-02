@@ -1,0 +1,41 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, text width=1.45cm,
+    minimum height=1.05cm, align=center, inner sep=2pt},
+  hasil/.style={tahap, fill=green!10},
+  gerbang/.style={draw, rounded corners, fill=orange!12, font=\tiny,
+    align=center, inner sep=2pt},
+  pita/.style={draw, rounded corners=2pt, fill=praditagreen!15},
+  ket/.style={font=\tiny, gray!60!black}
+]
+  % Enam tahap pipeline dari commit sampai produksi.
+  \node[tahap] (t1) at (0,0) {\textit{Commit} dan tinjauan kode};
+  \node[tahap] (t2) at (1.9,0) {\textit{Build} dan uji otomatis};
+  \node[tahap] (t3) at (3.8,0) {Pemindaian keamanan};
+  \node[tahap] (t4) at (5.7,0) {Artefak bertanda versi};
+  \node[tahap] (t5) at (7.6,0) {\textit{Staging} dan uji penerimaan};
+  \node[hasil] (t6) at (9.5,0) {Produksi bertahap};
+  \foreach \asal/\tujuan in {t1/t2, t2/t3, t3/t4, t4/t5, t5/t6} {
+    \draw[panah] (\asal) -- (\tujuan);
+  }
+
+  % Umpan balik cepat ke pengembang.
+  \draw[panah, gray!70, dashed] (t3.north) to[bend right=28]
+    node[ket, above] {umpan balik dalam hitungan menit} (t1.north);
+
+  % Gerbang keputusan rilis pada continuous delivery.
+  \node[gerbang] (gerbang) at (8.55,1.15) {keputusan rilis\\(manusia)};
+  \draw[thick, orange!70!black] (gerbang.south) -- (8.55,0.08);
+
+  % Cakupan tiga istilah.
+  \draw[pita] (-0.8,-1.08) rectangle (6.5,-0.68);
+  \node[font=\tiny] at (2.85,-0.88)
+    {\textit{Continuous Integration}: setiap \textit{commit} dibangun dan diuji};
+  \draw[pita] (-0.8,-1.63) rectangle (8.4,-1.23);
+  \node[font=\tiny] at (3.8,-1.43)
+    {\textit{Continuous Delivery}: selalu siap rilis, manusia memutuskan kapan};
+  \draw[pita] (-0.8,-2.18) rectangle (10.3,-1.78);
+  \node[font=\tiny] at (4.75,-1.98)
+    {\textit{Continuous Deployment}: lolos semua tahap, langsung ke produksi};
+\end{tikzpicture}

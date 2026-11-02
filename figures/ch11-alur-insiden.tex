@@ -1,0 +1,48 @@
+% Alur penanganan insiden dari deteksi sampai tindak lanjut, beserta empat peran
+% yang dipisahkan selama insiden berlangsung.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  tahap/.style={draw, rounded corners, align=center, minimum height=1.0cm,
+                text width=3.0cm, inner sep=3pt},
+  peran/.style={draw, rounded corners, align=center, minimum height=0.95cm,
+                text width=2.4cm, inner sep=3pt, fill=blue!8},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  % Baris 1: dari tanda pertama sampai dampak dihentikan
+  \node[tahap, fill=blue!8] (deteksi) at (0, 0)
+    {Deteksi\\{\tiny\mdseries \textit{alert} laju pembakaran SLO}};
+  \node[tahap, fill=blue!8] (deklarasi) at (4, 0)
+    {Deklarasi dan triase\\{\tiny\mdseries komandan insiden ditunjuk}};
+  \node[tahap, fill=orange!12] (mitigasi) at (8, 0)
+    {Mitigasi\\{\tiny\mdseries hentikan dampak bagi pasien lebih dahulu}};
+
+  % Baris 2: dari pemulihan sampai pelajaran dijalankan
+  \node[tahap, fill=blue!8] (pulih) at (8, -2)
+    {Pemulihan\\{\tiny\mdseries layanan kembali memenuhi SLO}};
+  \node[tahap, fill=orange!12] (postmortem) at (4, -2)
+    {\textit{Postmortem}\\{\tiny\mdseries tanpa menyalahkan, paling lambat 5 hari kerja}};
+  \node[tahap, fill=green!10] (lanjut) at (0, -2)
+    {Tindak lanjut\\{\tiny\mdseries setiap butir punya pemilik dan tenggat}};
+
+  \draw[panah] (deteksi) -- (deklarasi);
+  \draw[panah] (deklarasi) -- (mitigasi);
+  \draw[panah] (mitigasi) -- (pulih);
+  \draw[panah] (pulih) -- (postmortem);
+  \draw[panah] (postmortem) -- (lanjut);
+  \draw[panah, dashed] (lanjut) -- node[left, font=\tiny, align=right]
+    {mencegah\\terulang} (deteksi);
+
+  % Baris 3: peran selama insiden
+  \node[draw, rounded corners, fill=praditagreen!15, minimum height=0.6cm,
+        text width=11.0cm, align=center, inner sep=3pt] (judulperan) at (4, -3.75)
+    {\textbf{Peran yang dipisahkan selama insiden berlangsung}};
+  \node[peran] (komandan) at (-0.3, -5.05)
+    {Komandan insiden\\{\tiny\mdseries memimpin dan memutuskan}};
+  \node[peran] (operasi) at (2.57, -5.05)
+    {Pelaksana operasi\\{\tiny\mdseries satu-satunya yang mengubah sistem}};
+  \node[peran] (komunikasi) at (5.43, -5.05)
+    {Komunikasi\\{\tiny\mdseries mengabari direksi dan pihak terdampak}};
+  \node[peran] (rencana) at (8.3, -5.05)
+    {Perencanaan\\{\tiny\mdseries mencatat linimasa dan mengatur sif}};
+\end{tikzpicture}

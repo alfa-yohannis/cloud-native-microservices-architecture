@@ -1,0 +1,48 @@
+% Dua cara menyimpan sesi pengguna. Kiri: sesi di memori server membuat server
+% tambahan tidak berguna. Kanan: proses tanpa state berbagi satu penyimpanan sesi.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  kotak/.style={draw, rounded corners, align=center, minimum height=0.9cm,
+                text width=1.55cm, inner sep=2pt},
+  lebar/.style={draw, rounded corners, align=center, minimum height=0.7cm,
+                text width=3.6cm, inner sep=2pt},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  % Panel kiri
+  \node[lebar, fill=blue!8] (lb1) at (0,1.2)
+    {Penyeimbang beban\\{\tiny\mdseries mengirim pasien ke server yang sama}};
+  \node[kotak, fill=red!22] (sa) at (-1,-0.4)
+    {Server A\\{\tiny\mdseries sesi pasien di memori}};
+  \node[kotak, fill=gray!35] (sb) at (1,-0.4)
+    {Server B\\{\tiny\mdseries baru, tidak mengenal sesi}};
+  \draw[panah] (lb1.south) ++(-1,0) -- (sa.north);
+  \draw[panah, dashed, gray] (lb1.south) ++(1,0) -- (sb.north);
+  \node[font=\tiny, align=center, text=red!60!black] at (0,-1.55)
+    {server A mati atau penuh:\\pasien harus masuk ulang};
+
+  % Panel kanan
+  \node[lebar, fill=blue!8] (lb2) at (6,1.2)
+    {Penyeimbang beban\\{\tiny\mdseries mengirim ke server mana saja}};
+  \foreach \nama/\x in {A/4.9, B/6, C/7.1} {
+    \node[kotak, fill=blue!8, text width=0.85cm] (s\nama) at (\x,-0.4)
+      {Server \nama};
+    \draw[panah] (lb2.south -| s\nama.north) -- (s\nama.north);
+  }
+  \node[lebar, fill=green!10] (simpan) at (6,-1.75)
+    {Penyimpanan sesi bersama\\{\tiny\mdseries \textit{backing service}}};
+  \foreach \nama in {A, B, C} {
+    \draw[panah] (s\nama.south) -- (simpan.north -| s\nama.south);
+  }
+
+  \begin{scope}[on background layer]
+    \node[draw, dashed, gray, rounded corners, inner sep=5pt,
+          fit={(lb1) (sa) (sb) (0,-1.9)}] (kiri) {};
+    \node[draw, dashed, gray, rounded corners, inner sep=5pt,
+          fit=(lb2) (sA) (sC) (simpan)] (kanan) {};
+  \end{scope}
+  \node[font=\scriptsize\bfseries, anchor=south] at (kiri.north)
+    {Sesi di memori server};
+  \node[font=\scriptsize\bfseries, anchor=south] at (kanan.north)
+    {Proses tanpa \textit{state}};
+\end{tikzpicture}

@@ -1,0 +1,41 @@
+\begin{tikzpicture}[
+  x=0.42cm, y=0.036cm,
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  % Seluruh area di bawah kurva diwarnai sebagai puncak, lalu lapisan
+  % dasar ditimpa sehingga yang tersisa hanya bagian di atas batas komitmen.
+  \fill[orange!12] (0,0) -- plot[smooth, tension=0.6] coordinates {
+      (0,46) (2,44) (4,45) (6,52) (8,78) (10,90) (12,82) (13,74)
+      (15,80) (17,86) (19,70) (21,55) (24,47)}
+    -- (24,0) -- cycle;
+  \fill[blue!8] (0,0) rectangle (24,40);
+
+  % Kurva kebutuhan kapasitas selama 24 jam.
+  \draw[very thick, praditagreen] plot[smooth, tension=0.6] coordinates {
+      (0,46) (2,44) (4,45) (6,52) (8,78) (10,90) (12,82) (13,74)
+      (15,80) (17,86) (19,70) (21,55) (24,47)};
+
+  % Batas komitmen.
+  \draw[thick, dashed] (0,40) -- (24,40);
+  \node[anchor=west, align=left] at (24.3,40)
+    {batas\\komitmen};
+
+  % Pekerjaan batch malam yang boleh terhenti.
+  \draw[thick, dashed, fill=green!10] (0.6,54) rectangle (5.4,80);
+  \node[align=center, font=\scriptsize\bfseries] at (3,67)
+    {Batch malam\\{\tiny\mdseries\itshape spot}};
+
+  % Keterangan tiap lapisan.
+  \node[align=center, font=\scriptsize\bfseries] at (14,20)
+    {Beban dasar 24 jam\\{\tiny\mdseries komitmen 1 atau 3 tahun}};
+  \node[align=center, font=\scriptsize\bfseries] at (10.4,58)
+    {Puncak siang\\{\tiny\mdseries\itshape on-demand}};
+
+  % Sumbu.
+  \draw[panah] (0,0) -- (25.5,0) node[anchor=west] {jam};
+  \draw[panah] (0,0) -- (0,104) node[anchor=south west] {kapasitas terpakai};
+  \foreach \jam in {0,6,12,18,24} {
+    \draw (\jam,0) -- (\jam,-2.5) node[anchor=north] {\jam};
+  }
+\end{tikzpicture}

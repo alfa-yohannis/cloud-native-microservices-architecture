@@ -1,0 +1,479 @@
+\documentclass[aspectratio=169, table, 12pt]{beamer}
+
+\input{../preamble}
+
+% Kolom X rata kiri untuk tabel yang sempit.
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{\Huge Adopsi Cloud dan\\ \vspace{10pt} Strategi Migrasi 7R}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Isi Pertemuan}
+  \vspace{10pt}
+  \begin{columns}[t]
+    \column{0.5\textwidth}
+    {\small\tableofcontents[sections={1-4}]}
+
+    \column{0.5\textwidth}
+    {\small\tableofcontents[sections={5-8}]}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\hfill}
+  \centering
+  \LARGE{\textbf{Dari 46 aplikasi hasil akuisisi,\\mana yang dipindah lebih dulu,\\dan
+  apakah organisasinya siap?}}
+\end{frame}
+
+\section{Tujuan dan Kerangka Bahasan}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Tujuan dan Kerangka Bahasan}}
+\end{frame}
+
+\begin{frame}{Tujuan Pembelajaran}
+  \vspace{6pt}
+  \begin{itemize}
+    \item Membandingkan struktur kerangka adopsi \textit{cloud} dari AWS (Amazon Web
+          Services), Microsoft, dan Google.
+    \item Menilai kesiapan organisasi dengan enam perspektif AWS CAF.
+    \item Memberi usulan strategi 7R yang beralasan untuk setiap aplikasi dalam
+          portofolio.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Masalah yang Dijawab Pertemuan Ini}
+  \begin{itemize}
+    \item Misalkan inventaris pertama Medikara Health mencatat 46 aplikasi.
+    \item Bab 2 mengusulkan model \textit{hybrid} dan menunda keputusan ERP keuangan.
+    \item Bab 3 menghitung biaya per kunjungan pasien.
+    \item Migrasi yang hanya digerakkan divisi TI sering gagal: pengguna tidak dilatih,
+          anggaran tanpa pemilik, kontrol akses lemah ikut pindah.
+    \item Urutan bahasan: kerangka, kesiapan, inventaris, 7R, \textit{landing zone}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{{\Large Diagram Konsep Bab 4}}
+  \centering
+  \includegraphics[width=0.96\textwidth,height=0.77\textheight,keepaspectratio]{../../figures/ch04-diagram-konsep.png}
+\end{frame}
+
+\section{Tiga Kerangka Adopsi Cloud}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Tiga Kerangka Adopsi Cloud}}
+\end{frame}
+
+\begin{frame}{Apa Itu Kerangka Adopsi Cloud}
+  \begin{itemize}
+    \item CAF (\textit{Cloud Adoption Framework}): panduan, praktik, dan alat bantu untuk
+          adopsi \textit{cloud} di tingkat organisasi.
+    \item Menurut AWS: memprioritaskan peluang, menilai kesiapan, memperbarui peta jalan
+          secara bertahap.
+    \item Analogi: buku panduan jasa pindahan kantor. Judul babnya beda, isinya mirip.
+    \item Misalkan Bekasi memindah jadwal kamar operasi tanpa melatih 40 perawat: celah
+          orang.
+    \item Misalkan Depok membuka akun sendiri, Rp18 juta per bulan tanpa pemilik: celah
+          tata kelola.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{AWS CAF: Enam Perspektif, Empat Domain, Empat Fase}
+  \centering
+  \eadiagram{../../figures/ch04-struktur-aws-caf.tex}
+\end{frame}
+
+\begin{frame}{Microsoft CAF dan Google Cloud Adoption Framework}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \textbf{Microsoft CAF (pembaruan Agustus 2026)}
+    \begin{itemize}
+      \item Tujuh fase: Strategy, Plan, Ready, Adopt, Govern, Secure, Manage.
+      \item Ready menyiapkan \textit{landing zone}.
+      \item Ada skenario kedaulatan data.
+      \item Mudah dijadikan paket kerja.
+    \end{itemize}
+
+    \column{0.48\textwidth}
+    \textbf{Google Cloud Adoption Framework}
+    \begin{itemize}
+      \item Empat tema: Learn, Lead, Scale, Secure.
+      \item Tiga fase: \textit{tactical}, \textit{strategic},
+            \textit{transformational}.
+      \item Dibaca lewat orang, proses, dan teknologi.
+      \item Mudah dikomunikasikan ke direksi.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Perbandingan Tiga Kerangka}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}YYY}
+    \hline
+    \textbf{Aspek} & \textbf{AWS CAF} & \textbf{Microsoft CAF} & \textbf{Google CAF} \\
+    \hline
+    Unit utama & Enam perspektif & Tujuh fase & Empat tema \\
+    \hline
+    Paling membantu menjawab & Siapa memiliki kemampuan apa? & Pekerjaan apa lebih dulu?
+      & Sudah semampu apa sekarang? \\
+    \hline
+    Kekuatan & Memetakan pemangku kepentingan & Paket kerja proyek & Tingkat kematangan
+      \\
+    \hline
+    Kelemahan bila sendirian & Tanpa urutan kerja rinci & Terbaca sebagai urusan TI
+      saja & Kurang rinci per kemampuan \\
+    \hline
+  \end{tabularx}
+
+  \vspace{8pt}
+  Bab ini memakai enam perspektif AWS CAF untuk menilai kesiapan.
+\end{frame}
+
+\begin{frame}{Dua Hal yang Sering Tertukar}
+  \begin{itemize}
+    \item Kerangka adopsi (CAF) menilai kesiapan organisasi dan mengatur perjalanan
+          adopsi.
+    \item Kerangka arsitektur (Well-Architected, enam pilar) menilai mutu rancangan satu
+          \textit{workload}.
+    \item "Apakah tim keamanan sudah siap?" milik CAF.
+    \item "Apakah SIMRS punya cadangan di dua zona?" milik kerangka arsitektur.
+  \end{itemize}
+\end{frame}
+
+\section{Penilaian Kesiapan}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Penilaian Kesiapan dengan\\Enam Perspektif}}
+\end{frame}
+
+\begin{frame}{Enam Perspektif dan Pemangku Kepentingannya}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2cm}Y
+      >{\raggedright\arraybackslash}p{4.4cm}}
+    \hline
+    \textbf{Perspektif} & \textbf{Pertanyaan kunci} & \textbf{Pemangku kepentingan} \\
+    \hline
+    Business & Hasil bisnis apa, berapa angkanya, siapa pemilik manfaat? & Direktur
+      utama, keuangan, operasional \\
+    \hline
+    People & Keterampilan, budaya, struktur tim apa yang berubah? & Kepala TI, kepala
+      sumber daya manusia \\
+    \hline
+    Governance & Siapa memutuskan; bagaimana anggaran dan risiko dikendalikan? & Direktur
+      keuangan, manajemen risiko \\
+    \hline
+    Platform & Lingkungan apa yang dibangun dan disiapkan berulang? & Arsitek,
+      \textit{engineer} infrastruktur \\
+    \hline
+    Security & Bagaimana data dan \textit{workload} dijaga? & Keamanan informasi,
+      kepatuhan, audit internal \\
+    \hline
+    Operations & Bagaimana layanan dipantau, dipulihkan, diubah? & Kepala operasional TI
+      \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Memberi Skor tanpa Terjebak Formalitas}
+  \begin{itemize}
+    \item Skor 1 sampai 5: belum ada, informal, terdokumentasi sebagian, konsisten dan
+          diukur, diperbaiki berdasarkan data.
+    \item Setiap skor wajib disertai bukti. Skor tanpa bukti dicatat 1.
+    \item Penilai bukan pemilik proses yang dinilai.
+    \item Keputusan dibaca dari skor terendah, bukan rata-rata.
+    \item Setiap celah punya pemilik, rencana, dan tanggal tinjau ulang.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Pemeriksaan Kesehatan, Bukan Audit}
+  \begin{itemize}
+    \item Analogi: lima hasil normal dan satu kadar gula jauh di atas batas tetap perlu
+          ditangani sekarang.
+    \item Audit memeriksa kepatuhan pada aturan dan menghasilkan temuan.
+    \item Penilaian kesiapan memeriksa kemampuan untuk perubahan dan menghasilkan
+          rencana.
+    \item Misalkan rata-rata 3,4 tetapi Security 1,7 karena akun administrator dipakai 9
+          orang: belum siap.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Kasus Medikara: Profil Kesiapan (Angka Rekaan)}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \centering
+    \resizebox{!}{0.62\textheight}{\input{../../figures/ch04-profil-kesiapan.tex}}
+
+    \column{0.43\textwidth}
+    \footnotesize
+    \begin{itemize}
+      \item 52 staf TI di lima rumah sakit dan kantor pusat; 4 bersertifikat.
+      \item 212 akun SIMRS mantan karyawan masih aktif.
+      \item Vendor Medikara+ memakai akun bersama.
+      \item Rata-rata 2,3; Business 3,3; Security 1,3.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Kasus Medikara: Dua Konsekuensi}
+  \begin{itemize}
+    \item Batas minimal: 3 untuk setiap perspektif, 4 untuk Security.
+    \item Pertama, gelombang pertama ditunda sekitar enam bulan.
+    \item Tiga celah terbesar: Security (selisih 2,7), Operations (1,0), People (1,0).
+    \item Kedua, pekerjaan tanpa memindahkan data pasien tidak perlu menunggu.
+    \item Aplikasi yang tidak dipakai dimatikan; inventaris dimulai sekarang.
+  \end{itemize}
+\end{frame}
+
+\section{Inventaris dan Dependensi}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Inventaris Portofolio\\dan Dependensi}}
+\end{frame}
+
+\begin{frame}{Atribut Minimal Inventaris}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3cm}YY}
+    \hline
+    \textbf{Atribut} & \textbf{Mengapa dibutuhkan} & \textbf{Contoh: aplikasi apotek} \\
+    \hline
+    Pemilik bisnis dan teknis & Siapa memutuskan, siapa mengerjakan & Kepala unit apotek;
+      TI pusat \\
+    \hline
+    Pengguna dan kritikalitas & Siapa terdampak, urutan gelombang & 96 staf di 12
+      apotek; sedang \\
+    \hline
+    Teknologi, kontrak & Dapat dipindah apa adanya? Kapan paling murah? & Desktop;
+      dukungan berhenti akhir 2026 \\
+    \hline
+    Dependensi & Aplikasi yang harus pindah bersama & Baca stok langsung dari basis data
+      SIMRS \\
+    \hline
+    Kondisi & Masalah yang sudah dirasakan & Stok sinkron tiap malam \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Kabel di Balik Lemari}
+  \begin{itemize}
+    \item Analogi: lampu kamar anak ternyata menyala dari stopkontak kamar sebelah.
+    \item Flexera 2020 (750 responden): memahami dependensi aplikasi adalah tantangan
+          teratas migrasi.
+    \item Sumber pencarian: wawancara, berkas konfigurasi, jadwal tugas malam, log
+          jaringan.
+    \item Setiap sumber hanya menangkap sebagian, jadi dipakai bersamaan.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Peta Dependensi di Sekitar SIMRS Jakarta (Rekaan)}
+  \centering
+  \eadiagram{../../figures/ch04-peta-dependensi.tex}
+\end{frame}
+
+\begin{frame}{Kelompok Pindah: Apa yang Terungkap}
+  \begin{itemize}
+    \item Kelompok pindah: aplikasi yang harus dipindah dalam gelombang yang sama.
+    \item Apotek membaca basis data SIMRS sekitar 30.000 kali per bulan: pindah bersama,
+          atau ganti dengan antarmuka resmi.
+    \item Skrip malam 30 kali per bulan menyatukan kelompok SIMRS dan ERP keuangan.
+    \item Sistem laboratorium terikat kabel ke alat analisis: alat fisik tidak ikut
+          pindah.
+    \item Prinsip arsitektur dan \textit{gap analysis}: dibahas rinci di IT40513.
+  \end{itemize}
+\end{frame}
+
+\section{Strategi Migrasi 7R}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Strategi Migrasi 7R}}
+\end{frame}
+
+\begin{frame}{Tujuh R Menurut AWS Prescriptive Guidance}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2cm}YY}
+    \hline
+    \textbf{Strategi} & \textbf{Yang terjadi} & \textbf{Kasus pemakaian umum} \\
+    \hline
+    Retire & Dimatikan atau diarsipkan & Pemakaian di bawah 5 persen; tanpa koneksi masuk
+      90 hari \\
+    \hline
+    Retain & Tetap di tempat sementara & Aturan lokasi data, perangkat khusus, menunggu
+      SaaS \\
+    \hline
+    Rehost & Dipindah tanpa perubahan & Banyak server dengan cepat \\
+    \hline
+    Relocate & Pindah di tingkat platform & Platform virtualisasi; antarakun \\
+    \hline
+    Repurchase & Diganti produk lain & Lisensi lama ke SaaS \\
+    \hline
+    Replatform & Pindah dengan sebagian optimasi & Basis data ke layanan terkelola \\
+    \hline
+    Refactor & Arsitektur dirancang ulang & Monolit menghambat rilis \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Analogi dan Tiga Strategi yang Sering Tertukar}
+  \begin{itemize}
+    \item Pindah rumah: buang, titip, angkut, kontainer utuh, beli baru, ganti engsel,
+          rancang ulang dapur.
+    \item Rehost: server satu per satu ke mesin virtual, aplikasi tidak diubah.
+    \item Relocate: sekumpulan server sekaligus di tingkat platform, atau pindah antarakun.
+    \item Replatform: sebagian kecil cara jalan diubah, misalnya basis data ke layanan
+          terkelola.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Mengapa Tidak Sekalian Refactor?}
+  \begin{itemize}
+    \item AWS: Refactor tidak dianjurkan untuk migrasi besar, karena modernisasi
+          dilakukan selama migrasi.
+    \item Paling rumit, paling mahal, sulit dikelola untuk banyak aplikasi.
+    \item Anjuran: \textit{rehost}, \textit{relocate}, atau \textit{replatform} dulu,
+          modernisasi sesudahnya.
+    \item Konsekuensi pertama: masa membayar dua lingkungan menjadi pendek.
+    \item Konsekuensi kedua: masalah rancangan ikut pindah, jadi "kemudian" butuh
+          tanggal dan anggaran.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Urutan Pertanyaan untuk Usulan Awal}
+  \centering
+  \eadiagram{../../figures/ch04-pohon-7r.tex}
+\end{frame}
+
+\begin{frame}{Kasus Medikara: Usulan 7R Awal (Rekaan)}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.6cm}
+      >{\raggedright\arraybackslash}p{2.2cm}Y}
+    \hline
+    \textbf{Aplikasi} & \textbf{Usulan} & \textbf{Alasan singkat} \\
+    \hline
+    SIMRS, lima versi & Diperdebatkan & Retain lalu Repurchase, atau Rehost ke Jakarta \\
+    \hline
+    ERP keuangan & Replatform & Basis data ke layanan terkelola; lisensi sampai 2028 \\
+    \hline
+    Medikara+ & Relocate & Keluar dari akun vendor; Refactor menyusul \\
+    \hline
+    Sistem laboratorium & Retain & Terikat kabel ke alat analisis \\
+    \hline
+    Aplikasi apotek & Repurchase & Dukungan vendor berhenti; SaaS memadai \\
+    \hline
+    Klaster virtualisasi, 14 aplikasi & Relocate & Pindah utuh di tingkat platform \\
+    \hline
+    Portal dokumen akreditasi & Rehost & Aplikasi sederhana di perangkat tua \\
+    \hline
+    Antrean lama Jakarta & Retire & Tanpa koneksi masuk 90 hari \\
+    \hline
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Kasus Medikara: Sebaran 46 Aplikasi}
+  \begin{itemize}
+    \item Retire 6, Retain 5, Rehost 10, Relocate 15, Repurchase 3, Replatform 2,
+          Refactor 0, diperdebatkan 5.
+    \item Tidak ada Refactor pada gelombang pertama; Medikara+ menyusul mulai Bab 8.
+    \item SIMRS: Retain lalu Repurchase sejalan dengan strategi, tetapi melatih sekitar
+          2.900 staf.
+    \item SIMRS: Rehost cepat mengatasi perangkat tua, tetapi lima versi tetap lima.
+    \item Bab 7 mendiagnosis bentuk arsitektur; keputusan akhir ada di peta jalan Bab 14.
+  \end{itemize}
+\end{frame}
+
+\section{Landing Zone dan CCoE}
+
+\begin{frame}{\hfill}
+  \centering
+  \Huge{\textbf{Landing Zone dan\\Cloud Center of Excellence}}
+\end{frame}
+
+\begin{frame}{Landing Zone: Fondasi Sebelum Workload Datang}
+  \begin{itemize}
+    \item Lingkungan \textit{cloud} yang disiapkan sebelum \textit{workload} pertama
+          datang.
+    \item Microsoft CAF: fase Ready, beberapa area rancangan.
+    \item Isi umum: struktur akun, identitas dan akses, jaringan, kebijakan keamanan,
+          log terpusat, tag dan anggaran.
+    \item Analogi: kawasan perumahan yang jalan, saluran, dan pos satpamnya sudah jadi.
+    \item Misalkan sesudah 8 minggu: akun baru siap dalam 1 hari, bukan 3 minggu.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Landing Zone Rancangan Awal Medikara}
+  \centering
+  \eadiagram{../../figures/ch04-landing-zone.tex}
+\end{frame}
+
+\begin{frame}{Cloud Center of Excellence (CCoE)}
+  \begin{itemize}
+    \item Tim lintas fungsi: arsitek, keamanan, keuangan, operasi, wakil unit bisnis.
+    \item Flexera 2020: 73 persen perusahaan besar punya tim \textit{cloud} pusat atau
+          CCoE.
+    \item CCoE bukan divisi TI baru yang mengerjakan seluruh migrasi.
+    \item Menetapkan standar, menyediakan fondasi, mengajari tim lain.
+    \item Aturan yang dijaga disebut \textit{guardrail}; dibahas di Bab 14.
+  \end{itemize}
+\end{frame}
+
+\section{Aktivitas}
+
+\begin{frame}{Aktivitas: Penilaian Kesiapan dan Portofolio 7R}
+  \begin{enumerate}
+    \item Isi \texttt{lembar-penilaian-kesiapan-caf.xlsx}: skor, bukti, pemilik jawaban.
+    \item Tetapkan batas minimal, catat tiga celah terbesar.
+    \item Inventaris aplikasi di \texttt{templat-inventaris-aplikasi.xlsx}.
+    \item Beri usulan 7R dengan alasan satu kalimat
+          (\texttt{panduan-keputusan-7r.md}).
+    \item Tandai usulan yang diperdebatkan beserta dua pilihannya.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Peran, Luaran, dan Kriteria}
+  \begin{itemize}
+    \item Non-teknis memimpin Business, People, Governance; teknis memimpin Platform,
+          Security, Operations.
+    \item Luaran: penilaian kesiapan dan portofolio 7R untuk C2, ditinjau menjelang UTS.
+    \item Kriteria: bukti 25\%, inventaris 25\%, alasan 7R 30\%, ketidakpastian 10\%,
+          etika 10\%.
+    \item Opsional: \texttt{kelompok-pindah.py} untuk menandai kelompok pindah.
+    \item Data nyata seizin organisasi dan dianonimkan; tanpa data pribadi.
+  \end{itemize}
+\end{frame}
+
+\section{Ringkasan dan Latihan}
+
+\begin{frame}{Ringkasan}
+  \begin{itemize}
+    \item Tiga kerangka, satu pesan: adopsi \textit{cloud} adalah urusan orang, proses,
+          dan tata kelola.
+    \item Kesiapan dibaca dari perspektif terlemah; rata-rata 2,3 menyembunyikan
+          Security 1,3.
+    \item Dependensi tersembunyi dapat menyatukan dua kelompok pindah.
+    \item Untuk migrasi besar: pindah dulu, modernisasi kemudian, dengan tanggal dan
+          anggaran.
+    \item \textit{Landing zone} dan CCoE menyiapkan fondasi tanpa mengambil alih kerja
+          tim lain.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Latihan}
+  \begin{enumerate}
+    \item Jelaskan mengapa panduan AWS menyarankan agar strategi Refactor tidak dipakai
+          untuk sebagian besar aplikasi dalam migrasi berskala besar.
+    \item Medikara Health memiliki SIMRS dengan versi berbeda di lima rumah sakit.
+          Usulkan strategi 7R untuk SIMRS, lalu pertahankan usulan tersebut terhadap satu
+          alternatif lain.
+    \item Perspektif CAF mana yang paling sering diabaikan ketika migrasi hanya
+          digerakkan oleh divisi TI? Jelaskan akibatnya.
+  \end{enumerate}
+\end{frame}
+
+\end{document}

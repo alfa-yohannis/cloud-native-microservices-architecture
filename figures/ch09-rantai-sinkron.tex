@@ -1,0 +1,55 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, text width=1.75cm,
+    minimum height=0.95cm, align=center},
+  tekan/.style={tahap, fill=orange!12},
+  induk/.style={draw, rounded corners, fill=praditagreen!15, text width=1.75cm,
+    minimum height=0.95cm, align=center},
+  pelanggan/.style={draw, rounded corners, fill=blue!8, text width=1.75cm,
+    minimum height=0.7cm, align=center},
+  judul/.style={font=\footnotesize\bfseries, anchor=west},
+  ket/.style={font=\tiny, fill=white, inner sep=1pt}
+]
+  % Baris A: Medikara+ menunggu empat sistem secara berurutan.
+  \node[judul] at (-1.0,0.95) {A. Semua panggilan sinkron};
+  \node[tahap] (app1) at (0,0) {Medikara+};
+  \node[tahap] (jd1) at (2.4,0) {Jadwal dokter\\{\tiny\mdseries 99,9\%}};
+  \node[tahap] (bp1) at (4.8,0) {Kepesertaan BPJS\\{\tiny\mdseries 99,0\%}};
+  \node[tahap] (df1) at (7.2,0) {Pendaftaran SIMRS\\{\tiny\mdseries 99,5\%}};
+  \node[tekan] (nt1) at (9.6,0) {Notifikasi\\{\tiny\mdseries 99,0\%}};
+  \draw[panah] (app1) -- (jd1);
+  \draw[panah] (jd1) -- (bp1);
+  \draw[panah] (bp1) -- (df1);
+  \draw[panah] (df1) -- (nt1);
+  \node[draw, rounded corners, fill=red!22, text width=11.0cm, align=center,
+    minimum height=0.75cm] at (4.8,-1.2)
+    {Ketersediaan gabungan $\approx$ 97,4\%, atau sekitar 18,6 jam gagal per bulan.\\
+     Notifikasi yang mati ikut menggagalkan janji temu.};
+
+  % Baris B: hanya jadwal dokter yang ditunggu, sisanya menerima event.
+  \node[judul] at (-1.0,-2.15) {B. Hanya jadwal yang sinkron};
+  \node[tahap] (app2) at (0,-3.25) {Medikara+};
+  \node[tahap] (jd2) at (0,-4.85) {Jadwal dokter\\{\tiny\mdseries 99,9\%}};
+  \node[induk] (br) at (3.2,-3.25) {\textit{Event broker}\\{\tiny\mdseries 99,95\%}};
+  \node[pelanggan] (bp2) at (6.2,-2.35) {Kepesertaan BPJS};
+  \node[pelanggan] (df2) at (6.2,-3.25) {Pendaftaran SIMRS};
+  \node[pelanggan, fill=orange!12] (nt2) at (6.2,-4.15)
+    {Notifikasi\\{\tiny\mdseries boleh terlambat}};
+  \draw[panah] (app2) -- node[ket, right] {sinkron} (jd2);
+  \draw[panah] (app2) -- node[ket, above] {\textit{JanjiTemu-}} node[ket, below]
+    {\textit{Dibuat}} (br);
+  \draw[panah, dashed] (br.east) -- (bp2.west);
+  \draw[panah, dashed] (br.east) -- (df2.west);
+  \draw[panah, dashed] (br.east) -- (nt2.west);
+  \node[draw, rounded corners, fill=green!10, text width=2.6cm, align=center,
+    minimum height=0.95cm] at (9.55,-3.25)
+    {Yang ditunggu pasien hanya jadwal dan \textit{broker}: $\approx$ 99,85\%,
+     sekitar 65 menit per bulan};
+
+  % Keterangan garis.
+  \draw[panah] (2.3,-5.35) -- ++(0.6,0);
+  \node[anchor=west, font=\tiny] at (3.0,-5.35) {menunggu jawaban};
+  \draw[panah, dashed] (5.0,-5.35) -- ++(0.6,0);
+  \node[anchor=west, font=\tiny] at (5.7,-5.35) {pesan diantar kemudian};
+\end{tikzpicture}

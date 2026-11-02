@@ -1,0 +1,48 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, minimum width=2.2cm,
+    minimum height=1.0cm, align=center, text width=2.05cm},
+  periksa/.style={draw, rounded corners, fill=orange!12, minimum width=2.2cm,
+    minimum height=1.0cm, align=center, text width=2.05cm},
+  hasil/.style={draw, rounded corners, fill=green!10, minimum width=2.2cm,
+    minimum height=1.0cm, align=center, text width=2.05cm},
+  tolak/.style={draw, rounded corners, fill=red!22, minimum width=2.2cm,
+    minimum height=0.8cm, align=center, text width=2.05cm}
+]
+  % Katalog kebijakan sebagai satu sumber kebenaran.
+  \node[draw, rounded corners, fill=praditagreen!15, minimum width=11.6cm,
+    minimum height=0.8cm, align=center, text width=11.3cm,
+    font=\scriptsize\bfseries] (katalog) at (5.85,2.0)
+    {Katalog kebijakan di repositori Git, dikelola CCoE\\{\tiny\mdseries satu aturan
+     tertulis, satu kode kebijakan, satu pemilik, satu cara pengecualian}};
+
+  % Alur perubahan dari tim sampai pemindaian berkala.
+  \node[tahap] (ubah) at (0.95,0) {Tim menulis perubahan IaC};
+  \node[periksa] (proaktif) at (3.9,0) {Pemeriksaan di \textit{pipeline}\\{\tiny\mdseries
+    sebelum dibuat}};
+  \node[periksa] (preventif) at (6.8,0) {Penolakan di tingkat akun\\{\tiny\mdseries saat
+    dibuat}};
+  \node[hasil] (jalan) at (9.7,0) {Sumber daya berjalan di \textit{landing zone}};
+  \node[periksa] (detektif) at (9.7,-2.0) {Pemindaian konfigurasi\\{\tiny\mdseries
+    sesudah dibuat}};
+  \node[tolak] (pesan) at (3.9,-2.0) {Ditolak, dengan alasan dan cara memperbaiki};
+  \node[tahap] (lapor) at (6.8,-2.0) {Laporan temuan ke pemilik layanan};
+
+  \draw[panah] (ubah) -- (proaktif);
+  \draw[panah] (proaktif) -- node[above, font=\tiny] {lolos} (preventif);
+  \draw[panah] (preventif) -- node[above, font=\tiny] {lolos} (jalan);
+  \draw[panah] (jalan) -- (detektif);
+  \draw[panah] (detektif) -- (lapor);
+  \draw[panah] ([xshift=-4mm]proaktif.south) -- node[left, font=\tiny] {gagal}
+    ([xshift=-4mm]pesan.north);
+  \draw[panah] (preventif.south) -- ++(0,-0.4) -| node[pos=0.25, above, font=\tiny]
+    {gagal} ([xshift=4mm]pesan.north);
+  \draw[panah] (pesan.west) -| node[pos=0.75, left, font=\tiny] {perbaiki} (ubah.south);
+
+  % Setiap pemeriksaan membaca katalog yang sama.
+  \foreach \simpul in {proaktif, preventif} {
+    \draw[panah, gray] (katalog.south -| \simpul.north) -- (\simpul.north);
+  }
+  \draw[panah, gray] (11.35,1.6) |- (detektif.east);
+\end{tikzpicture}

@@ -1,68 +1,1240 @@
 \chapter{Prinsip Cloud-Native dan Twelve-Factor App}
+\label{ch:ch05-prinsip}
+
+% Gaya listing Python khusus bab ini, disamakan dengan listing lain di modul.
+\lstdefinestyle{ch05python}{language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, showstringspaces=false, breaklines=true, frame=lines,
+  numbers=left, numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10}}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
-  \item Menjelaskan definisi \textit{cloud-native} menurut CNCF (Cloud Native Computing Foundation) dan perbedaannya dengan aplikasi yang sekadar \textit{cloud-hosted}.
-  \item Menerjemahkan dua belas faktor Twelve-Factor App ke dalam dampak bisnis yang mudah dipahami.
+  \item Menjelaskan definisi \textit{cloud-native} menurut CNCF (Cloud Native Computing
+        Foundation) dan perbedaannya dengan aplikasi yang sekadar \textit{cloud-hosted}.
+  \item Menerjemahkan dua belas faktor Twelve-Factor App ke dalam dampak bisnis yang mudah
+        dipahami.
   \item Menilai kesenjangan aplikasi yang ada terhadap prinsip \textit{cloud-native}.
 \end{itemize}
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: Medikara+ sudah berjalan di cloud milik vendor, tetapi tetap lambat saat lonjakan pengguna dan butuh dua minggu untuk satu pembaruan; berada di cloud belum tentu berarti cloud-native.
+Aplikasi pasien Medikara+ sudah berjalan di \textit{cloud} sejak 2023. Vendor pembuatnya
+menyewa dua mesin virtual di sebuah penyedia \textit{cloud}, lalu memasang Medikara+ di
+sana. Di atas kertas, masalah kapasitas seharusnya selesai. Kenyataannya lain. Setiap kali
+program vaksinasi diumumkan, Medikara+ melambat sampai banyak pemesanan gagal. Satu
+pembaruan kecil, misalnya perubahan teks pengingat jadwal, tetap butuh dua minggu untuk
+sampai ke ponsel pasien. Direksi bertanya dengan wajar: bukankah aplikasi ini sudah di
+\textit{cloud}?
+
+Jawabannya, berada di \textit{cloud} belum tentu berarti \textit{cloud-native}. Lokasi
+server berubah, tetapi cara aplikasi dibangun, dikonfigurasi, dijalankan, dan ditambah
+kapasitasnya masih sama dengan cara lama. Bab 1 sudah membedakan \textit{cloud-hosted} dan
+\textit{cloud-native} secara garis besar, dan Bab 4 sudah memberi label strategi migrasi
+untuk setiap aplikasi. Bab ini menyediakan alat ukurnya: definisi resmi untuk menilai arah,
+dan daftar periksa untuk menemukan titik yang menghambat. Hasilnya adalah kartu skor
+kesenjangan \textit{cloud-native} untuk tonggak capstone C2.
+
+Pembahasan dimulai dari definisi \textit{cloud-native} versi 1.1 yang disetujui Cloud
+Native Computing Foundation (CNCF) pada 26 Februari 2024 \cite{cncf-definition}. Setelah
+itu, dua belas faktor Twelve-Factor App \cite{twelvefactor} dibahas dalam tiga kelompok,
+lengkap dengan statusnya sebagai proyek \textit{open source} sejak November 2024
+\cite{c05-heroku2024} dan perluasannya menjadi lima belas faktor oleh Hoffman
+\cite{c05-hoffman2016}. Bab ditutup dengan \textit{immutable infrastructure} dan
+konfigurasi deklaratif \cite{c05-morris-immutable,c05-k8s-object-management}, dua gagasan
+yang menjadi jembatan ke pembahasan \textit{container} pada Bab 8 dan GitOps pada Bab 13.
 
 \section{Definisi Cloud-Native menurut CNCF}
+\label{sec:ch05-definisi}
 
-% TODO
-% Cakupan: definisi CNCF versi 1.1 (disetujui 26 Februari 2024) dan perubahannya dari versi 1.0; perbedaan cloud-hosted dan cloud-native; sifat sistem yang dituju: loosely coupled, resilient, manageable, observable, dan perubahan berdampak besar yang bisa dilakukan sering dan dapat diprediksi.
+CNCF adalah yayasan di bawah Linux Foundation yang menaungi banyak proyek \textit{open
+source}, termasuk Kubernetes. Definisi \textit{cloud-native} versi 1.1 disetujui oleh
+komite teknis (\textit{Technical Oversight Committee}) dan dewan pengurus
+(\textit{Governing Board}) CNCF pada 26 Februari 2024 \cite{cncf-definition}. Isinya
+terdiri atas tiga bagian. Bagian pertama menyatakan bahwa praktik \textit{cloud-native}
+memungkinkan organisasi mengembangkan, membangun, dan men-\textit{deploy}
+\textit{workload} di lingkungan komputasi publik, privat, maupun hibrida, untuk memenuhi
+kebutuhannya pada skala besar, dengan cara yang terprogram dan dapat diulang. Cirinya adalah
+sistem yang keterkaitannya longgar dan saling bekerja sama secara aman, tangguh, terkelola,
+berkelanjutan, dan dapat diamati. Bagian kedua menyebut teknologi yang biasanya dipakai:
+\textit{container}, \textit{service mesh}, \textit{multi-tenancy}, \textit{microservices},
+\textit{immutable infrastructure}, \textit{serverless}, dan API (\textit{Application
+Programming Interface}) deklaratif. Definisi itu menegaskan bahwa daftar ini tidak lengkap.
+Bagian ketiga menyatakan hasilnya: bersama otomatisasi yang andal, teknologi tersebut
+memungkinkan perekayasa melakukan perubahan berdampak besar secara sering dan dapat
+diprediksi, dengan kerja manual yang minimal dan pembagian tanggung jawab yang jelas
+\cite{cncf-definition}.
+
+Gambar \ref{fig:ch05-definisi-cncf} membaca definisi itu dari kiri ke kanan. Praktik
+menjadi titik awal, teknologi hanya contoh, sifat sistem menjadi sasaran, dan hasilnya
+adalah kemampuan berubah dengan cepat tanpa takut.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch05-definisi-cncf.tex}
+  \caption{Susunan definisi \textit{cloud-native} CNCF versi 1.1: praktik, contoh
+           teknologi, sifat sistem yang dituju, dan hasil yang diharapkan}
+  \label{fig:ch05-definisi-cncf}
+\end{figure}
+
+Analoginya adalah standar pelayanan loket di sebuah rumah sakit. Standar yang baik menyebut
+sifat layanan yang dituju: antrean tertib, data pasien aman, waktu tunggu terukur, dan
+keluhan dapat ditelusuri. Standar itu tidak menyebut merek mesin antrean atau merek komputer
+loket. Merek boleh berganti selama sifatnya terpenuhi. Definisi CNCF bekerja dengan cara
+yang sama. Kubernetes, \textit{container}, dan \textit{serverless} adalah contoh alat,
+sedangkan yang dinilai adalah praktik dan sifat sistemnya.
+
+Dua contoh cara membaca definisi ini:
+\begin{enumerate}
+  \item Sebuah organisasi memakai Kubernetes untuk menjalankan satu aplikasi lama apa
+        adanya. Aplikasi itu tetap dirilis empat kali setahun lewat 60 langkah manual.
+        Alatnya \textit{cloud-native}, tetapi hasilnya belum: perubahan tidak sering dan
+        tidak dapat diprediksi.
+  \item Misalkan sebuah bank daerah menjalankan sistemnya di pusat data sendiri, tetapi
+        pemasangannya sudah otomatis dan setiap perubahan dapat dirilis dalam 30 menit.
+        Sistem ini lebih dekat ke \textit{cloud-native} daripada contoh pertama, walaupun
+        tidak berada di \textit{cloud} publik, karena definisi CNCF juga mencakup
+        lingkungan privat.
+\end{enumerate}
+
+\subsection{Perubahan dari Versi 1.0 ke Versi 1.1}
+
+Definisi versi 1.0 dari 2018 tersimpan di riwayat berkas yang sama \cite{cncf-definition}.
+Perbandingan keduanya menunjukkan pergeseran cara pandang, seperti dirangkum Tabel
+\ref{tab:ch05-versi-definisi}.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Perbedaan definisi \textit{cloud-native} CNCF versi 1.0 dan versi 1.1}
+  \label{tab:ch05-versi-definisi}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Versi 1.0 (2018)} & \textbf{Versi 1.1 (2024)} \\
+    \hline
+    Pokok kalimat & Teknologi \textit{cloud-native} & Praktik \textit{cloud-native} \\
+    \hline
+    Yang dibangun & Aplikasi yang dapat diskalakan & \textit{Workload}, pada skala besar,
+      secara terprogram dan dapat diulang \\
+    \hline
+    Sifat sistem & Keterkaitan longgar, tangguh, terkelola, dapat diamati & Ditambah aman
+      dan berkelanjutan, serta saling bekerja sama \\
+    \hline
+    Contoh teknologi & \textit{Container}, \textit{service mesh}, \textit{microservices},
+      \textit{immutable infrastructure}, API deklaratif & Ditambah \textit{multi-tenancy}
+      dan \textit{serverless}, dengan penegasan bahwa daftarnya tidak lengkap \\
+    \hline
+    Hasil & Perubahan berdampak besar, sering, dapat diprediksi, kerja manual minimal &
+      Sama, ditambah pembagian tanggung jawab yang jelas \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Pergeseran dari "teknologi" ke "praktik" punya dua konsekuensi. Pertama, membeli alat tidak
+otomatis membuat organisasi menjadi \textit{cloud-native}. Cara tim membangun dan mengubah
+sistem ikut dinilai. Kedua, sifat "aman" dan "berkelanjutan" kini menjadi bagian definisi.
+Keamanan tidak lagi dianggap urusan tambahan sesudah sistem jadi, dan pemakaian energi serta
+jejak karbon yang dibahas pada Bab 3 ikut menjadi ukuran mutu.
+
+\subsection{Enam Sifat Sistem yang Dituju}
+
+Sifat sistem dalam definisi CNCF sering terdengar abstrak bagi pembaca non-teknis. Tabel
+\ref{tab:ch05-sifat} menerjemahkannya ke bahasa sehari-hari, lengkap dengan pertanyaan yang
+dapat diajukan kepada tim TI (teknologi informasi) tentang aplikasi yang sedang dinilai.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Enam sifat sistem dalam definisi CNCF versi 1.1 dan pertanyaan pengujinya}
+  \label{tab:ch05-sifat}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Sifat} & \textbf{Arti sehari-hari} & \textbf{Pertanyaan penguji} \\
+    \hline
+    Keterkaitan longgar & Satu bagian dapat diubah tanpa membongkar bagian lain & Bila
+      modul janji temu diubah, apakah modul tagihan harus ikut diuji ulang? \\
+    \hline
+    Aman & Akses dibatasi dan diperiksa di setiap pertemuan antarbagian & Siapa saja yang
+      dapat membaca kunci akses BPJS Kesehatan? \\
+    \hline
+    Tangguh & Gangguan pada satu bagian tidak menjatuhkan semuanya & Bila satu server
+      mati, berapa pasien yang ikut terputus? \\
+    \hline
+    Terkelola & Perubahan dan perawatan dilakukan lewat cara yang baku & Dapatkah satu
+      pengaturan diubah tanpa memasang ulang aplikasi? \\
+    \hline
+    Berkelanjutan & Sumber daya dipakai sesuai kebutuhan, termasuk energi & Apakah
+      kapasitas turun lagi setelah jam sibuk berlalu? \\
+    \hline
+    Dapat diamati & Keadaan sistem dapat diketahui dari luar & Berapa menit yang dibutuhkan
+      untuk mengetahui penyebab gangguan terakhir? \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Bagian hasil dalam definisi CNCF menyebut kerja manual yang minimal. Istilah aslinya
+\textit{toil}. Buku \textit{Site Reliability Engineering} dari Google mendefinisikan
+\textit{toil} sebagai pekerjaan manual yang berulang, dapat diotomatisasi, bersifat taktis,
+tidak meninggalkan nilai jangka panjang, dan bertambah seiring layanan tumbuh
+\cite{beyer2016}. Daftar 37 langkah manual yang dijalankan vendor Medikara+ setiap kali
+memasang versi baru adalah contoh \textit{toil}. Jumlah langkahnya tetap, tetapi
+frekuensinya akan naik bila organisasi ingin rilis lebih sering.
+
+\subsection{Cloud-Hosted dan Cloud-Native}
+
+Dua hal pada istilah ini sering tertukar. Pembagiannya begini. Aplikasi
+\textit{cloud-hosted} menumpang di infrastruktur \textit{cloud}, tetapi rancangan dan cara
+kerjanya tidak berubah. Aplikasi \textit{cloud-native} memenuhi sifat yang dituju definisi
+CNCF. Ukurannya bukan lokasi, melainkan sifat. Kedua bentuk itu adalah ujung sebuah rentang,
+bukan dua kotak terpisah, dan sebagian besar aplikasi organisasi berada di tengahnya.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Medikara+ berjalan di dua mesin virtual di \textit{cloud} milik vendor. Kapasitas
+        ditambah dengan mengganti mesin menjadi lebih besar, butuh sekitar 40 menit, dan
+        seluruh pengguna terputus. Pembaruan butuh dua minggu. Aplikasi ini
+        \textit{cloud-hosted}.
+  \item Enterprise Resource Planning (ERP) keuangan dipakai sekitar 120 staf keuangan pada
+        jam kerja, bebannya stabil, dan perubahannya jarang. Pertanyaan yang tepat untuk
+        aplikasi ini adalah sifat mana yang benar-benar dibutuhkan, misalnya aman dan dapat
+        diamati, bukan seluruh daftar.
+\end{enumerate}
 
 \section{Twelve-Factor App dan Statusnya Sekarang}
+\label{sec:ch05-twelve-factor}
 
-% TODO
-% Cakupan: asal-usul Twelve-Factor App (2011) dan statusnya sebagai proyek open source sejak November 2024; manfaat memakai daftar faktor sebagai alat penilaian, bukan dogma; pengelompokan dua belas faktor menjadi tiga kelompok untuk memudahkan pembaca non-teknis.
+Definisi CNCF menyebut sifat yang dituju, tetapi tidak menyebut cara memeriksa sebuah
+aplikasi satu per satu. Pertanyaan kemudian muncul: daftar periksa apa yang dapat dipakai?
+Jawaban yang paling luas dikenal adalah Twelve-Factor App.
+
+Twelve-Factor App adalah metodologi untuk membangun aplikasi yang dipakai lewat jaringan
+sebagai layanan, atau \textit{Software as a Service} (SaaS). Metodologi ini ditulis oleh
+Adam Wiggins, salah satu pendiri platform Heroku, dari pengalaman menjalankan ratusan ribu
+aplikasi di platform itu. Versi pertamanya terbit pada 2011, dan teks yang dibaca sekarang
+terakhir diperbarui pada 2017 \cite{twelvefactor}. Dua belas faktornya bertujuan agar
+aplikasi mudah disiapkan lewat otomatisasi, mudah dipindahkan antarlingkungan, cocok
+dipasang di platform \textit{cloud}, punya perbedaan sekecil mungkin antara lingkungan
+pengembangan dan produksi, serta dapat diskalakan tanpa perubahan besar pada rancangan
+\cite{twelvefactor}.
+
+Statusnya berubah pada 12 November 2024. Heroku mengumumkan bahwa Twelve-Factor App kini
+menjadi proyek \textit{open source} yang dikelola komunitas, dengan repositori di
+\berkas{github.com/twelve-factor/twelve-factor} yang memuat dokumen visi, daftar pengelola,
+dan pedoman kontribusi. Wiggins menyebutnya dokumen yang dikelola komunitas dan dapat
+berkembang dari waktu ke waktu \cite{c05-heroku2024}. Konsekuensinya bagi penilai: bunyi
+faktor dapat berubah pada tahun-tahun mendatang, sehingga kartu skor sebaiknya mencatat
+tanggal akses dan versi teks faktor yang dipakai.
+
+Twelve-Factor App juga bukan satu-satunya daftar. Hoffman memperluasnya menjadi lima belas
+faktor dengan menambahkan API yang dirancang lebih dahulu (\textit{API first}), telemetri,
+serta autentikasi dan otorisasi \cite{c05-hoffman2016}. Tambahan terakhir relevan bagi
+Medikara Health, mengingat temuan audit internal tentang kontrol akses yang lemah.
+
+\subsection{Alat Penilaian, Bukan Dogma}
+
+Dua belas faktor paling berguna bila dipakai sebagai alat penilaian. Setiap faktor
+memunculkan pertanyaan tentang aplikasi, dan jawabannya menunjukkan kesenjangan beserta
+dampaknya. Faktor bukan perintah yang wajib dipenuhi seluruhnya. Faktor itu ditulis untuk
+aplikasi SaaS yang terus berubah dan dipakai banyak orang, dan tidak semua aplikasi
+organisasi berbentuk seperti itu.
+
+Analoginya adalah pemeriksaan kesehatan berkala. Hasil laboratorium berisi belasan angka:
+gula darah, kolesterol, fungsi hati, dan seterusnya. Dokter tidak menuntut semua angka
+sempurna. Dokter membaca angka mana yang menyimpang, menilai seberapa berbahaya
+penyimpangan itu bagi usia dan pekerjaan pasien, lalu memilih dua atau tiga hal yang perlu
+ditangani lebih dahulu. Kartu skor \textit{twelve-factor} dibaca dengan cara yang sama.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Medikara+ dipakai sekitar 310.000 pengguna terdaftar, bebannya naik turun tajam,
+        dan pembaruannya diharapkan terjadi setiap pekan. Hampir semua faktor relevan,
+        sehingga kesenjangan pada faktor mana pun berdampak langsung pada pasien.
+  \item Aplikasi rekap lembur bulanan di bagian sumber daya manusia dipakai 12 orang dan
+        dijalankan sekali sebulan. Faktor tentang penskalaan hampir tidak relevan. Faktor
+        tentang konfigurasi dan \textit{log} tetap penting, karena aplikasi itu menyimpan
+        data karyawan dan perlu dapat diaudit.
+\end{enumerate}
+
+\subsection{Tiga Kelompok Faktor}
+
+Dua belas faktor terlalu banyak untuk diingat sekaligus oleh pembaca non-teknis. Bab ini
+mengelompokkannya menjadi tiga, dan setiap kelompok diwakili satu pertanyaan bisnis. Gambar
+\ref{fig:ch05-tiga-kelompok} memperlihatkan pengelompokan itu, dan Tabel
+\ref{tab:ch05-dua-belas} memuat bunyi singkat setiap faktor beserta terjemahan bebasnya.
+Pengelompokan ini adalah alat bantu bab ini, bukan bagian dari teks resmi Twelve-Factor App.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch05-tiga-kelompok.tex}
+  \caption{Dua belas faktor dalam tiga kelompok, masing-masing dengan satu pertanyaan
+           bisnis}
+  \label{fig:ch05-tiga-kelompok}
+\end{figure}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Dua belas faktor Twelve-Factor App dan terjemahan bebasnya, diolah dari
+           \cite{twelvefactor}}
+  \label{tab:ch05-dua-belas}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.6cm}
+    >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}p{0.9cm}}
+    \hline
+    \textbf{No.} & \textbf{Faktor} & \textbf{Bunyi singkat (terjemahan bebas)} &
+      \textbf{Kel.} \\
+    \hline
+    I & \textit{Codebase} & Satu basis kode dalam sistem kendali versi, dipasang di banyak
+      tempat & A \\
+    \hline
+    II & \textit{Dependencies} & Ketergantungan dinyatakan dan diisolasi secara eksplisit
+      & A \\
+    \hline
+    III & \textit{Config} & Konfigurasi disimpan di lingkungan, bukan di kode & A \\
+    \hline
+    IV & \textit{Backing services} & Layanan pendukung diperlakukan sebagai sumber daya
+      yang dapat dipasang dan dilepas & A \\
+    \hline
+    V & \textit{Build, release, run} & Tahap \textit{build} dan tahap menjalankan dipisahkan
+      dengan tegas & B \\
+    \hline
+    VI & \textit{Processes} & Aplikasi dijalankan sebagai satu atau beberapa proses tanpa
+      \textit{state} & B \\
+    \hline
+    VII & \textit{Port binding} & Layanan disediakan lewat \textit{port} milik aplikasi
+      sendiri & B \\
+    \hline
+    VIII & \textit{Concurrency} & Kapasitas ditambah dengan menambah proses & B \\
+    \hline
+    IX & \textit{Disposability} & Proses cepat menyala dan berhenti dengan rapi & B \\
+    \hline
+    X & \textit{Dev/prod parity} & Lingkungan pengembangan, uji, dan produksi dibuat
+      semirip mungkin & C \\
+    \hline
+    XI & \textit{Logs} & \textit{Log} diperlakukan sebagai aliran kejadian & C \\
+    \hline
+    XII & \textit{Admin processes} & Tugas administratif dijalankan sebagai proses sekali
+      jalan & C \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \section{Faktor tentang Kode, Konfigurasi, dan Backing Service}
+\label{sec:ch05-kelompok-a}
 
-% TODO
-% Cakupan: codebase, dependencies, config, dan backing services; dampak bisnis tiap faktor, misalnya konfigurasi yang tertanam di kode membuat setiap rumah sakit menjalankan versi berbeda.
-% Kasus Medikara: konfigurasi SIMRS yang berbeda di lima rumah sakit.
-% Pendalaman teknis: memisahkan konfigurasi dari kode dengan environment variable.
+Kelompok A menjawab satu pertanyaan bisnis: dapatkah satu kode dipasang di banyak lokasi
+tanpa diubah? Bagi Medikara Health yang punya lima rumah sakit, 18 klinik, dan satu
+laboratorium rujukan, pertanyaan ini menentukan berapa kali satu perubahan harus dikerjakan.
+
+\subsection{Codebase dan Dependencies}
+
+Faktor I menyatakan bahwa satu aplikasi punya tepat satu basis kode (\textit{codebase})
+yang dicatat dalam sistem kendali versi, lalu dipasang di banyak tempat. Setiap tempat
+pemasangan disebut \textit{deploy}: lingkungan uji, lingkungan produksi, atau lokasi
+cabang. Bila ada beberapa basis kode, yang ada bukan lagi satu aplikasi. Bila beberapa
+aplikasi berbagi kode yang sama, kode itu seharusnya dipisahkan menjadi pustaka yang dipakai
+bersama \cite{twelvefactor}. Faktor II menyatakan bahwa setiap ketergantungan, misalnya
+pustaka dan versinya, ditulis secara eksplisit dan diisolasi. Aplikasi tidak boleh
+bergantung pada perangkat lunak yang kebetulan sudah terpasang di server
+\cite{twelvefactor}.
+
+Dua faktor ini paling mudah dipahami lewat dampaknya. Bila lima rumah sakit masing-masing
+menyimpan salinan kode sendiri, satu perbaikan harus disalin lima kali, dan setiap salinan
+dapat menyimpang sedikit demi sedikit. Bila ketergantungan tidak tertulis, server baru hanya
+dapat disiapkan oleh orang yang ingat urutan pemasangannya. Pengetahuan itu hilang ketika
+orangnya pindah kerja.
+
+\subsection{Config: Konfigurasi di Lingkungan}
+
+Faktor III mendefinisikan konfigurasi sebagai segala sesuatu yang berbeda
+antar-\textit{deploy}. Isinya tiga jenis: alamat dan kredensial basis data serta layanan
+pendukung lain, kredensial ke layanan luar, dan nilai khas setiap lokasi, misalnya kode
+fasilitas \cite{twelvefactor}. Pengaturan internal yang sama di semua lokasi, misalnya
+urutan menu, bukan konfigurasi dalam arti ini. Faktor III meminta konfigurasi dipisahkan
+tegas dari kode dan disimpan di lingkungan tempat aplikasi berjalan, biasanya sebagai
+\textit{environment variable}. Twelve-Factor App memberi uji sederhana: bila basis kode
+dibuka ke publik hari ini, apakah ada kredensial yang ikut bocor? Bila ya, konfigurasi belum
+terpisah dari kode \cite{twelvefactor}.
+
+Analoginya adalah prosedur standar yang dipakai di lima cabang. Badan prosedur berlaku sama
+untuk semua cabang, sedangkan nomor telepon darurat dan nama kepala ruang ditulis di lembar
+lampiran setiap cabang. Bila nomor telepon ditulis di dalam badan prosedur, setiap
+pergantian kepala ruang memaksa seluruh prosedur dicetak ulang dan disahkan ulang.
+Akibatnya lima cabang lama-kelamaan memegang lima versi prosedur yang berbeda.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Alamat layanan integrasi BPJS (Badan Penyelenggara Jaminan Sosial) Kesehatan
+        tertulis di dalam kode SIMRS (Sistem Informasi Manajemen Rumah Sakit) di lima
+        rumah sakit. Ketika alamat itu berubah, setiap rumah sakit harus mengubah kode,
+        membangun ulang, menguji, dan memasang ulang. Dengan dua hari kerja per rumah
+        sakit, totalnya 10 hari kerja atau dua minggu.
+  \item Kata sandi basis data tertulis di berkas kode yang disalin ke laptop tiga vendor
+        berbeda. Siapa pun yang memegang salinan kode juga memegang kata sandinya. Risiko
+        ini berkaitan langsung dengan insiden kebocoran data lewat vendor pada 2025 dan
+        dengan kewajiban pengamanan dalam Undang-Undang (UU) Pelindungan Data Pribadi (PDP)
+        \cite{uu27-2022-pdp}.
+\end{enumerate}
+
+\subsection{Backing Services}
+
+Faktor IV menyebut setiap layanan yang dipakai aplikasi lewat jaringan sebagai
+\textit{backing service}: basis data, antrean pesan, layanan surel, \textit{cache}, dan
+layanan pihak ketiga. Aplikasi memperlakukan semuanya sebagai sumber daya yang dipasang
+lewat konfigurasi, tanpa membedakan layanan milik sendiri dan milik pihak ketiga.
+Akibatnya, satu basis data dapat diganti cukup dengan mengubah alamat dan kredensial di
+konfigurasi, tanpa mengubah kode \cite{twelvefactor}. Bagi Medikara Health, BPJS Kesehatan
+dan SATUSEHAT juga \textit{backing service}. Lingkungan uji SATUSEHAT dan lingkungan
+produksinya seharusnya dapat ditukar hanya lewat konfigurasi.
+
+Gambar \ref{fig:ch05-satu-kode} merangkai faktor I dan III dengan faktor V yang dibahas
+pada seksi berikutnya. Satu basis kode dibangun sekali, lalu digabung dengan konfigurasi
+setiap rumah sakit. Tabel \ref{tab:ch05-kelompok-a} menerjemahkan keempat faktor kelompok A
+ke pelanggaran yang sering ditemui dan dampak bisnisnya.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch05-satu-kode-banyak-deploy.tex}
+  \caption{Satu \textit{codebase}, satu \textit{build}, lima \textit{release}: yang
+           berbeda antarlokasi hanya konfigurasinya}
+  \label{fig:ch05-satu-kode}
+\end{figure}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Faktor kelompok A, pelanggaran yang sering ditemui, dan dampak bisnisnya}
+  \label{tab:ch05-kelompok-a}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Faktor} & \textbf{Pelanggaran yang sering ditemui} & \textbf{Dampak bisnis} \\
+    \hline
+    I \textit{Codebase} & Setiap lokasi menyimpan salinan kode sendiri & Satu perbaikan
+      dikerjakan berkali-kali; versi antarlokasi menyimpang \\
+    \hline
+    II \textit{Dependencies} & Pustaka dipasang manual di server tanpa catatan & Server
+      baru hanya dapat disiapkan oleh orang tertentu; pemulihan lambat \\
+    \hline
+    III \textit{Config} & Alamat, kata sandi, dan kode fasilitas tertulis di kode &
+      Perubahan kecil butuh rilis penuh; kredensial ikut tersebar bersama kode \\
+    \hline
+    IV \textit{Backing services} & Alamat basis data dan layanan luar tertanam di banyak
+      tempat & Penggantian penyedia atau migrasi basis data menjadi proyek besar \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{kasus}[title={Kasus Medikara Health: Konfigurasi SIMRS di Lima Rumah Sakit}]
+  SIMRS di lima rumah sakit Medikara Health berasal dari satu keluarga produk, tetapi
+  versinya berbeda, dari versi 3.9 di Bandung sampai versi 5.2 di Jakarta. Setiap rumah
+  sakit menyimpan salinan kode sendiri yang sudah dimodifikasi tim TI setempat. Penelusuran
+  tim TI pusat pada 2026 menemukan 37 nilai konfigurasi yang tertanam di kode dan berbeda
+  antar-rumah sakit. Sembilan di antaranya adalah kata sandi atau kunci akses ke layanan
+  luar.
+
+  Misalkan BPJS Kesehatan mengumumkan perubahan alamat dan kunci akses layanan integrasi
+  klaimnya. Dengan kondisi sekarang, setiap rumah sakit mengubah kode, membangun ulang,
+  menguji, dan memasang ulang SIMRS-nya, rata-rata dua hari kerja. Totalnya 10 hari kerja.
+  Selama masa itu, sebagian rumah sakit sudah memakai alamat baru dan sebagian lain belum,
+  sehingga laporan klaim harian sulit dibandingkan.
+
+  Bila konfigurasi dipindahkan ke lingkungan, perubahan yang sama cukup dengan mengganti dua
+  nilai di setiap lokasi lalu menyalakan ulang aplikasi. Perkiraan tim TI pusat: satu hari
+  kerja untuk kelima rumah sakit. Langkah ini tidak menyatukan lima versi SIMRS, karena itu
+  urusan faktor I. Namun, langkah ini menghapus sembilan kredensial dari kode dan memangkas
+  waktu perubahan konfigurasi dari dua minggu menjadi satu hari.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Konfigurasi dari Environment Variable}]
+  Listing \ref{lst:ch05-konfigurasi} memperlihatkan cara aplikasi contoh membaca
+  konfigurasinya. Semua nilai yang berbeda antarlokasi diambil dari \textit{environment
+  variable}. Bila ada nilai wajib yang kosong, aplikasi menolak menyala dan menulis
+  alasannya ke \textit{log}. Konfigurasi yang hilang lebih baik ketahuan saat aplikasi
+  mulai daripada saat pasien sudah memesan.
+
+\begin{lstlisting}[style=ch05python, caption={Membaca konfigurasi dari \textit{environment variable}, tersedia di \berkas{sources/chapter05/contoh-aplikasi-konfigurasi/app.py}}, label={lst:ch05-konfigurasi}]
+def baca_konfigurasi(lingkungan):
+  """Mengambil konfigurasi dari environment variable.
+
+  Mengapa: nilai yang berbeda antarlokasi tidak boleh tertanam di kode.
+  Akibat: bila ada variabel wajib yang kosong, aplikasi berhenti dengan
+  pesan yang jelas, bukan gagal diam-diam saat melayani pasien.
+  """
+  kosong = [nama for nama in VARIABEL_WAJIB if not lingkungan.get(nama)]
+  if kosong:
+    tulis_log("error", "konfigurasi_tidak_lengkap", variabel=kosong)
+    sys.exit(KODE_KELUAR_GAGAL)
+  return {
+      "kode_rumah_sakit": lingkungan["KODE_RUMAH_SAKIT"],
+      "alamat_basis_data": lingkungan["ALAMAT_BASIS_DATA"],
+      "kunci_akses_bpjs": lingkungan["KUNCI_AKSES_BPJS"],
+      "port": int(lingkungan.get("PORT", PORT_BAWAAN)),
+  }
+\end{lstlisting}
+
+  Contoh nilai untuk rumah sakit Bogor tersedia di
+  \berkas{sources/chapter05/contoh-aplikasi-konfigurasi/contoh-bogor.env}. Nilainya
+  rekaan. Di lingkungan produksi, kunci akses tidak disimpan di berkas teks biasa,
+  melainkan di pengelola rahasia milik platform.
+\end{pendalaman}
 
 \section{Faktor tentang Build, Proses, dan Skala}
+\label{sec:ch05-kelompok-b}
 
-% TODO
-% Cakupan: build-release-run, processes tanpa state, port binding, concurrency, dan disposability; penskalaan vertikal dan horizontal; mengapa sesi yang disimpan di memori server menghambat penskalaan.
-% Kasus Medikara: lonjakan pengguna Medikara+ saat program vaksinasi diumumkan.
+Kelompok B menjawab pertanyaan bisnis kedua: dapatkah kapasitas ditambah dan dikurangi
+dalam hitungan menit? Lima faktor di kelompok ini menentukan apakah lonjakan pengguna dapat
+dilayani dengan menambah server, atau hanya dapat ditunggu sampai reda.
+
+\subsection{Build, Release, Run}
+
+Faktor V memisahkan tiga tahap dengan tegas. Tahap \textit{build} mengubah kode menjadi
+paket siap jalan. Tahap \textit{release} menggabungkan paket itu dengan konfigurasi satu
+lokasi. Tahap \textit{run} menjalankan \textit{release} tersebut. Setiap \textit{release}
+punya nomor unik dan tidak boleh diubah setelah dibuat. Perubahan apa pun menghasilkan
+\textit{release} baru, sehingga kembali ke versi sebelumnya cukup dengan menjalankan
+\textit{release} lama. Kode tidak boleh diubah langsung di server yang sedang berjalan
+\cite{twelvefactor}.
+
+Dampak bisnisnya ada dua. Pertama, pertanyaan audit seperti "versi berapa yang berjalan di
+rumah sakit Bogor pada 3 Maret?" dapat dijawab dari catatan \textit{release}. Kedua,
+pemulihan dari rilis yang bermasalah turun dari hitungan jam menjadi hitungan menit, karena
+\textit{release} sebelumnya masih utuh.
+
+\subsection{Processes, Port Binding, Concurrency, dan Disposability}
+
+Faktor VI menyatakan bahwa aplikasi berjalan sebagai satu atau beberapa proses tanpa
+\textit{state} yang tidak saling berbagi apa pun. Data yang perlu bertahan disimpan di
+\textit{backing service}, misalnya basis data, dan memori proses hanya dipakai sementara
+untuk satu permintaan. Twelve-Factor App menyebut \textit{sticky session}, yaitu pengguna
+yang selalu diarahkan ke server yang sama karena sesinya tersimpan di sana, sebagai
+pelanggaran. Data sesi seharusnya disimpan di penyimpanan bersama yang punya batas
+kedaluwarsa \cite{twelvefactor}.
+
+Faktor VII menyatakan bahwa aplikasi menyediakan layanannya sendiri lewat sebuah
+\textit{port}, tanpa bergantung pada server web yang disuntikkan dari luar. Akibatnya, satu
+aplikasi dapat menjadi \textit{backing service} bagi aplikasi lain cukup dengan memberikan
+alamat dan \textit{port}-nya \cite{twelvefactor}. Faktor VIII menyatakan bahwa kapasitas
+ditambah dengan menambah proses. Pekerjaan dibagi ke jenis proses, misalnya proses web untuk
+melayani permintaan dan proses \textit{worker} untuk pekerjaan latar belakang, lalu setiap
+jenis ditambah jumlahnya sesuai beban \cite{twelvefactor}. Faktor IX menyatakan bahwa proses
+dapat dinyalakan dan dimatikan kapan saja. Waktu mulai dibuat sesingkat mungkin, proses
+berhenti dengan rapi ketika menerima sinyal \texttt{SIGTERM} dari platform, dan proses tetap
+aman bila mati mendadak \cite{twelvefactor}.
+
+Keempat faktor ini saling mengunci. Menambah proses tidak berguna bila proses baru butuh 11
+menit untuk menyala, karena lonjakan sudah memuncak lebih dahulu. Menambah proses juga tidak
+berguna bila sesi pengguna terikat pada proses lama.
+
+\subsection{Penskalaan Vertikal dan Horizontal}
+
+Ada dua cara menambah kapasitas. Penskalaan vertikal (\textit{scale up}) mengganti server
+dengan server yang lebih besar: prosesor lebih banyak dan memori lebih besar. Penskalaan
+horizontal (\textit{scale out}) menambah server atau proses yang sama persis, lalu membagi
+beban di antara semuanya lewat penyeimbang beban (\textit{load balancer}). Faktor VIII
+Twelve-Factor App mengarah ke cara kedua \cite{twelvefactor}.
+
+Analoginya adalah warung yang ramai saat jam makan siang. Cara pertama adalah mengganti
+kasir dengan kasir yang lebih cepat. Ada batasnya, karena secepat apa pun satu orang, ia
+tetap satu orang, dan selama pergantian berlangsung warung berhenti melayani. Cara kedua
+adalah membuka dua meja kasir tambahan yang bekerja dengan cara yang sama. Syaratnya satu:
+catatan pesanan tidak boleh ada di kepala satu kasir, tetapi di buku nota yang dapat dibaca
+semua kasir. Tabel \ref{tab:ch05-vertikal-horizontal} membandingkan kedua cara tersebut.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Penskalaan vertikal dan horizontal}
+  \label{tab:ch05-vertikal-horizontal}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Vertikal (\textit{scale up})} & \textbf{Horizontal
+      (\textit{scale out})} \\
+    \hline
+    Cara & Mengganti server dengan yang lebih besar & Menambah server atau proses yang
+      sama \\
+    \hline
+    Batas atas & Ukuran mesin terbesar yang disediakan penyedia & Kemampuan
+      \textit{backing service}, misalnya basis data, untuk melayani semua proses \\
+    \hline
+    Waktu menambah & Sering butuh penyalaan ulang, puluhan menit & Menit atau detik, bila
+      proses cepat menyala \\
+    \hline
+    Saat satu server mati & Seluruh layanan berhenti & Server lain tetap melayani \\
+    \hline
+    Syarat pada aplikasi & Hampir tidak ada & Proses tanpa \textit{state}, cepat menyala,
+      konfigurasi dari lingkungan \\
+    \hline
+    Pola biaya & Server besar dibayar terus, termasuk di luar jam sibuk & Mengikuti beban
+      bila jumlah server diturunkan kembali \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Mengapa Sesi di Memori Server Menghambat Penskalaan}
+
+Sesi adalah catatan sementara tentang pengguna yang sedang aktif: siapa yang sudah masuk,
+isi formulir yang belum selesai, dan langkah terakhir yang dibuka. Bila sesi disimpan di
+memori satu server, pengguna itu terikat pada server tersebut, dan penyeimbang beban
+terpaksa selalu mengirimnya ke sana. Server baru yang ditambahkan tidak mengenal pengguna
+lama, sehingga hanya dapat melayani pengguna yang baru masuk. Bila server lama mati atau
+dinyalakan ulang, semua sesi di dalamnya hilang dan penggunanya harus masuk ulang. Gambar
+\ref{fig:ch05-sesi-skala} membandingkan kondisi itu dengan proses tanpa \textit{state}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch05-sesi-skala.tex}
+  \caption{Sesi di memori server mengikat pengguna pada satu server, sedangkan proses
+           tanpa \textit{state} berbagi satu penyimpanan sesi}
+  \label{fig:ch05-sesi-skala}
+\end{figure}
+
+% Diagram konsep PNG; sumber komponen dan relasi di figures/chapter-diagrams.json.
+\IfFileExists{../figures/ch05-diagram-konsep.png}{%
+Proses aplikasi dibuat dapat diganti dan ditambah secara identik.
+Data serta sesi persisten berada pada layanan pendukung di luar proses aplikasi.
+
+Gambar \ref{fig:ch05-loket-kembar} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch05-diagram-konsep.png}
+  \caption{Aplikasi stateless memisahkan proses dari data persisten}
+  \label{fig:ch05-loket-kembar}
+\end{figure}
+}{}
+
+Memindahkan sesi ke penyimpanan bersama punya harga: satu layanan tambahan yang harus
+dirawat dan dijaga ketersediaannya. Kasus berikut memperlihatkan mengapa harga itu layak
+dibayar oleh Medikara+.
+
+\begin{kasus}[title={Kasus Medikara Health: Lonjakan Medikara+ saat Program Vaksinasi}]
+  Misalkan Medikara Health mengumumkan program vaksinasi influenza bagi karyawan perusahaan
+  mitra pada Senin pukul 09.00 lewat notifikasi Medikara+. Pada hari biasa, Medikara+
+  melayani sekitar 1.200 pengguna aktif bersamaan. Dalam 20 menit setelah notifikasi,
+  jumlahnya naik menjadi sekitar 9.600, atau delapan kali lipat. Waktu respons naik dari 1,5
+  detik menjadi 14 detik, dan 23 persen pemesanan gagal pada satu jam pertama.
+
+  Vendor menempuh penskalaan vertikal: kedua mesin diganti dengan mesin berukuran dua kali
+  lipat, dari 8 menjadi 16 inti prosesor. Prosesnya butuh sekitar 40 menit dan setiap mesin
+  harus dinyalakan ulang. Karena sesi tersimpan di memori, semua pengguna yang sedang
+  memesan terputus dan harus masuk ulang. Mesin baru juga butuh sekitar 11 menit untuk
+  menyala karena memuat seluruh jadwal dokter ke memori lebih dahulu.
+
+  Penelusuran dengan kelompok B menunjukkan tiga kesenjangan. Faktor VI: sesi di memori
+  server. Faktor VIII: kapasitas hanya dapat ditambah secara vertikal. Faktor IX: waktu
+  menyala 11 menit, lebih lama dari separuh masa lonjakan. Ketiganya menjelaskan mengapa
+  Medikara+ yang sudah di \textit{cloud} tetap lambat. Elastisitas \textit{cloud} tersedia,
+  tetapi aplikasinya tidak dapat memanfaatkannya.
+\end{kasus}
 
 \section{Faktor tentang Lingkungan, Log, dan Tugas Administratif}
+\label{sec:ch05-kelompok-c}
 
-% TODO
-% Cakupan: dev/prod parity, logs sebagai aliran event, dan admin processes; dampaknya pada waktu pemulihan gangguan dan kemampuan audit.
-% Pendalaman teknis: menulis log terstruktur ke stdout dan membiarkan platform yang mengumpulkannya.
+Kelompok C menjawab pertanyaan bisnis ketiga: dapatkah sistem dirawat, diaudit, dan
+dipulihkan dengan cepat? Tiga faktor di kelompok ini jarang dibicarakan di rapat manajemen,
+tetapi dampaknya terasa setiap kali terjadi gangguan atau pemeriksaan audit.
+
+\subsection{Dev/Prod Parity}
+
+Faktor X meminta lingkungan pengembangan, lingkungan uji (\textit{staging}), dan lingkungan
+produksi dibuat semirip mungkin. Twelve-Factor App menyebut tiga kesenjangan yang perlu
+dipersempit. Kesenjangan waktu: kode baru sampai ke produksi setelah berminggu-minggu.
+Kesenjangan orang: pengembang menulis kode, sedangkan orang lain yang memasangnya.
+Kesenjangan alat: pengembang memakai basis data atau sistem operasi yang berbeda dari
+produksi. Twelve-Factor App juga mengingatkan agar pengembang tidak tergoda memakai
+\textit{backing service} yang lebih ringan di lingkungan pengembangan \cite{twelvefactor}.
+Tabel \ref{tab:ch05-kesenjangan-lingkungan} merangkum ketiganya.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Tiga kesenjangan antara lingkungan pengembangan dan produksi, diolah dari
+           \cite{twelvefactor}}
+  \label{tab:ch05-kesenjangan-lingkungan}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.8cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kesenjangan} & \textbf{Aplikasi tradisional} & \textbf{Aplikasi
+      \textit{twelve-factor}} & \textbf{Dampak bisnis bila dibiarkan} \\
+    \hline
+    Waktu & Berminggu-minggu sampai berbulan-bulan & Hitungan jam atau menit & Kesalahan
+      baru ketahuan lama setelah kodenya ditulis \\
+    \hline
+    Orang & Pengembang menulis, tim operasi memasang & Pengembang ikut memasang dan
+      mengamati & Serah terima menambah antrean dan saling tunggu \\
+    \hline
+    Alat & Berbeda antara laptop dan produksi & Semirip mungkin & Kesalahan hanya muncul di
+      produksi dan sulit ditiru \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Logs sebagai Aliran Kejadian}
+
+Faktor XI memperlakukan \textit{log} sebagai aliran kejadian yang terus mengalir, bukan
+sebagai berkas. Aplikasi tidak mengurus ke mana \textit{log} dikirim atau bagaimana
+disimpan. Aplikasi cukup menulis setiap kejadian ke keluaran standar (\texttt{stdout}).
+Lingkungan tempat aplikasi berjalan yang menangkap aliran itu, menggabungkannya dari semua
+proses, lalu mengirimnya ke tempat penyimpanan dan analisis \cite{twelvefactor}. Pembahasan
+\textit{observability} yang lebih luas ada di Bab 11.
+
+Analoginya adalah kamera pengawas di lorong rumah sakit. Kamera tidak menyimpan rekaman di
+badannya sendiri. Rekaman dikirim ke ruang kendali yang menyimpannya, memberi cap waktu, dan
+memungkinkan pencarian. Bila setiap kamera menyimpan rekaman sendiri, mencari satu kejadian
+berarti mendatangi kamera satu per satu, dan rekaman ikut hilang ketika kameranya rusak.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Sistem laboratorium rujukan menulis \textit{log} ke berkas di tiga server. Saat
+        gangguan, teknisi masuk ke tiga server bergantian dan mencocokkan jam secara
+        manual, rata-rata sekitar 2 jam per penelusuran.
+  \item Bila ketiga server menulis ke \texttt{stdout} dan platform mengumpulkannya, satu
+        pencarian berdasarkan nomor permintaan sudah memperlihatkan seluruh jejak kejadian.
+\end{enumerate}
+
+\subsection{Admin Processes}
+
+Faktor XII mengatur tugas administratif sekali jalan, misalnya migrasi struktur basis data,
+perbaikan data, atau skrip pembersihan. Tugas seperti itu dijalankan di lingkungan yang sama
+dengan proses biasa, memakai \textit{release}, basis kode, dan konfigurasi yang sama. Kode
+tugas administratif disimpan bersama kode aplikasi \cite{twelvefactor}. Dampak bisnisnya
+terkait langsung dengan kontrol akses. Skrip perbaikan data yang dijalankan seseorang
+langsung di basis data produksi, dari laptopnya, tanpa catatan, adalah jenis kejadian yang
+sulit dijelaskan kepada auditor.
+
+\begin{kasus}[title={Kasus Medikara Health: Pertanyaan Audit tentang Hasil Laboratorium}]
+  Audit internal Medikara Health menemukan kontrol akses yang lemah. Salah satu tindak
+  lanjutnya, auditor meminta daftar petugas yang membuka hasil laboratorium sepuluh pasien
+  contoh selama 90 hari terakhir.
+
+  Sistem laboratorium rujukan tidak dapat memenuhinya. \textit{Log} hanya disimpan tujuh
+  hari di tiap server, dengan format yang berbeda karena ketiga server dipasang pada tahun
+  yang berbeda. Tim TI butuh tiga hari kerja untuk mengumpulkan dan mencocokkan \textit{log}
+  tujuh hari itu saja. Misalkan pada Maret 2026 juga terjadi gangguan enam jam setelah
+  pembaruan, karena lingkungan uji memakai versi basis data yang lebih baru daripada
+  produksi. Kesalahan itu tidak muncul saat pengujian.
+
+  Dua kesenjangan kelompok C terlihat jelas. Faktor XI: \textit{log} berupa berkas lokal
+  yang berumur pendek. Faktor X: lingkungan uji tidak sama dengan produksi. Dampaknya bukan
+  hanya waktu kerja tim TI, tetapi juga kemampuan organisasi membuktikan kepatuhan. Berapa
+  lama \textit{log} akses wajib disimpan adalah keputusan tata kelola dan kepatuhan yang
+  dibahas di IT40813. Mata kuliah ini memastikan \textit{log} dapat dikumpulkan dan dicari
+  begitu angka itu ditetapkan.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Log Terstruktur ke Stdout}]
+  Listing \ref{lst:ch05-log} memperlihatkan fungsi penulis \textit{log} pada aplikasi
+  contoh. Setiap kejadian ditulis sebagai satu baris berformat JavaScript Object Notation
+  (JSON) ke \texttt{stdout}, dengan nama kejadian dan rincian sebagai pasangan nama dan
+  nilai. Format ini dapat dibaca manusia dan mesin sekaligus, sehingga platform dapat
+  menyaring \textit{log} berdasarkan rumah sakit, tingkat keparahan, atau nama kejadian.
+
+\begin{lstlisting}[style=ch05python, caption={Menulis \textit{log} terstruktur ke \texttt{stdout}, tersedia di \berkas{sources/chapter05/contoh-aplikasi-konfigurasi/app.py}}, label={lst:ch05-log}]
+def tulis_log(tingkat, kejadian, **rincian):
+  """Menulis satu kejadian sebagai satu baris JSON ke stdout.
+
+  Mengapa: aplikasi tidak mengurus berkas log, rotasi, atau penyimpanan.
+  Akibat: platform dapat mengumpulkan log semua proses ke satu tempat,
+  sehingga satu pertanyaan audit dijawab dengan satu pencarian.
+  """
+  catatan = {
+      "waktu": datetime.now(timezone.utc).isoformat(),
+      "tingkat": tingkat,
+      "kejadian": kejadian,
+  }
+  catatan.update(rincian)
+  print(json.dumps(catatan), flush=True)
+\end{lstlisting}
+
+  Dua hal perlu dijaga. Pertama, \texttt{flush=True} memastikan setiap baris langsung
+  keluar, tidak tertahan di penyangga. Kedua, kunci akses dan data pribadi pasien tidak
+  boleh ikut ditulis ke \textit{log}. Aplikasi contoh hanya mencatat kode rumah sakit dan
+  alamat yang diminta, dan juga menangani \texttt{SIGTERM} agar berhenti dengan rapi,
+  sesuai faktor IX.
+\end{pendalaman}
 
 \section{Immutable Infrastructure dan Konfigurasi Deklaratif}
+\label{sec:ch05-immutable}
 
-% TODO
-% Cakupan: perbedaan server yang dirawat satu per satu dan server yang diganti utuh; konfigurasi deklaratif dibandingkan dengan langkah manual; kaitan dengan container (Bab 8) dan GitOps (Bab 13).
+Dua belas faktor berbicara tentang aplikasi. Pertanyaan berikutnya menyangkut server tempat
+aplikasi berjalan: dirawat atau diganti?
+
+\subsection{Server yang Dirawat dan Server yang Diganti}
+
+Server yang dirawat satu per satu lama-kelamaan menjadi unik. Setiap tambalan keamanan,
+perubahan pengaturan saat darurat, dan pustaka yang dipasang manual menambah perbedaan kecil
+yang tidak tercatat. Fowler menyebut server seperti ini \textit{snowflake server}, server
+kepingan salju yang tidak ada duanya dan sulit dibuat ulang \cite{c05-fowler-snowflake}.
+\textit{Immutable infrastructure} mengambil jalan sebaliknya. Server tidak diubah setelah
+dipasang. Setiap perubahan dibuat pada definisi tertulis, dari definisi itu dibangun
+\textit{image} baru, lalu server baru menggantikan server lama secara utuh
+\cite{c05-morris-immutable}. Gambar \ref{fig:ch05-immutable} membandingkan kedua jalan
+tersebut.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch05-immutable.tex}
+  \caption{Server yang dirawat menumpuk perubahan manual, sedangkan server
+           \textit{immutable} dibangun ulang dari definisi dan diganti utuh}
+  \label{fig:ch05-immutable}
+\end{figure}
+
+Analoginya adalah prosedur tertulis di sebuah rumah sakit. Bila setiap ruangan mencoret dan
+menambah catatan pada salinan prosedurnya sendiri, setelah beberapa tahun tidak ada dua
+salinan yang sama. Cara yang tertib adalah merevisi dokumen induk, mengesahkannya, lalu
+menarik semua salinan lama dan membagikan salinan baru. Tidak ada coretan di salinan,
+sehingga isi setiap ruangan selalu sama dengan dokumen induk.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Server SIMRS rumah sakit Depok dipasang pada 2019 dan dirawat manual selama enam
+        tahun. Ketika cakramnya rusak pada 2025, tim TI butuh empat hari untuk membangun
+        server pengganti, karena sebagian pengaturannya hanya diketahui dari ingatan dua
+        orang.
+  \item Misalkan server yang sama didefinisikan secara tertulis dan \textit{image}-nya
+        dibangun otomatis. Server pengganti dapat disiapkan dalam sekitar 45 menit, dan
+        hasilnya sama dengan server yang rusak.
+\end{enumerate}
+
+\subsection{Langkah Manual dan Konfigurasi Deklaratif}
+
+Dua cara menuliskan definisi sering tertukar. Pembagiannya begini. Cara imperatif menuliskan
+langkah: pasang ini, ubah itu, jalankan tiga salinan. Cara deklaratif menuliskan keadaan
+akhir yang diinginkan: harus ada tiga salinan aplikasi versi 5.3 dengan konfigurasi rumah
+sakit Bogor. Sistem lalu mencari sendiri langkah yang diperlukan dan terus membandingkan
+keadaan nyata dengan keadaan yang diinginkan. Dokumentasi Kubernetes membedakan tiga teknik
+pengelolaan objek: perintah imperatif, konfigurasi objek imperatif, dan konfigurasi objek
+deklaratif \cite{c05-k8s-object-management}. Contoh manifest deklaratif untuk aplikasi
+contoh bab ini tersedia di
+\berkas{sources/chapter05/contoh-aplikasi-konfigurasi/deployment.yaml}.
+
+Analoginya adalah memberi petunjuk jalan. Cara imperatif berbunyi "lurus 200 meter, belok
+kiri di lampu merah, lalu belok kanan setelah masjid". Bila satu jalan ditutup, petunjuk itu
+gagal. Cara deklaratif cukup menyebut alamat tujuan di aplikasi peta. Aplikasi peta mencari
+rute sendiri dan menghitung ulang bila ada jalan yang ditutup. Tabel
+\ref{tab:ch05-imperatif-deklaratif} membandingkan keduanya dari sisi yang dirasakan
+organisasi.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Langkah manual (imperatif) dan konfigurasi deklaratif}
+  \label{tab:ch05-imperatif-deklaratif}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Langkah manual (imperatif)} & \textbf{Konfigurasi
+      deklaratif} \\
+    \hline
+    Yang ditulis & Urutan langkah & Keadaan akhir yang diinginkan \\
+    \hline
+    Bila diulang & Hasil dapat berbeda bila ada langkah terlewat & Hasil sama setiap kali \\
+    \hline
+    Bila keadaan menyimpang & Tidak ketahuan sampai ada gangguan & Penyimpangan dideteksi
+      dan dikembalikan \\
+    \hline
+    Jejak audit & Bergantung pada catatan petugas & Setiap perubahan definisi tercatat dan
+      dapat ditinjau \\
+    \hline
+    Kebutuhan awal & Rendah, cukup dokumen langkah & Lebih tinggi: alat, keterampilan, dan
+      disiplin tim \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Keputusan beralih ke konfigurasi deklaratif punya dua konsekuensi. Pertama, setiap perubahan
+server harus lewat definisi tertulis, termasuk perubahan saat darurat. Kebiasaan "masuk ke
+server lalu ubah langsung" harus dihentikan, dan ini lebih sering menjadi tantangan budaya
+daripada tantangan teknis. Kedua, definisi itu menjadi aset yang dirawat seperti kode:
+disimpan di repositori, ditinjau sebelum dipakai, dan diberi nomor versi. Prinsip OpenGitOps
+menyatakan hal serupa: keadaan yang diinginkan dinyatakan secara deklaratif, disimpan dengan
+versi yang tidak dapat diubah, ditarik otomatis oleh sistem, dan terus dicocokkan dengan
+keadaan nyata \cite{opengitops}. \textit{Container} pada Bab 8 adalah bentuk paling umum
+dari \textit{image} yang tidak diubah, dan GitOps pada Bab 13 adalah cara mengelola
+definisi deklaratifnya.
 
 \section{Aktivitas: Kartu Skor Kesenjangan Cloud-Native}
+\label{sec:ch05-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menilai dua sampai tiga aplikasi inti terhadap dua belas faktor dan menerjemahkan setiap kesenjangan ke dampak bisnis.
-% Peran dalam tim: anggota teknis menjelaskan arti tiap faktor dan mengumpulkan bukti dari dokumentasi atau wawancara tim TI; anggota non-teknis menuliskan dampak bisnis tiap kesenjangan dan memeriksa apakah bahasanya dapat dipahami manajemen.
-% Langkah: (1) pilih dua sampai tiga aplikasi inti; (2) beri skor tiap faktor dengan bukti; (3) tulis dampak bisnis tiap kesenjangan; (4) tandai tiga kesenjangan yang paling merugikan.
-% Luaran dan tonggak capstone: C2, kartu skor kesenjangan cloud-native untuk aplikasi inti.
-% Berkas sources yang direncanakan: sources/chapter05/kartu-skor-twelve-factor.xlsx, sources/chapter05/contoh-aplikasi-konfigurasi/ (opsional, untuk pendalaman teknis)
+\textbf{Tujuan.} Tim menilai dua sampai tiga aplikasi inti terhadap dua belas faktor, lalu
+menerjemahkan setiap kesenjangan ke dampak bisnis yang dapat dipahami manajemen. Hasilnya
+bukan nilai lulus atau gagal, melainkan daftar kesenjangan yang paling merugikan beserta
+buktinya.
+
+\textbf{Pembagian peran.} Anggota berlatar teknis menjelaskan arti setiap faktor kepada
+tim, menyusun pertanyaan untuk tim TI organisasi, dan mengumpulkan bukti dari dokumentasi,
+wawancara, atau pengamatan cara rilis. Anggota berlatar non-teknis menuliskan dampak bisnis
+setiap kesenjangan dengan angka, misalnya hari kerja, jumlah pasien, atau rupiah, lalu
+memeriksa apakah bahasanya dapat dipahami direksi. Satu anggota ditunjuk sebagai pencatat
+bukti agar setiap skor dapat ditelusuri sumbernya.
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Pilih dua sampai tiga aplikasi inti dari portofolio Bab 4. Dahulukan aplikasi yang
+        diberi usulan Replatform atau Refactor, karena kesenjangannya menentukan besar
+        pekerjaan. Aplikasi yang akan dipensiunkan cukup dicatat alasannya.
+  \item Pelajari arti setiap faktor bersama, memakai Tabel \ref{tab:ch05-dua-belas} dan
+        daftar pertanyaan di \berkas{sources/chapter05/pertanyaan-bukti-per-faktor.md}.
+  \item Kumpulkan bukti untuk setiap faktor: dokumen prosedur rilis, hasil wawancara dengan
+        tim TI atau vendor, atau pengamatan langsung yang tidak memuat data rahasia.
+  \item Beri skor setiap faktor memakai skala pada Tabel \ref{tab:ch05-skala-skor}. Setiap
+        skor wajib disertai satu kalimat bukti.
+  \item Tulis dampak bisnis setiap faktor yang skornya 0 atau 1, dengan angka dan sumber
+        angkanya.
+  \item Tandai tiga kesenjangan yang paling merugikan untuk seluruh aplikasi yang dinilai,
+        lalu tulis alasan pemilihannya dalam satu paragraf.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Skala skor kartu \textit{twelve-factor}}
+  \label{tab:ch05-skala-skor}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}
+    >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Skor} & \textbf{Arti} & \textbf{Contoh bukti pada faktor III \textit{Config}} \\
+    \hline
+    0 & Belum dipenuhi & Kata sandi dan alamat basis data tertulis di kode \\
+    \hline
+    1 & Sebagian kecil & Sebagian nilai di berkas terpisah yang ikut tersimpan bersama kode \\
+    \hline
+    2 & Sebagian besar & Konfigurasi di lingkungan, kecuali beberapa nilai lama \\
+    \hline
+    3 & Dipenuhi & Semua nilai yang berbeda antarlokasi ada di lingkungan atau pengelola
+      rahasia \\
+    \hline
+    TR & Tidak relevan & Faktor tidak berlaku untuk bentuk aplikasi ini; alasannya ditulis \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Tabel \ref{tab:ch05-kartu-skor-contoh} memperlihatkan contoh kartu skor untuk tiga aplikasi
+Medikara Health. Angkanya rekaan untuk kasus fiktif ini, tetapi disusun agar konsisten
+dengan kasus-kasus di bab ini.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Contoh kartu skor kesenjangan \textit{cloud-native} tiga aplikasi Medikara
+           Health (skor 0 sampai 3)}
+  \label{tab:ch05-kartu-skor-contoh}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+    >{\centering\arraybackslash}p{1.15cm} >{\centering\arraybackslash}p{1.5cm}
+    >{\centering\arraybackslash}p{1.15cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Faktor} & \textbf{SIMRS Bogor} & \textbf{Medikara+} & \textbf{Sistem lab} &
+      \textbf{Bukti utama} \\
+    \hline
+    I \textit{Codebase} & 0 & 2 & 2 & Lima salinan kode SIMRS \\
+    \hline
+    II \textit{Dependencies} & 1 & 2 & 1 & Pustaka SIMRS dipasang manual \\
+    \hline
+    III \textit{Config} & 0 & 1 & 1 & 37 nilai tertanam di kode SIMRS \\
+    \hline
+    IV \textit{Backing services} & 1 & 2 & 1 & Alamat BPJS Kesehatan di kode \\
+    \hline
+    V \textit{Build, release, run} & 0 & 1 & 1 & Rilis Medikara+ lewat 37 langkah manual \\
+    \hline
+    VI \textit{Processes} & 1 & 0 & 2 & Sesi Medikara+ di memori server \\
+    \hline
+    VII \textit{Port binding} & 1 & 2 & 1 & SIMRS bergantung server web terpasang \\
+    \hline
+    VIII \textit{Concurrency} & 0 & 1 & 1 & Medikara+ hanya naik vertikal \\
+    \hline
+    IX \textit{Disposability} & 0 & 1 & 1 & Mesin baru Medikara+ menyala 11 menit \\
+    \hline
+    X \textit{Dev/prod parity} & 0 & 1 & 1 & Versi basis data uji lab berbeda \\
+    \hline
+    XI \textit{Logs} & 1 & 1 & 0 & \textit{Log} lab lokal, tujuh hari \\
+    \hline
+    XII \textit{Admin processes} & 1 & 2 & 1 & Skrip perbaikan SIMRS dari laptop \\
+    \hline
+    \textbf{Jumlah (dari 36)} & \textbf{6} & \textbf{16} & \textbf{13} & Persentase: 17, 44,
+      dan 36 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Jumlah skor tidak boleh dibaca sebagai peringkat mutu aplikasi. Medikara+ punya jumlah
+tertinggi, tetapi satu kesenjangannya, yaitu sesi di memori, menyebabkan kerugian paling
+terasa bagi pasien. Dari contoh ini, tiga kesenjangan yang paling merugikan adalah faktor VI
+pada Medikara+ (pemesanan gagal saat lonjakan), faktor III pada SIMRS (dua minggu untuk satu
+perubahan konfigurasi dan sembilan kredensial di kode), serta faktor XI pada sistem
+laboratorium (pertanyaan audit tidak dapat dijawab).
+
+\textbf{Luaran dan kaitan capstone.} Luarannya adalah kartu skor kesenjangan
+\textit{cloud-native} untuk aplikasi inti, diisi di
+\berkas{sources/chapter05/kartu-skor-twelve-factor.xlsx}, ditambah ringkasan satu halaman
+bagi manajemen yang memuat tiga kesenjangan terpenting beserta dampaknya. Kedua dokumen itu
+masuk ke tonggak C2 Kondisi Saat Ini, yang ditinjau menjelang Ujian Tengah Semester (UTS).
+Kartu skor ini juga menjadi masukan Bab 7 saat tim mendiagnosis keterkaitan aplikasi inti,
+dan masukan Bab 14 saat menyusun urutan modernisasi.
+
+\textbf{Kriteria penilaian.} Ketepatan arti faktor (20\%): setiap faktor dinilai sesuai
+bunyinya. Kekuatan bukti (30\%): setiap skor dapat ditelusuri sumbernya. Dampak bisnis
+terukur (30\%): dampak ditulis dengan angka beserta sumber atau anggapannya. Prioritas yang
+beralasan (20\%): tiga kesenjangan dipilih dari dampak, bukan dari skor terendah semata.
+
+\textbf{Catatan etika.} Bukti konfigurasi sering memuat kata sandi, alamat internal, atau
+kunci akses. Nilai seperti itu tidak boleh disalin ke kartu skor atau ditampilkan dalam
+tangkapan layar. Cukup tulis keberadaannya, misalnya "kata sandi basis data tertulis di
+berkas kode". Data pribadi pasien atau karyawan tidak boleh dipakai sama sekali.
+
+\textit{Pendalaman teknis (opsional).} Anggota berlatar teknis menjalankan
+\berkas{sources/chapter05/contoh-aplikasi-konfigurasi/app.py} di laptop sendiri dua kali,
+sekali dengan konfigurasi Bogor dan sekali dengan konfigurasi rumah sakit lain, tanpa
+mengubah kode. Lalu proses dihentikan dengan sinyal \texttt{SIGTERM} untuk melihat
+\textit{log} berhenti yang rapi. Langkahnya ada di \berkas{sources/chapter05/README.md}.
+Aplikasi contoh hanya dijalankan di komputer sendiri, tidak diarahkan ke sistem milik
+organisasi.
 
 \section{Ringkasan}
 
-% TODO
+Medikara+ sudah berada di \textit{cloud}, tetapi tetap lambat saat lonjakan dan tetap butuh
+dua minggu untuk satu pembaruan. Bab ini menjelaskan mengapa hal itu mungkin terjadi.
+Definisi \textit{cloud-native} CNCF versi 1.1 tidak berbicara tentang lokasi atau merek
+teknologi. Definisi itu berbicara tentang praktik dan sifat sistem: keterkaitan longgar,
+aman, tangguh, terkelola, berkelanjutan, dan dapat diamati, sehingga perubahan berdampak
+besar dapat dilakukan sering dan dapat diprediksi dengan kerja manual yang minimal.
+
+Twelve-Factor App memberi daftar periksa yang lebih rinci. Ditulis pada 2011 dari
+pengalaman Heroku, daftar itu kini menjadi proyek \textit{open source} yang dikelola
+komunitas sejak November 2024. Dua belas faktornya dapat dikelompokkan menjadi tiga
+pertanyaan bisnis: dapatkah satu kode dipasang di banyak lokasi tanpa diubah, dapatkah
+kapasitas ditambah dan dikurangi dalam hitungan menit, dan dapatkah sistem dirawat, diaudit,
+dan dipulihkan dengan cepat.
+
+Setiap faktor punya dampak bisnis yang dapat dihitung. Konfigurasi yang tertanam di kode
+SIMRS membuat satu perubahan alamat BPJS Kesehatan memakan dua minggu dan menyebarkan
+sembilan kredensial. Sesi di memori server membuat Medikara+ tidak dapat memanfaatkan
+penskalaan horizontal saat program vaksinasi. \textit{Log} yang tersimpan sebagai berkas
+lokal tujuh hari membuat pertanyaan audit tentang akses hasil laboratorium tidak dapat
+dijawab.
+
+Di luar aplikasi, cara merawat server ikut menentukan. Server yang dirawat manual
+bertahun-tahun menjadi unik dan sulit dibuat ulang, sedangkan \textit{immutable
+infrastructure} membangun ulang server dari definisi tertulis. Konfigurasi deklaratif
+menuliskan keadaan akhir yang diinginkan, bukan langkahnya, dan menjadi dasar
+\textit{container} pada Bab 8 serta GitOps pada Bab 13.
+
+Pesan utama bab ini: \textit{cloud-native} adalah sifat yang dibuktikan, bukan lokasi yang
+ditempati. Kartu skor kesenjangan yang disusun tim pada Aktivitas bab ini mengubah
+pertanyaan "sudah di \textit{cloud} atau belum" menjadi pertanyaan yang lebih berguna bagi
+direksi: kesenjangan mana yang paling merugikan, berapa kerugiannya, dan apa buktinya.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Faktor di Balik Lambatnya Medikara+}
+
+Latihan ini membuktikan bahwa masalah kinerja yang terlihat sama dapat berasal dari beberapa
+faktor sekaligus, dan bahwa faktor yang paling relevan dipilih dari bukti, bukan dugaan.
+Pertanyaan pemicunya: Medikara+ sering lambat setiap kali program vaksinasi diumumkan.
+Faktor mana dalam Twelve-Factor App yang paling relevan, dan mengapa?
+
 \begin{enumerate}
-  \item Medikara+ sering lambat setiap kali program vaksinasi diumumkan. Faktor mana dalam Twelve-Factor App yang paling relevan untuk masalah ini? Jelaskan alasannya.
-  \item Jelaskan dengan bahasa non-teknis mengapa aplikasi yang menyimpan sesi pengguna di memori \textit{server} sulit diskalakan.
-  \item Apakah semua aplikasi organisasi perlu memenuhi dua belas faktor? Berikan satu contoh aplikasi yang tidak perlu dan jelaskan alasannya.
+  \item Baca kembali kasus lonjakan Medikara+ di seksi kelompok B.
+  \item Daftar semua faktor yang mungkin berperan, sedikitnya empat.
+  \item Tulis gejala setiap faktor pada Medikara+ dan angka yang menjadi buktinya.
+  \item Beri tingkat relevansi tinggi, sedang, atau rendah, beserta alasannya.
+  \item Pilih satu faktor yang paling relevan dan tulis satu paragraf pembelaannya.
+\end{enumerate}
+
+Tabel \ref{tab:ch05-lat1-contoh} memuat contoh terisi. Tabel \ref{tab:ch05-lat1-hasil}
+adalah lembar isian.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 1, contoh terisi: faktor di balik lambatnya Medikara+}
+  \label{tab:ch05-lat1-contoh}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}p{1.4cm}}
+    \hline
+    \textbf{Faktor} & \textbf{Gejala pada Medikara+} & \textbf{Bukti dan angka} &
+      \textbf{Relevansi} \\
+    \hline
+    VI \textit{Processes} & Sesi di memori; mesin tambahan tidak membantu pengguna lama &
+      1.200 pengguna lama tetap di dua mesin & Tinggi \\
+    \hline
+    VIII \textit{Concurrency} & Kapasitas hanya ditambah secara vertikal & 40 menit, semua
+      pengguna terputus & Tinggi \\
+    \hline
+    IX \textit{Disposability} & Mesin baru lama menyala & 11 menit, lonjakan memuncak dalam
+      20 menit & Sedang \\
+    \hline
+    V \textit{Build, release, run} & Rilis manual, perbaikan cepat sulit dipasang & 37
+      langkah, dua minggu & Rendah \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 1, lembar isian}
+  \label{tab:ch05-lat1-hasil}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}p{1.4cm}}
+    \hline
+    \textbf{Faktor} & \textbf{Gejala pada Medikara+} & \textbf{Bukti dan angka} &
+      \textbf{Relevansi} \\
+    \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Bila hanya faktor IX yang diperbaiki sehingga mesin baru menyala dalam satu menit,
+        berapa persen masalah yang kira-kira terselesaikan? Gunakan angka di tabel untuk
+        menalar jawabannya.
+  \item Pada contoh, faktor VI dan VIII sama-sama bernilai tinggi. Mana yang harus
+        diperbaiki lebih dahulu, dan mengapa urutannya penting?
+\end{enumerate}
+
+\subsection*{Latihan 2: Sesi di Memori Server dalam Bahasa Direksi}
+
+Latihan ini membuktikan bahwa alasan teknis di balik keputusan arsitektur dapat dijelaskan
+tanpa istilah teknis, asalkan analogi, akibat, dan angkanya disusun berurutan. Pertanyaan
+pemicunya: mengapa aplikasi yang menyimpan sesi pengguna di memori server sulit
+diskalakan?
+
+\begin{enumerate}
+  \item Pilih satu analogi sehari-hari yang menggambarkan sesi di memori server.
+  \item Tulis akibatnya saat server ditambah, lalu saat satu server mati atau dinyalakan
+        ulang.
+  \item Sertakan satu angka dari Medikara+ atau dari organisasi tim.
+  \item Tutup dengan satu kalimat usulan beserta biayanya.
+\end{enumerate}
+
+Tabel \ref{tab:ch05-lat2-contoh} memuat contoh terisi. Tabel \ref{tab:ch05-lat2-hasil}
+adalah lembar isian.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 2, contoh terisi: penjelasan untuk direksi Medikara Health}
+  \label{tab:ch05-lat2-contoh}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+    >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Bagian} & \textbf{Isi} \\
+    \hline
+    Analogi & Kasir yang mengingat pesanan pelanggan di kepalanya sendiri, bukan di buku
+      nota bersama \\
+    \hline
+    Akibat saat server ditambah & Kasir baru hanya dapat melayani pelanggan baru;
+      pelanggan lama tetap antre di kasir lama \\
+    \hline
+    Akibat saat server mati & Semua pesanan di kepala kasir itu hilang; pelanggan harus
+      memesan ulang \\
+    \hline
+    Angka & Saat vaksinasi, 9.600 pengguna aktif bersamaan; penggantian mesin 40 menit
+      memutus semua pemesanan yang sedang berjalan \\
+    \hline
+    Usulan & Memindahkan sesi ke penyimpanan bersama; biayanya satu layanan tambahan dan
+      pekerjaan ubahan oleh vendor \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 2, lembar isian}
+  \label{tab:ch05-lat2-hasil}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+    >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Bagian} & \textbf{Isi} \\
+    \hline
+    Analogi & \dots \\ \hline
+    Akibat saat server ditambah & \dots \\ \hline
+    Akibat saat server mati & \dots \\ \hline
+    Angka & \dots \\ \hline
+    Usulan & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Bagian mana di tabel yang paling mungkin dipertanyakan direksi? Data apa yang perlu
+        disiapkan untuk menjawabnya?
+  \item Penyimpanan sesi bersama juga dapat mati. Apakah usulan pada contoh hanya
+        memindahkan titik lemah? Jelaskan dengan membandingkan akibatnya.
+\end{enumerate}
+
+\subsection*{Latihan 3: Aplikasi yang Tidak Perlu Memenuhi Dua Belas Faktor}
+
+Latihan ini membuktikan bahwa dua belas faktor adalah alat penilaian, bukan kewajiban yang
+sama untuk semua aplikasi. Pertanyaan pemicunya: apakah semua aplikasi organisasi perlu
+memenuhi dua belas faktor? Latihan ini meminta satu contoh aplikasi yang tidak perlu,
+beserta alasannya.
+
+\begin{enumerate}
+  \item Pilih tiga aplikasi dengan sifat berbeda, misalnya satu yang dipakai pasien, satu
+        alat internal kecil, dan satu yang akan dipensiunkan.
+  \item Tulis sifat setiap aplikasi: pengguna, frekuensi perubahan, dan umur yang tersisa.
+  \item Tentukan faktor yang tetap wajib dan faktor yang boleh diabaikan.
+  \item Tulis keputusan dan alasannya dalam satu kalimat.
+\end{enumerate}
+
+Tabel \ref{tab:ch05-lat3-contoh} memuat contoh terisi untuk Medikara Health dengan angka
+rekaan. Tabel \ref{tab:ch05-lat3-hasil} adalah lembar isian.
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 3, contoh terisi: tiga aplikasi Medikara Health}
+  \label{tab:ch05-lat3-contoh}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aplikasi} & \textbf{Sifat} & \textbf{Faktor wajib} & \textbf{Keputusan} \\
+    \hline
+    Medikara+ & 310.000 pengguna, beban naik turun, rilis diharapkan tiap pekan & Hampir
+      semua & Kejar seluruh faktor, mulai dari VI dan VIII \\
+    \hline
+    Rekap lembur bulanan & 12 pengguna, jalan sekali sebulan, jarang berubah & III, XI &
+      Cukup pindahkan kredensial dan rapikan \textit{log}; faktor skala diabaikan \\
+    \hline
+    SIMRS Bandung & Versi 3.9, misalkan dijadwalkan diganti pada 2027 & III, XI & Jangan
+      investasi besar; amankan kredensial dan \textit{log} sampai diganti \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \footnotesize
+  \caption{Latihan 3, lembar isian}
+  \label{tab:ch05-lat3-hasil}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.1cm}
+    >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aplikasi} & \textbf{Sifat} & \textbf{Faktor wajib} & \textbf{Keputusan} \\
+    \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, faktor III dan XI muncul sebagai faktor wajib di semua baris. Apa yang
+        membuat kedua faktor itu berbeda dari faktor lain?
+  \item Bila jadwal penggantian SIMRS Bandung mundur dari 2027 ke 2030, faktor mana yang
+        perlu ditambahkan ke daftar wajib? Jelaskan dari sisi biaya dan risiko.
 \end{enumerate}

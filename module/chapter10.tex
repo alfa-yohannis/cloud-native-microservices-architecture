@@ -1,4 +1,5 @@
 \chapter{Data dalam Microservices: Saga dan Outbox}
+\label{ch:ch10}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,61 +10,1089 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: data pasien Medikara Health tersebar di banyak sistem dan sering tidak cocok satu sama lain; memecah sistem menjadi layanan tanpa memikirkan data justru memperparah masalah ini.
+Seorang pasien Medikara Health yang pernah berobat di rumah sakit Bekasi, lalu dirawat di rumah sakit
+Depok, hampir pasti punya dua nomor rekam medis. Alamat barunya sudah diperbarui lewat aplikasi
+Medikara+, tetapi Sistem Informasi Manajemen Rumah Sakit (SIMRS) di Bekasi masih menyimpan alamat
+lama. Bagian keuangan dan bagian pelayanan menyusun laporan jumlah kunjungan bulan yang sama, dan
+angkanya tidak pernah persis sama. Strategi "Satu Pasien, Satu Rekam Medis" menuntut keadaan
+sebaliknya: data pasien yang cocok di seluruh 5 rumah sakit, 18 klinik pratama, laboratorium
+rujukan, dan 12 apotek.
+
+Bab 6 sampai Bab 9 menentukan batas layanan, tempat menjalankannya, dan cara layanan berkomunikasi.
+Pemecahan itu belum selesai bila datanya tidak ikut dipikirkan. Layanan baru yang tetap menulis ke basis data
+SIMRS yang sama hanya memindahkan ketergantungan ke tempat lain. Sebaliknya, layanan yang menyimpan
+salinan data sendiri tanpa aturan menambah jumlah versi kebenaran. Tiga pertanyaan kemudian muncul.
+Siapa pemilik setiap data? Bagaimana proses yang melintasi beberapa layanan tetap utuh tanpa satu
+transaksi basis data? Bagaimana laporan manajemen tetap tersedia tanpa membebani layanan yang
+melayani pasien?
+
+\IfFileExists{../figures/ch10-diagram-konsep.png}{%
+Gambar \ref{fig:ch10-lemari-arsip} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch10-diagram-konsep.png}
+  \caption{Transaksi lokal, outbox, dan kompensasi saga}
+  \label{fig:ch10-lemari-arsip}
+\end{figure}
+}{}
+
+Bab ini menjawab ketiga pertanyaan itu secara berurutan. Rujukan utamanya adalah buku
+\textit{Microservices Patterns} karya Richardson \cite{richardson2018} beserta katalog pola daring
+di microservices.io \cite{c10-richardson-dbps, c10-richardson-saga, c10-richardson-outbox},
+makalah asli tentang saga dari Garcia-Molina dan Salem \cite{garcia-molina1987}, buku
+\textit{Building Microservices} karya Newman \cite{newman2021}, artikel Vogels tentang
+\textit{eventual consistency} \cite{c10-vogels2009}, dan tulisan Fowler tentang Command Query
+Responsibility Segregation (CQRS) \cite{c10-fowler-cqrs}. Hasil bab ini adalah peta kepemilikan data
+dan rancangan saga untuk tonggak capstone C3 (Kondisi Target).
 
 \section{Database per Service dan Basis Data Bersama}
+\label{sec:ch10-dbps}
 
-% TODO
-% Cakupan: alasan tiap layanan memiliki datanya sendiri; basis data bersama sebagai anti-pattern dan dampaknya pada perubahan dan kepemilikan; cara layanan lain memperoleh data yang bukan miliknya.
-% Kasus Medikara: tabel pasien SIMRS yang ditulis oleh pendaftaran, keuangan, dan laboratorium sekaligus.
+Pola \textit{database per service} menetapkan bahwa data yang disimpan sebuah layanan bersifat
+privat bagi layanan itu dan hanya dapat diakses lewat Application Programming Interface (API)
+miliknya \cite{c10-richardson-dbps}. Layanan lain tidak membaca atau menulis tabelnya secara
+langsung. Bila Layanan Tagihan membutuhkan nama pasien, Layanan Tagihan bertanya kepada Layanan
+Pasien, bukan membuka tabel pasien. Lawannya adalah basis data bersama: beberapa layanan atau modul
+membaca dan menulis tabel yang sama. Katalog pola Richardson menggolongkannya sebagai
+\textit{anti-pattern} \cite{c10-richardson-dbps}. Newman juga menyarankan agar layanan tidak
+berbagi basis data, karena layanan lain menjadi bergantung pada rincian penyimpanan yang seharusnya
+tersembunyi \cite{newman2021}.
+
+Analoginya seperti satu buku besar di meja tengah kantor yang boleh ditulisi bagian pendaftaran,
+keuangan, dan laboratorium. Setiap bagian menambah kolom sesuai kebutuhannya, mencoret isian bagian
+lain bila dianggap salah, dan tidak ada yang tahu siapa yang terakhir mengubah satu baris. Kantor
+yang lebih tertib memberi setiap bagian lemari arsip sendiri yang kuncinya dipegang bagian itu.
+Bagian lain yang memerlukan isi lemari meminta salinan lewat loket, atau menerima tembusan setiap
+kali ada perubahan penting.
+
+Gambar \ref{fig:ch10-basis-data} membandingkan kedua susunan itu. Di sisi kiri, tiga modul SIMRS
+menulis ke satu tabel pasien. Di sisi kanan, setiap layanan memegang datanya sendiri dan layanan
+lain membaca lewat API atau \textit{event}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch10-basis-data-bersama.tex}
+  \caption{Basis data bersama dibandingkan dengan \textit{database per service}}
+  \label{fig:ch10-basis-data}
+\end{figure}
+
+Pemisahan ini punya dua konsekuensi. Pertama, setiap data punya satu pemilik yang bertanggung jawab
+atas mutu dan perubahannya. Tim pemilik boleh mengubah struktur tabelnya tanpa rapat dengan tim
+lain, selama kontrak API dan \textit{event} yang sudah dijanjikan tetap dijaga. Kedua, dua hal yang
+dulu mudah menjadi sulit: transaksi yang mencakup data beberapa layanan dan \textit{query} yang
+menggabungkan data beberapa layanan \cite{c10-richardson-dbps}. Seksi
+\ref{sec:ch10-transaksi} sampai \ref{sec:ch10-cqrs} membahas cara menangani kedua kesulitan itu.
+Tabel \ref{tab:ch10-dampak-bersama} merangkum perbedaannya dari sisi yang biasa ditanyakan manajemen.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Basis data bersama dan \textit{database per service} dari sisi organisasi}
+  \label{tab:ch10-dampak-bersama}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Basis data bersama} & \textbf{\textit{Database per service}} \\ \hline
+    Perubahan struktur & Harus disepakati semua tim pengguna; satu perubahan dapat merusak modul
+      lain & Diputuskan tim pemilik; kontrak API dan \textit{event} dijaga \\ \hline
+    Kepemilikan data & Kabur; tidak jelas siapa yang membetulkan data yang salah & Satu pemilik
+      untuk setiap data \\ \hline
+    Beban dan kegagalan & \textit{Query} berat satu modul memperlambat semua modul & Beban dan
+      gangguan terkurung di satu layanan \\ \hline
+    Kontrol akses & Banyak akun punya hak tulis ke tabel sensitif & Akses lewat API yang dicatat
+      dan dibatasi \\ \hline
+    Rilis & Perubahan besar dirilis serentak & Setiap layanan dirilis mandiri \\ \hline
+    Harga yang dibayar & Rendah di awal: penggabungan data dan transaksi tunggal mudah &
+      Transaksi dan \textit{query} lintas layanan perlu pola khusus \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Misalkan vendor ERP (Enterprise Resource Planning) keuangan mengubah arti satu kolom status
+        pembayaran pada basis data SIMRS rumah sakit Depok. Modul laboratorium memakai kolom yang
+        sama untuk menentukan pemeriksaan yang boleh dikerjakan, sehingga selama dua hari 260 permintaan
+        pemeriksaan tertahan sampai kesalahan itu ditemukan.
+  \item Vendor Medikara+ membaca tabel jadwal dokter SIMRS secara langsung. Setiap kali SIMRS
+        ditingkatkan versinya, Medikara+ harus diuji ulang selama sekitar tiga minggu, karena tidak
+        ada yang dapat memastikan perubahan tabel mana yang memengaruhi aplikasi pasien.
+\end{enumerate}
+
+\subsection{Privat Tidak Berarti Server Sendiri}
+
+Dua hal pada \textit{database per service} sering tertukar. Pembagiannya begini. Yang diwajibkan
+pola ini adalah kepemilikan dan batas akses: tidak ada layanan lain yang menyentuh tabel milik
+sebuah layanan. Pola ini tidak mewajibkan setiap layanan punya server basis data sendiri, dan tidak
+mewajibkan setiap layanan memakai teknologi basis data yang berbeda. Richardson menyebut tiga bentuk
+pada basis data relasional, seperti tercantum pada Tabel \ref{tab:ch10-bentuk-privat}
+\cite{c10-richardson-dbps}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga bentuk data privat pada basis data relasional}
+  \label{tab:ch10-bentuk-privat}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Bentuk} & \textbf{Cara kerja} & \textbf{Kapan cocok} \\ \hline
+    Tabel privat per layanan & Setiap layanan memiliki sekumpulan tabel yang hanya boleh diakses
+      layanan itu & Awal pemisahan; biaya tambahan paling rendah \\ \hline
+    Skema privat per layanan & Setiap layanan memiliki skema basis data sendiri dengan akun
+      sendiri & Batas akses perlu ditegakkan oleh basis data, bukan hanya oleh kesepakatan \\ \hline
+    Server basis data per layanan & Setiap layanan memiliki server basis data sendiri & Layanan
+      dengan beban tinggi atau kebutuhan teknologi khusus \\ \hline
+  \end{tabularx}
+\end{table}
+
+Bagi Medikara Health, bentuk kedua biasanya cukup sebagai langkah pertama. Akun Layanan Tagihan
+tidak diberi hak apa pun pada skema Layanan Pasien, sehingga aturan kepemilikan tidak bergantung
+pada disiplin pemrogram semata. Temuan audit internal tentang kontrol akses yang lemah juga
+terjawab sebagian, karena hak tulis tidak lagi tersebar ke banyak akun.
+
+\subsection{Cara Layanan Lain Memperoleh Data}
+
+Pertanyaan berikutnya muncul: bila tabel pasien tidak boleh dibuka, bagaimana Layanan Tagihan
+mencetak nama pasien di tagihan? Ada tiga cara, dengan harga yang berbeda. Tabel
+\ref{tab:ch10-cara-membaca} merangkumnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga cara memperoleh data milik layanan lain}
+  \label{tab:ch10-cara-membaca}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Cara} & \textbf{Cara kerja} & \textbf{Kelebihan} & \textbf{Harga} \\ \hline
+    Memanggil API pemilik & Pembaca bertanya setiap kali butuh; beberapa jawaban dapat
+      digabung oleh satu komponen penggabung & Data selalu terbaru & Pembaca ikut terganggu bila
+      pemilik tidak tersedia \\ \hline
+    Salinan lokal dari \textit{event} & Pemilik menerbitkan \textit{event} perubahan; pembaca
+      menyimpan salinan ringkas yang hanya dibaca & Tetap berjalan walaupun pemilik mati &
+      Salinan bisa tertinggal beberapa saat \\ \hline
+    \textit{Read model} khusus & Data beberapa layanan disusun ulang untuk satu kebutuhan baca,
+      misalnya laporan & Cepat untuk laporan dan pencarian lintas layanan & Komponen tambahan dan
+      batas kesegaran \\ \hline
+  \end{tabularx}
+\end{table}
+
+Ketiga cara itu punya satu aturan yang sama: salinan tidak pernah diubah oleh pembacanya. Bila
+Layanan Tagihan menemukan nama pasien yang salah, Layanan Tagihan melapor kepada Layanan Pasien,
+bukan membetulkan salinannya sendiri. Aturan ini yang membedakan salinan yang tertib dari data
+pasien yang tersebar tanpa pemilik. Cara kedua sudah dikenal di Bab 9 sebagai
+\textit{event-carried state transfer}, dan cara ketiga dibahas di seksi \ref{sec:ch10-cqrs}.
+
+\begin{kasus}[title={Kasus Medikara Health: Satu Tabel Pasien, Tiga Penulis}]
+  Misalkan tim arsitektur memeriksa tabel pasien pada SIMRS rumah sakit Bekasi. Tabel itu punya 64
+  kolom. Modul pendaftaran menulis 31 kolom identitas dan demografi, modul keuangan menulis 14 kolom
+  penjamin dan status tagihan, dan modul laboratorium menulis 9 kolom data klinis ringkas seperti
+  golongan darah dan alergi. Sisanya, 10 kolom, tidak diketahui lagi siapa penulisnya. Ada 23 akun
+  aplikasi dan pengguna yang punya hak tulis ke tabel itu, termasuk satu akun vendor laboratorium.
+
+  Pada tahun lalu, tim keuangan memperlebar kolom nomor kartu penjamin agar dapat menampung format
+  nomor polis asuransi mitra yang baru. Modul pendaftaran tidak siap dengan perubahan itu dan gagal
+  menyimpan data selama tiga jam. Sebanyak 410 pasien didaftarkan dengan formulir kertas, lalu
+  diketik ulang pada malam harinya.
+
+  Usulan tim punya tiga bagian. Pertama, Layanan Identitas Pasien menjadi pemilik 31 kolom
+  identitas. Kedua, Layanan Penjaminan menjadi pemilik 14 kolom penjamin. Ketiga, data klinis
+  ringkas pindah ke Layanan Rekam Medis, sedangkan 10 kolom tanpa pemilik ditinjau untuk dihapus.
+  Pemindahan tidak dilakukan sekaligus. Kolom dipindah satu kelompok demi satu kelompok dengan pola
+  \textit{strangler fig} yang dibahas di Bab 14, sambil menutup hak tulis akun lama satu per satu.
+\end{kasus}
 
 \section{Transaksi Terdistribusi dan Eventual Consistency}
+\label{sec:ch10-transaksi}
 
-% TODO
-% Cakupan: mengapa satu transaksi basis data tidak bisa lagi mencakup seluruh proses; keterbatasan two-phase commit; eventual consistency dan cara menjelaskannya kepada pengguna bisnis; konsekuensi pada pengalaman pasien.
+Di dalam SIMRS monolitik, pendaftaran pasien rujukan dapat berjalan dalam satu transaksi basis data:
+catat rujukan, kunci jadwal dokter, catat penjamin, lalu simpan semuanya sekaligus. Transaksi seperti
+ini punya empat sifat yang disingkat ACID. \textit{Atomicity} berarti semua perubahan tersimpan atau
+semuanya batal. \textit{Consistency} berarti aturan data tetap terpenuhi. \textit{Isolation} berarti
+proses lain tidak melihat keadaan setengah jadi. \textit{Durability} berarti perubahan yang sudah
+tersimpan tidak hilang walaupun server mati. Setelah data dipecah ke beberapa layanan, keempat
+sifat itu hanya berlaku di dalam satu layanan. Tidak ada lagi satu transaksi yang mencakup rujukan,
+jadwal, dan penjamin sekaligus.
+
+\subsection{Batas Two-Phase Commit}
+
+Jawaban klasik untuk masalah ini adalah \textit{two-phase commit} (2PC). Satu koordinator bertanya
+kepada semua peserta apakah mereka siap menyimpan perubahan. Bila semua menjawab siap, koordinator
+memerintahkan penyimpanan. Bila satu saja menolak, semua peserta membatalkan perubahannya.
+Analoginya seperti rapat rukun tetangga yang keputusannya baru sah bila seluruh kepala keluarga
+hadir dan menandatangani. Satu orang yang terlambat membuat seluruh warga menunggu di balai
+pertemuan, dan selama menunggu tidak ada yang boleh pulang.
+
+Pada \textit{microservices}, 2PC jarang dipakai. Keterbatasannya ada tiga.
+\begin{enumerate}
+  \item Semua peserta harus tersedia pada saat yang sama, sehingga ketersediaan transaksi turun
+        \cite{richardson2018}. Bila empat layanan masing-masing tersedia 99,5 persen, transaksi yang
+        memerlukan keempatnya hanya dapat berjalan sekitar $0{,}995^4 \approx 98{,}0$ persen dari
+        waktu. Dalam sebulan (720 jam), waktu tidak tersedia naik dari 3,6 jam menjadi sekitar 14,3
+        jam.
+  \item Peserta menahan kunci data selama menunggu keputusan koordinator. Bila koordinator mati
+        setelah semua peserta menyatakan siap, data yang terkunci tidak dapat dipakai proses lain
+        sampai koordinator pulih.
+  \item Banyak teknologi yang dipakai \textit{microservices} tidak mendukungnya, misalnya sebagian
+        \textit{message broker} dan basis data non-relasional \cite{richardson2018}. Layanan
+        eksternal seperti Badan Penyelenggara Jaminan Sosial (BPJS) Kesehatan dan SATUSEHAT juga
+        tidak mungkin ikut serta dalam transaksi milik Medikara Health.
+\end{enumerate}
+
+Katalog pola Richardson menyimpulkannya dengan singkat: 2PC bukan pilihan untuk menyimpan perubahan
+basis data dan menerbitkan pesan sekaligus \cite{c10-richardson-outbox}. Jalan keluarnya adalah
+menerima bahwa data beberapa layanan tidak selalu cocok pada setiap detik, lalu mengelola selisih
+itu dengan sengaja.
+
+\subsection{Eventual Consistency}
+
+\textit{Eventual consistency} adalah jaminan bahwa bila tidak ada perubahan baru, semua pembaca pada
+akhirnya akan melihat nilai terakhir yang sama. Vogels menyebut rentang waktu antara perubahan dan
+saat semua pembaca dijamin melihat nilai baru sebagai jendela ketidakkonsistenan
+(\textit{inconsistency window}) \cite{c10-vogels2009}. Selama jendela itu terbuka, dua layanan dapat
+memberi jawaban berbeda untuk pertanyaan yang sama. Setelah jendela tertutup, keduanya kembali cocok.
+
+Analoginya seperti transfer antarbank. Saldo pengirim langsung berkurang, sedangkan saldo penerima
+bertambah beberapa menit kemudian. Selama itu aplikasi bank menulis "transaksi sedang diproses".
+Tidak ada uang yang hilang, dan nasabah tahu apa yang sedang terjadi. Bank tidak berpura-pura bahwa
+uang sudah sampai, tetapi juga tidak menahan pengirim di depan layar sampai uang diterima.
+
+Pengguna bisnis tidak perlu memahami istilahnya. Yang perlu disepakati bersama mereka adalah tiga
+pertanyaan untuk setiap data. Berapa lama selisih yang masih dapat diterima? Apa yang dilihat pasien
+atau petugas selama selisih itu? Apa yang terjadi bila selisih tidak pernah tertutup karena salah
+satu langkah gagal? Tabel \ref{tab:ch10-kebutuhan-konsistensi} memperlihatkan jawabannya untuk lima
+data Medikara Health.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Toleransi selisih data pada lima data Medikara Health}
+  \label{tab:ch10-kebutuhan-konsistensi}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{1.9cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Data} & \textbf{Selisih yang diterima} & \textbf{Akibat bila terlambat} &
+      \textbf{Pendekatan} \\ \hline
+    Slot jadwal dokter & Tidak ada & Dua pasien di satu slot & Dikunci di dalam Layanan Jadwal
+      sebagai pemilik tunggal \\ \hline
+    Stok obat apotek & Detik & Obat terjual padahal habis & Stok dipesan di layanan pemilik
+      sebelum dijual \\ \hline
+    Status kepesertaan pada pendaftaran & Menit & Pasien terlanjur dilayani sebagai peserta &
+      Status "menunggu verifikasi" yang terlihat petugas \\ \hline
+    Hasil laboratorium di Medikara+ & 5 menit & Pasien bertanya ke loket & Pemberitahuan dikirim
+      saat hasil tersedia \\ \hline
+    Laporan kunjungan harian direksi & Beberapa jam & Keputusan memakai angka kemarin &
+      \textit{Read model} yang diperbarui dari \textit{event} \\ \hline
+  \end{tabularx}
+\end{table}
+
+Tabel itu memperlihatkan bahwa \textit{eventual consistency} bukan aturan untuk semua data. Data
+yang tidak boleh berselisih sedetik pun, seperti slot jadwal, diletakkan di satu layanan pemilik
+sehingga transaksi lokalnya tetap ACID. Selisih hanya diterima di antara layanan, bukan di dalam
+satu layanan.
+
+Dua contoh dampaknya pada pengalaman pasien:
+\begin{enumerate}
+  \item Misalkan Medikara+ menampilkan tulisan "pendaftaran berhasil" segera setelah rujukan
+        dicatat, padahal kepesertaan BPJS Kesehatan belum diverifikasi. Dengan sekitar 3.600
+        rujukan per bulan dan 4 persen di antaranya gagal verifikasi, sekitar 144 pasien per bulan
+        akan menerima kabar berhasil yang kemudian dicabut. Tulisan yang jujur adalah "pendaftaran
+        diterima, menunggu verifikasi kepesertaan".
+  \item Hasil laboratorium yang sudah divalidasi muncul di Medikara+ paling lambat 5 menit
+        kemudian. Selama 5 menit itu pasien yang bertanya ke loket mendapat jawaban "hasil sedang
+        dikirim ke aplikasi", bukan "hasil belum ada".
+\end{enumerate}
 
 \section{Saga dan Transaksi Kompensasi}
+\label{sec:ch10-saga}
 
-% TODO
-% Cakupan: gagasan saga dari Garcia-Molina dan Salem (1987); saga berbasis choreography dan orchestration; transaksi kompensasi dan langkah yang tidak dapat dibatalkan; pola saga dalam Richardson (2018).
-% Kasus Medikara: saga pendaftaran pasien rujukan dari klinik mitra sampai klaim terkirim.
+Garcia-Molina dan Salem memperkenalkan saga pada 1987 untuk menangani transaksi panjang
+(\textit{long-lived transaction}) yang menahan data terlalu lama bila dijalankan sebagai satu
+transaksi \cite{garcia-molina1987}. Gagasannya: transaksi panjang dipecah menjadi rangkaian transaksi
+kecil $T_1, T_2, \ldots, T_n$ yang masing-masing langsung disimpan. Setiap $T_i$ punya transaksi
+kompensasi $C_i$ yang membatalkan akibatnya secara bisnis. Sistem menjamin salah satu dari dua hasil:
+seluruh $T_1$ sampai $T_n$ selesai, atau $T_1$ sampai $T_j$ selesai lalu diikuti $C_j$ sampai $C_1$
+secara mundur. Richardson membawa gagasan ini ke \textit{microservices}: saga adalah rangkaian
+transaksi lokal di beberapa layanan yang dikoordinasikan dengan andal, dan perubahan dari langkah
+yang sudah selesai dibatalkan oleh transaksi kompensasi bila langkah berikutnya gagal
+\cite{richardson2018, c10-richardson-saga}.
+
+Analoginya seperti mengurus perjalanan dinas. Tiket pesawat, hotel, dan mobil sewaan dipesan
+berurutan dari tiga penyedia yang berbeda, dan tidak ada satu tombol untuk membatalkan ketiganya.
+Bila hotel ternyata penuh, staf membatalkan tiket pesawat dan meminta pengembalian dana, mungkin
+dengan potongan biaya. Pembatalan itu tidak menghapus sejarah: tiket tetap pernah dibeli, lalu
+dikembalikan, dan keduanya tercatat.
+
+Gambar \ref{fig:ch10-saga} memperlihatkan saga pendaftaran pasien rujukan dari klinik mitra
+sampai klaim terkirim. Baris atas adalah transaksi lokal, masing-masing milik satu layanan. Baris
+bawah adalah kompensasi yang berjalan mundur bila verifikasi kepesertaan gagal.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch10-saga-rujukan.tex}
+  \caption{Saga pendaftaran pasien rujukan beserta kompensasinya}
+  \label{fig:ch10-saga}
+\end{figure}
+
+\subsection{Kompensasi Bukan Rollback}
+
+Kompensasi berbeda dari \textit{rollback} basis data. \textit{Rollback} menghapus perubahan yang
+belum disimpan, seolah-olah tidak pernah terjadi. Kompensasi adalah transaksi baru yang membalik
+akibat bisnis dari transaksi yang sudah disimpan dan mungkin sudah dilihat pihak lain. Akibatnya,
+kompensasi sering tidak sempurna. Pesan pengingat yang sudah terkirim tidak dapat ditarik kembali,
+sehingga kompensasinya adalah pesan ralat. Obat yang sudah diserahkan tidak dapat dibatalkan,
+sehingga kompensasinya adalah proses retur. Kompensasi juga tidak selalu berarti batal. Bila
+kepesertaan BPJS Kesehatan gagal diverifikasi, pilihan yang lebih baik bagi pasien mungkin
+menawarkan jalur pembayaran umum atau asuransi lain sebelum jadwal dilepas.
+
+Karena ada langkah yang tidak dapat dibatalkan, Richardson membagi transaksi dalam saga menjadi tiga
+jenis \cite{richardson2018}. Transaksi yang dapat dikompensasi (\textit{compensatable transaction})
+berada di depan dan punya kompensasi. Titik penentu (\textit{pivot transaction}) adalah langkah yang
+menentukan apakah saga akan berlanjut sampai selesai atau berbalik. Transaksi yang dapat diulang
+(\textit{retriable transaction}) berada sesudah titik penentu dan dijamin akhirnya berhasil bila
+terus diulang, sehingga tidak perlu kompensasi. Aturan desainnya: langkah yang paling mungkin gagal
+dan langkah yang tidak dapat dibatalkan diletakkan sedekat mungkin dengan titik penentu.
+
+\subsection{Choreography dan Orchestration pada Saga}
+
+Bab 9 sudah membedakan \textit{choreography} dan \textit{orchestration} untuk alur
+\textit{event} secara umum. Saga memakai kedua pola yang sama \cite{c10-richardson-saga}. Pada saga
+berbasis \textit{choreography}, setiap layanan menyelesaikan transaksinya, menerbitkan
+\textit{event}, dan layanan berikutnya bereaksi terhadap \textit{event} itu. Pada saga berbasis
+\textit{orchestration}, satu pengatur saga (\textit{orchestrator}) memberi perintah kepada setiap
+peserta dan mencatat status saga. Tabel \ref{tab:ch10-koordinasi-saga} membandingkan keduanya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Saga berbasis \textit{choreography} dan \textit{orchestration}}
+  \label{tab:ch10-koordinasi-saga}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Choreography}} & \textbf{\textit{Orchestration}} \\ \hline
+    Pengatur alur & Tersebar; setiap layanan tahu \textit{event} apa yang harus ditanggapi &
+      Satu pengatur saga menyimpan urutan langkah \\ \hline
+    Melacak status satu saga & Sulit; status harus disusun dari banyak \textit{event} & Mudah;
+      status tercatat di pengatur saga \\ \hline
+    Menambah atau mengubah langkah & Menyentuh beberapa layanan & Terutama mengubah pengatur
+      saga \\ \hline
+    Risiko & Ketergantungan melingkar yang tidak terlihat & Logika bisnis menumpuk di pengatur
+      saga \\ \hline
+    Cocok untuk & Saga pendek, dua sampai tiga langkah & Saga panjang, banyak kompensasi, perlu
+      jejak audit \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Saga pembatalan janji temu hanya melibatkan dua langkah: slot dilepas, lalu pengingat
+        dibatalkan. \textit{Choreography} cukup, karena alurnya mudah dibaca dari dua
+        \textit{event}.
+  \item Saga pendaftaran rujukan melibatkan enam layanan dan tiga kompensasi, dan klinik mitra
+        ingin melihat status rujukannya. \textit{Orchestration} lebih tepat, karena status setiap
+        rujukan dapat dibaca di satu tempat dan setiap langkah meninggalkan jejak bagi auditor.
+\end{enumerate}
+
+\subsection{Saga Tidak Punya Isolasi}
+
+Saga melepas satu sifat ACID, yaitu isolasi \cite{c10-richardson-saga}. Setiap transaksi lokal
+langsung disimpan, sehingga proses lain dapat melihat keadaan setengah jadi. Misalkan laporan
+kunjungan dihitung ketika jadwal sudah dikunci tetapi kepesertaan belum diverifikasi. Pasien itu
+ikut terhitung, lalu hilang lagi dari laporan bila verifikasinya gagal.
+
+Richardson menyebut beberapa penangkal untuk masalah ini \cite{richardson2018}. Penangkal yang
+paling mudah dipahami pengguna bisnis adalah kunci semantik (\textit{semantic lock}): data yang
+sedang diproses saga diberi status yang menandai bahwa prosesnya belum selesai, misalnya
+\texttt{MENUNGGU\_VERIFIKASI}. Laporan, petugas loket, dan saga lain membaca status itu dan tahu
+bahwa data tersebut belum final. Dua contohnya: laporan kunjungan hanya menghitung rujukan yang
+statusnya sudah \texttt{TERVERIFIKASI}, dan klinik mitra yang ingin membatalkan rujukan berstatus
+\texttt{MENUNGGU\_VERIFIKASI} diarahkan menunggu hasil verifikasi atau meminta pembatalan lewat
+pengatur saga.
+
+\begin{kasus}[title={Kasus Medikara Health: Saga Pendaftaran Pasien Rujukan}]
+  Misalkan klinik mitra mengirim sekitar 3.600 rujukan per bulan ke lima rumah sakit Medikara
+  Health. Sekitar 4 persen, atau 144 rujukan, gagal verifikasi kepesertaan BPJS Kesehatan. Saat ini
+  kegagalan itu ditangani lewat telepon, dan slot dokter spesialis yang sudah dikunci baru dilepas
+  rata-rata dua hari kemudian. Dengan slot 15 menit, sekitar 36 jam praktik dokter spesialis per
+  bulan terkunci tanpa pasien.
+
+  Tim merancang saga berbasis \textit{orchestration} dengan pengatur saga di Layanan Rujukan.
+  Langkah dan kompensasinya tercantum pada Tabel \ref{tab:ch10-saga-kasus}. Anggota tim dari bagian
+  pelayanan menambahkan satu aturan bisnis: sebelum kompensasi C3 berjalan, petugas punya waktu dua
+  jam kerja untuk menawarkan jalur pembayaran umum atau asuransi lain kepada pasien. Bila pasien
+  menolak, kompensasi berjalan otomatis. Dengan aturan ini, slot dilepas paling lambat dua jam kerja
+  setelah verifikasi gagal, bukan dua hari.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Langkah, kompensasi, dan jenis transaksi pada saga pendaftaran rujukan}
+  \label{tab:ch10-saga-kasus}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.6cm} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{No} & \textbf{Layanan} & \textbf{Transaksi lokal} & \textbf{Kompensasi} &
+      \textbf{Jenis} \\ \hline
+    T1 & Rujukan & Rujukan dicatat dengan status \texttt{MENUNGGU\_VERIFIKASI} & Status
+      \texttt{DITOLAK}; klinik mitra menerima alasannya & Dapat dikompensasi \\ \hline
+    T2 & Identitas Pasien & Pasien dicocokkan dengan identitas induk & Tautan ke rujukan dilepas;
+      identitas tetap disimpan & Dapat dikompensasi \\ \hline
+    T3 & Jadwal & Slot dokter spesialis dikunci & Slot dilepas; pasien dan klinik mitra diberi
+      tahu & Dapat dikompensasi \\ \hline
+    T4 & Penjaminan & Kepesertaan BPJS Kesehatan diverifikasi & Tidak ada; bila gagal, C3, C2, dan
+      C1 berjalan & Titik penentu \\ \hline
+    T5 & Tagihan & Tagihan terbit setelah kunjungan & Tidak ada; koreksi lewat tagihan baru &
+      Dapat diulang \\ \hline
+    T6 & Klaim & Klaim dikirim ke BPJS Kesehatan & Tidak ada; dikirim ulang sampai diterima &
+      Dapat diulang \\ \hline
+  \end{tabularx}
+\end{table}
+
+Ada satu hal yang sering luput pada T2. Identitas pasien yang baru dicocokkan tidak dihapus walaupun
+rujukannya ditolak. Identitas itu sah dan mungkin dipakai pada kunjungan lain. Yang dibatalkan hanya
+tautan antara identitas dan rujukan. Contoh kecil ini memperlihatkan mengapa kompensasi harus
+diperiksa oleh anggota tim yang memahami aturan bisnis, bukan hanya oleh pemrogram.
 
 \section{Pola Transactional Outbox}
+\label{sec:ch10-outbox}
 
-% TODO
-% Cakupan: masalah dual write (data tersimpan tetapi event tidak terkirim, atau sebaliknya); cara kerja transactional outbox; kaitan dengan idempotensi consumer (Bab 9).
-% Pendalaman teknis: menerapkan outbox sederhana dengan PostgreSQL dan proses pembaca yang menerbitkan event.
+Saga bergantung pada \textit{event}. Setiap langkah harus menyimpan perubahan di basis datanya dan
+menerbitkan \textit{event} ke \textit{event broker} agar langkah berikutnya berjalan. Basis data dan
+\textit{broker} adalah dua sistem yang berbeda, dan 2PC tidak dapat dipakai untuk menyatukan
+keduanya. Masalah ini disebut \textit{dual write}: dua penulisan ke dua tempat yang harus sama-sama
+berhasil, tetapi tidak dilindungi satu transaksi. Tabel \ref{tab:ch10-dual-write} memperlihatkan
+akibat setiap urutan penulisan bila proses mati di tengah jalan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Akibat urutan penulisan bila proses mati di tengah jalan, pada langkah penguncian jadwal}
+  \label{tab:ch10-dual-write}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Urutan} & \textbf{Keadaan setelah gagal} & \textbf{Akibat bisnis} \\ \hline
+    Simpan data, lalu terbitkan \textit{event} & Slot terkunci, \textit{event} tidak pernah terbit
+      & Saga macet; pasien tidak pernah diberi tahu jadwalnya \\ \hline
+    Terbitkan \textit{event}, lalu simpan data & \textit{Event} terbit, penyimpanan slot batal &
+      Pasien menerima kabar jadwal yang sebenarnya tidak terkunci \\ \hline
+    \textit{Transactional outbox} & Data dan baris \textit{outbox} tersimpan bersama atau batal
+      bersama & \textit{Event} pasti terbit, tetapi mungkin lebih dari sekali \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pola \textit{transactional outbox} menyimpan \textit{event} sebagai baris di tabel
+\textit{outbox} pada basis data yang sama, di dalam transaksi lokal yang sama dengan perubahan data
+bisnis \cite{c10-richardson-outbox}. Karena keduanya berada di satu transaksi ACID, keduanya
+tersimpan bersama atau batal bersama. Sebuah proses terpisah, yang disebut penerbit
+(\textit{message relay}), membaca baris \textit{outbox} yang belum terbit, meneruskannya ke
+\textit{broker}, lalu menandainya sudah terbit.
+
+Analoginya seperti baki surat keluar di kantor tata usaha. Staf yang memutuskan sesuatu mencatatnya
+di buku agenda dan pada saat yang sama menaruh surat tembusan di baki surat keluar. Staf tidak
+berlari sendiri mengantar surat. Kurir datang berkala, mengambil isi baki, mengantarnya, lalu
+mencentang buku ekspedisi. Bila kurir sakit hari itu, surat tetap aman di baki dan diantar esok
+hari. Yang mungkin terjadi hanyalah satu surat terantar dua kali karena kurir lupa mencentang.
+
+Gambar \ref{fig:ch10-outbox} memperlihatkan alurnya pada langkah penguncian jadwal.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch10-outbox.tex}
+  \caption{Alur \textit{transactional outbox} pada Layanan Jadwal}
+  \label{fig:ch10-outbox}
+\end{figure}
+
+\subsection{Dua Cara Menjalankan Penerbit}
+
+Penerbit dapat bekerja dengan dua cara \cite{c10-richardson-outbox}. Cara pertama, \textit{polling
+publisher}, membaca tabel \textit{outbox} secara berkala dengan \textit{query} biasa. Cara kedua,
+\textit{transaction log tailing}, membaca catatan transaksi basis data (\textit{transaction log})
+dan menangkap setiap baris \textit{outbox} yang baru tersimpan. Teknik membaca catatan transaksi ini
+dikenal sebagai Change Data Capture (CDC). Contoh perangkat sumber terbuka untuk CDC adalah
+Debezium. Tabel \ref{tab:ch10-penerbit} membandingkan keduanya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Dua cara menjalankan penerbit \textit{outbox}}
+  \label{tab:ch10-penerbit}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Polling publisher}} & \textbf{\textit{Transaction log
+      tailing} (CDC)} \\ \hline
+    Cara kerja & \textit{Query} berkala ke tabel \textit{outbox} & Membaca catatan transaksi basis
+      data \\ \hline
+    Kesegaran \textit{event} & Bergantung pada jeda di antara dua \textit{query}, biasanya detik &
+      Hampir seketika \\ \hline
+    Beban ke basis data & Bertambah seiring frekuensi \textit{query} & Kecil, tetapi butuh hak
+      akses khusus \\ \hline
+    Keterampilan operasi & Cukup pemahaman \textit{query} biasa & Perlu mengelola perangkat CDC
+      dan konfigurasi basis data \\ \hline
+    Cocok untuk & Volume kecil sampai menengah, tim yang baru mulai & Volume besar, banyak layanan
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Konsekuensi: Event Dapat Datang Dua Kali}
+
+Pola ini punya dua konsekuensi. Pertama, penerbit dapat menerbitkan satu \textit{event} lebih dari
+sekali, misalnya bila penerbit mati setelah meneruskan \textit{event} tetapi sebelum menandainya
+\cite{c10-richardson-outbox}. Jaminannya adalah \textit{at-least-once}, sehingga setiap
+\textit{consumer} wajib idempoten seperti dibahas di Bab 9. Cara yang paling umum adalah memberi
+setiap \textit{event} nomor unik, lalu \textit{consumer} mencatat nomor yang sudah diproses dan
+menolak nomor yang sama. Kedua, tabel \textit{outbox} dan penerbit menjadi komponen yang harus
+dirawat: baris lama perlu dibersihkan berkala, dan keterlambatan penerbit perlu dipantau sebagai
+bagian dari \textit{observability} di Bab 11.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Medikara+ menangani sekitar 28.000 janji temu per bulan. Misalkan tanpa \textit{outbox},
+        0,3 persen \textit{event} \texttt{JanjiTemuDibuat} hilang ketika layanan dimulai ulang,
+        sehingga sekitar 84 pasien per bulan tidak menerima pengingat dan sebagian tidak datang.
+        Dengan \textit{outbox}, tidak ada \textit{event} yang hilang. Beberapa pengingat mungkin
+        terkirim dua kali, dan Layanan Notifikasi menolak duplikat berdasarkan nomor
+        \textit{event}.
+  \item \textit{Event} \texttt{TagihanTerbit} diteruskan ke ERP keuangan. Bila ERP tidak idempoten,
+        satu \textit{event} yang terkirim dua kali menjadi dua piutang untuk satu kunjungan. Karena
+        itu, penerimaan \textit{event} di sisi ERP diuji dengan \textit{event} kembar sebelum
+        \textit{outbox} diaktifkan.
+\end{enumerate}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Outbox Sederhana dengan PostgreSQL}]
+  Folder \berkas{sources/chapter10/contoh-outbox-postgresql/} berisi skema dan penerbit
+  \textit{outbox} untuk Layanan Jadwal. Listing \ref{lst:ch10-transaksi-outbox} adalah transaksi
+  lokal yang mengunci slot dan mencatat \textit{event} \texttt{JadwalDikunci}. Perintah
+  \texttt{UPDATE} dan \texttt{INSERT} digabung dalam satu pernyataan, sehingga baris
+  \textit{outbox} hanya tercipta bila slot benar-benar berhasil dikunci.
+
+\begin{lstlisting}[language=SQL, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10},
+  breaklines=true, showstringspaces=false, captionpos=b,
+  caption={Transaksi lokal dengan \textit{outbox}, tersedia di \berkas{sources/chapter10/contoh-outbox-postgresql/skema-outbox.sql}},
+  label={lst:ch10-transaksi-outbox}]
+BEGIN;
+WITH slot_terkunci AS (
+  UPDATE jadwal_dokter
+  SET status = 'DIKUNCI', id_rujukan = 'RJK-2026-11-00042'
+  WHERE id_slot = 'SLOT-BKS-0915' AND status = 'TERSEDIA'
+  RETURNING id_slot, id_dokter, id_rujukan
+)
+INSERT INTO outbox (jenis_event, id_agregat, isi)
+SELECT 'JadwalDikunci', id_slot,
+  jsonb_build_object('id_rujukan', id_rujukan, 'id_dokter', id_dokter)
+FROM slot_terkunci;
+COMMIT;
+\end{lstlisting}
+
+  Listing \ref{lst:ch10-penerbit} adalah inti penerbit dengan cara \textit{polling publisher}.
+  Klausa \texttt{FOR UPDATE SKIP LOCKED} pada \textit{query} pengambilan membuat dua penerbit yang
+  berjalan bersamaan tidak mengambil baris yang sama. Agar contoh dapat dijalankan tanpa memasang
+  \textit{broker}, \textit{event} ditulis ke berkas \texttt{event-terbit.jsonl} sebagai pengganti
+  \textit{broker}.
+
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10},
+  breaklines=true, showstringspaces=false, captionpos=b,
+  caption={Penerbit \textit{outbox}, tersedia di \berkas{sources/chapter10/contoh-outbox-postgresql/penerbit-outbox.py}},
+  label={lst:ch10-penerbit}]
+def proses_satu_kelompok(koneksi):
+  """Menerbitkan satu kelompok baris outbox, lalu mengembalikan jumlahnya.
+
+  Penandaan baru tersimpan setelah penerbitan. Bila proses mati di antara
+  keduanya, event yang sama terbit ulang pada putaran berikutnya. Karena itu
+  consumer wajib idempoten: jaminannya at-least-once, bukan exactly-once.
+  """
+  with koneksi.transaction():
+    hasil = koneksi.execute(PERINTAH_AMBIL, (UKURAN_KELOMPOK,))
+    baris_outbox = hasil.fetchall()
+    for id_event, jenis, id_agregat, isi, nomor_baris in baris_outbox:
+      terbitkan({"id_event": str(id_event), "jenis": jenis,
+                 "id_agregat": id_agregat, "isi": isi})
+      koneksi.execute(PERINTAH_TANDAI, (nomor_baris,))
+  return len(baris_outbox)
+\end{lstlisting}
+
+  Skema dimuat dengan \texttt{psql -d medikara -f skema-outbox.sql}, lalu penerbit dijalankan
+  dengan \texttt{python penerbit-outbox.py}, hanya pada PostgreSQL milik sendiri. Bila penerbit
+  dihentikan paksa tepat setelah menulis ke berkas lalu dijalankan lagi, \textit{event} yang sama
+  muncul dua kali dengan \texttt{id\_event} yang sama: itulah \textit{at-least-once}.
+\end{pendalaman}
 
 \section{CQRS dan Read Model untuk Pelaporan}
+\label{sec:ch10-cqrs}
 
-% TODO
-% Cakupan: CQRS pada tingkat konsep; read model yang dibangun dari event untuk kebutuhan laporan; manfaatnya bagi layanan operasional; batasan kesegaran data.
-% Kasus Medikara: laporan manajemen yang masih disusun dengan spreadsheet sebagai calon read model.
+CQRS memisahkan model yang dipakai untuk mengubah data dari model yang dipakai untuk membaca data
+\cite{c10-fowler-cqrs}. Sisi perintah (\textit{command}) menerima perubahan dan menjaga aturan
+bisnis. Sisi baca (\textit{query}) menyajikan data dalam bentuk yang paling cocok untuk pertanyaan
+pembacanya. Dalam \textit{microservices}, sisi baca biasanya berupa \textit{read model}: tabel atau
+basis data terpisah yang dibangun dari \textit{event} yang diterbitkan layanan pemilik. Fowler
+mencatat bahwa model baca dan model tulis boleh memakai basis data yang terpisah, sehingga basis
+data sisi baca dapat berfungsi sebagai basis data laporan.
+
+Analoginya seperti papan informasi keberangkatan di bandara. Petugas maskapai mengubah jadwal di
+sistem operasional mereka. Papan di ruang tunggu hanya menampilkan, dan isinya berubah beberapa
+detik kemudian. Ribuan penumpang membaca papan itu tanpa mengganggu petugas di meja
+\textit{check-in}. Bila papan rusak, jadwal penerbangan tidak ikut rusak, dan papan dapat dinyalakan
+ulang dari data maskapai.
+
+Gambar \ref{fig:ch10-read-model} memperlihatkan susunannya. Layanan Kunjungan, Layanan Tagihan, dan
+Layanan Laboratorium tetap memegang datanya masing-masing. Pembangun \textit{read model} menerima
+\textit{event} dari ketiganya dan menyusun tabel laporan yang dibaca \textit{dashboard} manajemen.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch10-read-model.tex}
+  \caption{\textit{Read model} laporan yang dibangun dari \textit{event} layanan operasional}
+  \label{fig:ch10-read-model}
+\end{figure}
+
+\textit{Read model} memberi tiga manfaat. Pertama, \textit{query} laporan yang berat tidak lagi
+membebani layanan yang melayani pasien. Kedua, laporan yang memerlukan data beberapa layanan dapat
+disusun tanpa menggabungkan tabel milik layanan lain secara langsung. Ketiga, \textit{read model}
+dapat dibangun ulang dari \textit{event} bila rusak atau bila bentuk laporannya berubah, selama
+\textit{event}-nya masih disimpan.
+
+Batasannya juga perlu ditulis eksplisit. \textit{Read model} selalu tertinggal dari data
+operasional, biasanya beberapa detik sampai beberapa menit. Karena itu, \textit{read model} tidak
+dipakai untuk keputusan yang memerlukan data saat itu juga. Ketersediaan slot jadwal, misalnya,
+tetap diperiksa di Layanan Jadwal, bukan di \textit{read model}. Fowler juga mengingatkan bahwa
+bagi sebagian besar sistem CQRS menambah kerumitan yang berisiko, sehingga pola ini dipakai hanya
+pada bagian sistem yang benar-benar membutuhkannya \cite{c10-fowler-cqrs}.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Misalkan \textit{dashboard} kunjungan harian direksi saat ini menjalankan \textit{query}
+        langsung ke basis data SIMRS kelima rumah sakit setiap pukul 07.00. Pada jam yang sama
+        loket pendaftaran pagi mulai ramai, dan waktu simpan pendaftaran naik dari 2 detik menjadi
+        9 detik selama sekitar 20 menit. Dengan \textit{read model}, \textit{query} direksi tidak
+        lagi menyentuh SIMRS.
+  \item Portal klinik mitra menampilkan status setiap rujukan. Status itu dibaca dari
+        \textit{read model} yang dibangun dari \textit{event} pengatur saga, sehingga sekitar
+        3.600 rujukan per bulan dapat dipantau mitra tanpa membebani Layanan Rujukan.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Laporan Spreadsheet sebagai Calon Read Model}]
+  Misalkan bagian perencanaan Medikara Health menyusun 14 laporan manajemen setiap bulan dengan
+  \textit{spreadsheet}. Enam staf bekerja sekitar tiga hari kerja setiap awal bulan untuk menarik
+  ekspor dari lima SIMRS, ERP keuangan, dan sistem laboratorium, lalu menyatukannya secara manual.
+  Jumlah kunjungan pada laporan pelayanan dan laporan keuangan berbeda sampai 3 persen, karena
+  setiap ekspor diambil pada jam yang berbeda dan memakai definisi kunjungan yang berbeda.
+
+  Tim memilih empat laporan pertama untuk dipindah ke \textit{read model}, seperti tercantum pada
+  Tabel \ref{tab:ch10-laporan-read-model}. Definisi "kunjungan" disepakati sekali dan dituangkan ke
+  dalam aturan proyeksi \textit{event}, bukan diulang di setiap \textit{spreadsheet}. Selama dua
+  bulan pertama, laporan lama dan laporan baru disusun berdampingan, lalu selisihnya diperiksa
+  bersama bagian keuangan sebelum \textit{spreadsheet} dihentikan.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Empat laporan pertama yang dipindah ke \textit{read model}}
+  \label{tab:ch10-laporan-read-model}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.2cm}}
+    \hline
+    \textbf{Laporan} & \textbf{\textit{Event} sumber} & \textbf{Kesegaran yang cukup} &
+      \textbf{Pengguna utama} \\ \hline
+    Kunjungan harian per fasilitas & \texttt{KunjunganSelesai} & 1 jam & Direksi, kepala rumah
+      sakit \\ \hline
+    Pendapatan per penjamin & \texttt{TagihanTerbit}, \texttt{PembayaranDiterima} & 1 hari kerja &
+      Direktorat Keuangan \\ \hline
+    Waktu tunggu rujukan & \texttt{RujukanDiterima}, \texttt{JadwalDikunci} & 1 jam & Bagian
+      pelayanan, klinik mitra \\ \hline
+    Status klaim BPJS Kesehatan & \texttt{KlaimTerkirim}, \texttt{KlaimDiverifikasi} & 1 hari
+      kerja & Bagian klaim \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Kepemilikan Data Pasien: Satu Pasien, Satu Rekam Medis}
+\label{sec:ch10-data-pasien}
 
-% TODO
-% Cakupan: identitas pasien tunggal lintas fasilitas; layanan pemilik data induk pasien dan pembaca lainnya; persetujuan pasien dan hak akses sebagai batasan desain (pelindungan data pribadi dibahas rinci di IT40813); arsitektur data tingkat enterprise disinggung singkat (dibahas rinci di IT40513).
-% Kasus Medikara: strategi "Satu Pasien, Satu Rekam Medis" dan pertukaran data dengan SATUSEHAT.
+Strategi "Satu Pasien, Satu Rekam Medis" menuntut satu identitas pasien yang berlaku di seluruh
+fasilitas. Dalam arsitektur layanan, identitas itu dipegang satu pemilik, misalnya Layanan
+Identitas Pasien, yang menjalankan indeks pasien induk (\textit{master patient index}, MPI).
+Layanan ini menyimpan data identitas induk, seperti nama, Nomor Induk Kependudukan (NIK), tanggal
+lahir, dan nomor rekam medis induk. Layanan lain cukup menyimpan nomor identitas induk dan salinan
+ringkas yang diperlukan. Bila ditemukan dua catatan untuk orang yang sama, keduanya ditautkan,
+bukan dihapus, agar jejak riwayatnya tetap utuh. Standar HL7 FHIR (Health Level Seven Fast
+Healthcare Interoperability Resources) menyediakan elemen \texttt{link} pada sumber daya
+\texttt{Patient} untuk menautkan sumber daya \texttt{Patient} lain yang menyangkut orang yang sama.
+Spesifikasi itu juga mencatat bahwa setiap organisasi biasanya memegang catatan \texttt{Patient}
+sendiri, sehingga satu pasien dapat punya beberapa catatan \cite{fhir-r4-patient}.
+
+Analoginya seperti nomor induk mahasiswa. Seorang mahasiswa tercatat di perpustakaan, bagian
+keuangan, dan laboratorium. Setiap unit menyimpan catatannya sendiri, misalnya pinjaman buku atau
+tagihan semester, tetapi semuanya merujuk ke nomor induk yang sama. Biro akademik adalah pemilik
+data identitas. Perpustakaan tidak mengubah nama mahasiswa di catatannya; bila nama itu salah,
+perpustakaan meminta biro akademik membetulkannya.
+
+Tabel \ref{tab:ch10-peta-kepemilikan} adalah contoh peta kepemilikan data Medikara Health. Setiap
+entitas punya tepat satu layanan pemilik, sejumlah layanan pembaca, dan cara memperoleh data yang
+disepakati.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh peta kepemilikan data Medikara Health}
+  \label{tab:ch10-peta-kepemilikan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Entitas data} & \textbf{Layanan pemilik} & \textbf{Layanan pembaca} & \textbf{Cara
+      memperoleh} \\ \hline
+    Identitas pasien induk & Identitas Pasien & Jadwal, Tagihan, Rekam Medis, Medikara+,
+      Integrasi SATUSEHAT & API pencarian; \textit{event} \texttt{PasienDiperbarui} \\ \hline
+    Persetujuan pasien & Persetujuan & Rekam Medis, Integrasi SATUSEHAT, Medikara+ & API yang
+      wajib diperiksa sebelum data dibuka \\ \hline
+    Rujukan & Rujukan & Jadwal, Penjaminan, Klaim & \textit{Event} \texttt{RujukanDiterima} \\
+      \hline
+    Jadwal dokter dan janji temu & Jadwal & Medikara+, Notifikasi, laporan & \textit{Event}
+      \texttt{JadwalDikunci}, \texttt{JanjiTemuDibuat} \\ \hline
+    Kepesertaan dan penjamin & Penjaminan & Tagihan, Klaim & API saat pendaftaran \\ \hline
+    Hasil laboratorium & Laboratorium & Rekam Medis, Medikara+, Integrasi SATUSEHAT &
+      \textit{Event} \texttt{HasilLabTersedia} \\ \hline
+    Tagihan dan pembayaran & Tagihan & Klaim, ERP keuangan, laporan & \textit{Event}
+      \texttt{TagihanTerbit} \\ \hline
+    Klaim BPJS Kesehatan & Klaim & ERP keuangan, laporan & \textit{Event} \texttt{KlaimTerkirim}
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Persetujuan dan Hak Akses sebagai Batasan Desain}
+
+Kepemilikan data pasien tidak hanya soal teknis. Undang-Undang Pelindungan Data Pribadi (UU PDP)
+menggolongkan data dan informasi kesehatan sebagai data pribadi yang bersifat spesifik
+\cite{uu27-2022-pdp}. Bagi arsitektur layanan, ketentuan ini menjadi tiga batasan desain. Pertama,
+catatan persetujuan pasien punya pemilik sendiri, yaitu Layanan Persetujuan, dan layanan lain
+memeriksanya sebelum membuka data. Kedua, \textit{event} membawa data seperlunya. \textit{Event}
+\texttt{HasilLabTersedia} cukup membawa nomor pasien induk dan nomor hasil, bukan seluruh nilai
+pemeriksaan, sehingga \textit{consumer} yang berhak membaca rinciannya lewat API yang dicatat.
+Ketiga, hak berlangganan \textit{event} di \textit{broker} dibatasi seketat hak akses ke basis data.
+Rincian dasar hukum, persetujuan, dan pengendalian akses dibahas di IT40813.
+
+Peta kepemilikan pada tingkat layanan juga perlu sejalan dengan arsitektur data tingkat
+\textit{enterprise}: domain data, pemilik data dari sisi bisnis (\textit{data owner}), pengurus data
+(\textit{data steward}), dan glosarium istilah. Peta di bab ini menjawab "layanan mana yang menulis
+data ini". Arsitektur data \textit{enterprise} menjawab "unit bisnis mana yang bertanggung jawab
+atas makna dan mutu data ini". Keduanya dibahas berdampingan, dan bagian \textit{enterprise}
+dibahas rinci di IT40513.
+
+\begin{kasus}[title={Kasus Medikara Health: Identitas Induk dan Pertukaran Data dengan SATUSEHAT}]
+  Misalkan inventarisasi awal menemukan sekitar 910.000 nomor rekam medis di lima SIMRS dan sistem
+  18 klinik pratama. Setelah pencocokan berdasarkan NIK, nama, tanggal lahir, dan alamat, nomor itu
+  mewakili sekitar 640.000 orang. Artinya, sekitar 270.000 nomor, atau 29,7 persen, adalah catatan
+  kedua atau ketiga untuk orang yang sama. Catatan ganda itu ditautkan ke identitas induk. Sekitar
+  12.000 pasangan yang kemiripannya meragukan diperiksa petugas rekam medis, bukan digabung otomatis.
+
+  Pengiriman data ke SATUSEHAT ditangani Layanan Integrasi SATUSEHAT. Layanan ini berlangganan
+  \textit{event} dari pemilik data, misalnya \texttt{KunjunganSelesai} dan
+  \texttt{HasilLabTersedia}, mengambil rincian yang diperlukan lewat API, lalu menyusunnya menjadi
+  sumber daya FHIR seperti \texttt{Patient}, \texttt{Encounter}, dan \texttt{Observation}. Layanan
+  Integrasi SATUSEHAT adalah pembaca, bukan pemilik. Bila SATUSEHAT menolak satu kiriman karena data
+  identitas tidak cocok, perbaikannya dilakukan di Layanan Identitas Pasien, lalu kiriman diulang.
+  Susunan ini menggantikan integrasi \textit{point-to-point} dari setiap SIMRS, sehingga perubahan
+  aturan pengiriman cukup dikerjakan di satu layanan.
+\end{kasus}
 
 \section{Aktivitas: Peta Kepemilikan Data dan Rancangan Saga}
+\label{sec:ch10-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menetapkan pemilik setiap entitas data utama dan merancang satu saga lintas layanan beserta kompensasinya.
-% Peran dalam tim: anggota non-teknis memastikan aturan bisnis dan langkah kompensasi masuk akal bagi pasien dan bagian keuangan; anggota teknis memilih pola koordinasi dan titik pemakaian outbox; seluruh anggota menguji rancangan dengan skenario gagal.
-% Langkah: (1) daftar entitas data utama; (2) tetapkan layanan pemilik dan layanan pembaca; (3) pilih satu proses lintas layanan; (4) uraikan langkah saga dan kompensasinya; (5) uji dengan dua skenario gagal.
-% Luaran dan tonggak capstone: C3, peta kepemilikan data dan rancangan saga.
-% Berkas sources yang direncanakan: sources/chapter10/templat-peta-kepemilikan-data.xlsx, sources/chapter10/templat-rancangan-saga.md, sources/chapter10/contoh-outbox-postgresql/ (opsional)
+\textbf{Tujuan.} Tim menetapkan pemilik setiap entitas data utama pada proses capstone, lalu
+merancang satu saga lintas layanan beserta kompensasinya. Keduanya menjadi bagian tonggak capstone
+C3 (Kondisi Target), melengkapi peta interaksi layanan dan katalog \textit{event} dari Bab 9.
+
+\textbf{Pembagian peran.}
+\begin{itemize}
+  \item Anggota non-teknis, misalnya yang berlatar manajemen, keuangan, hukum, atau kesehatan,
+        memastikan aturan bisnis dan langkah kompensasi masuk akal bagi pasien dan bagian keuangan.
+        Mereka juga menulis kalimat status yang dilihat pasien atau mitra selama saga berjalan.
+  \item Anggota teknis memilih pola koordinasi saga, menentukan titik pemakaian \textit{outbox},
+        dan memastikan setiap \textit{consumer} punya cara menolak \textit{event} kembar.
+  \item Seluruh anggota menguji rancangan dengan skenario gagal dan mencatat keputusan yang
+        diperdebatkan.
+\end{itemize}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Daftar entitas data utama pada proses yang dipilih tim, dengan bantuan katalog
+        \textit{event} Bab 9. Pakai lembar "Isian Tim" pada
+        \berkas{sources/chapter10/templat-peta-kepemilikan-data.xlsx}.
+  \item Tetapkan tepat satu layanan pemilik dan sejumlah layanan pembaca untuk setiap entitas, lalu
+        pilih cara memperoleh data dari Tabel \ref{tab:ch10-cara-membaca}. Tandai entitas yang saat
+        ini ditulis lebih dari satu sistem.
+  \item Pilih satu proses lintas layanan, misalnya pendaftaran pasien rujukan dari klinik mitra
+        sampai klaim terkirim, atau proses sejenis di organisasi pilihan.
+  \item Uraikan langkah saga dan kompensasinya dengan
+        \berkas{sources/chapter10/templat-rancangan-saga.md}. Tandai titik penentu, langkah yang
+        dapat diulang, dan setiap langkah yang menerbitkan \textit{event} lewat \textit{outbox}.
+  \item Uji rancangan dengan dua skenario gagal: satu kegagalan sebelum titik penentu dan satu
+        layanan yang tidak tersedia sesudah titik penentu. Catat kompensasi yang berjalan, pihak
+        yang diberi tahu, dan batas waktunya.
+\end{enumerate}
+
+\textbf{Luaran.} Peta kepemilikan data yang terisi, satu rancangan saga lengkap dengan dua skenario
+gagal, dan catatan satu halaman tentang keputusan yang paling diperdebatkan tim beserta
+\textit{tradeoff}-nya. Luaran ini masuk ke C3 sebagai peta kepemilikan data dan rancangan saga, dan
+akan dipakai lagi saat menyusun Service Level Objective (SLO) perjalanan pasien pada Bab 11.
+
+\textbf{Kriteria penilaian.} Tabel \ref{tab:ch10-kriteria-aktivitas} memuat kriteria singkat yang
+dipakai saat tinjauan Sabtu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 10}
+  \label{tab:ch10-kriteria-aktivitas}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{Bukti yang dicari} \\ \hline
+    Kejelasan kepemilikan data & 25 persen & Setiap entitas punya tepat satu pemilik dan cara baca
+      yang disepakati \\ \hline
+    Kelengkapan saga & 25 persen & Titik penentu, kompensasi, dan langkah yang dapat diulang
+      ditandai \\ \hline
+    Kewajaran kompensasi bagi bisnis & 25 persen & Kompensasi ditulis dalam bahasa bisnis dan
+      diperiksa anggota non-teknis \\ \hline
+    Ketahanan terhadap kegagalan & 25 persen & Dua skenario gagal diuji; \textit{outbox} dan
+      idempotensi dipakai di tempat yang tepat \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Etika.} Data organisasi nyata hanya dipakai seizin organisasi dan dianonimkan. Peta
+kepemilikan cukup memuat nama entitas dan atributnya, bukan isi data. Data pribadi pasien atau
+karyawan tidak boleh dicantumkan.
+
+\textbf{Pendalaman teknis (opsional).} Anggota berlatar teknis menjalankan contoh di
+\berkas{sources/chapter10/contoh-outbox-postgresql/} seperti pada kotak pendalaman seksi
+\ref{sec:ch10-outbox}, lalu menambahkan satu \textit{consumer} sederhana yang menolak
+\textit{event} dengan \texttt{id\_event} yang sudah pernah diproses. Percobaan hanya dilakukan pada
+basis data milik sendiri.
 
 \section{Ringkasan}
 
-% TODO
+Memecah sistem menjadi layanan belum selesai sebelum datanya ikut dipecah. Pola \textit{database per
+service} menetapkan bahwa data setiap layanan bersifat privat dan hanya diakses lewat API-nya.
+Hasilnya adalah satu pemilik untuk setiap data, perubahan struktur yang tidak lagi memerlukan rapat
+lintas tim, dan hak tulis yang tidak tersebar ke banyak akun. Privat tidak berarti server sendiri:
+skema privat sudah cukup sebagai langkah pertama. Layanan lain memperoleh data lewat API, salinan
+lokal dari \textit{event}, atau \textit{read model}, dan salinan tidak pernah diubah oleh pembacanya.
+
+Harga dari pemisahan itu adalah hilangnya satu transaksi ACID yang mencakup seluruh proses.
+\textit{Two-phase commit} menuntut semua peserta tersedia bersamaan dan tidak didukung banyak
+teknologi maupun layanan eksternal seperti BPJS Kesehatan. Jalan keluarnya adalah
+\textit{eventual consistency}: selisih data antarlayanan diterima selama jendela yang disepakati,
+diperlihatkan kepada pengguna sebagai status yang jujur, dan ditutup dengan sengaja. Data yang tidak
+boleh berselisih sedetik pun diletakkan di satu layanan pemilik.
+
+Saga, yang diperkenalkan Garcia-Molina dan Salem pada 1987, menjaga proses lintas layanan tetap
+utuh lewat rangkaian transaksi lokal dan transaksi kompensasi. Kompensasi bukan
+\textit{rollback}: kompensasi adalah transaksi bisnis baru yang kadang tidak sempurna dan tidak
+selalu berarti batal. Pembagian langkah menjadi dapat dikompensasi, titik penentu, dan dapat diulang
+membantu menempatkan langkah yang tidak dapat dibatalkan di tempat yang aman. Saga pendek cocok
+dengan \textit{choreography}; saga panjang dengan banyak kompensasi dan kebutuhan audit, seperti
+pendaftaran rujukan, lebih cocok dengan \textit{orchestration}.
+
+Saga bergantung pada \textit{event} yang pasti terbit. Pola \textit{transactional outbox} menyimpan
+\textit{event} di tabel \textit{outbox} dalam transaksi yang sama dengan data bisnis, lalu penerbit
+meneruskannya ke \textit{broker}. Data dan \textit{event} tidak lagi dapat berselisih, dengan harga
+\textit{event} yang kadang datang dua kali, sehingga \textit{consumer} harus idempoten. Di sisi baca,
+CQRS dan \textit{read model} menyajikan laporan dari \textit{event} tanpa membebani layanan yang
+melayani pasien, dengan batas kesegaran yang ditulis eksplisit. Semua pola ini bertumpu pada
+identitas pasien induk yang dipegang satu pemilik, dengan persetujuan pasien sebagai batasan desain.
+
+Pesan utama bab ini: setiap data punya satu pemilik, dan setiap selisih antarlayanan punya batas
+waktu, status yang terlihat, serta jalan pulang bila gagal. Peta kepemilikan data dan rancangan
+saga yang disusun pada Aktivitas bab ini menjadi dasar bagi SLO perjalanan pasien di Bab 11 dan
+rencana resiliensi di Bab 12.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Satu Tabel, Banyak Penulis}
+
+Latihan ini membuktikan bahwa basis data bersama mengaburkan kepemilikan data dan memperbesar dampak
+setiap perubahan. Pertanyaannya: mengapa tim keuangan dan tim layanan pasien sebaiknya tidak menulis
+langsung ke tabel basis data yang sama?
+
 \begin{enumerate}
-  \item Mengapa tim keuangan dan tim layanan pasien sebaiknya tidak menulis langsung ke tabel basis data yang sama?
-  \item Pada saga pendaftaran rujukan, verifikasi kepesertaan BPJS Kesehatan gagal setelah jadwal dokter dikunci. Uraikan langkah kompensasinya.
-  \item Laporan manajemen Medikara Health masih disusun dengan \textit{spreadsheet}. Jelaskan cara \textit{read model} menggantikan kebiasaan itu tanpa membebani layanan operasional.
+  \item Pilih satu tabel inti yang ditulis lebih dari satu aplikasi atau modul, dari organisasi
+        pilihan (seizin organisasi) atau dari contoh Tabel \ref{tab:ch10-lat1-contoh}.
+  \item Kelompokkan kolomnya menurut makna bisnis, misalnya identitas, penjamin, dan data klinis.
+  \item Catat modul atau tim yang menulis setiap kelompok kolom saat ini.
+  \item Usulkan satu layanan pemilik untuk setiap kelompok dan cara layanan lain memperolehnya.
+  \item Isi Tabel \ref{tab:ch10-lat1-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 1: tabel pasien SIMRS rumah sakit Bekasi dengan 64 kolom}
+  \label{tab:ch10-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm} r >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kelompok kolom} & \textbf{Kolom} & \textbf{Penulis saat ini} & \textbf{Pemilik usulan} &
+      \textbf{Cara pembaca memperoleh} \\ \hline
+    Identitas dan demografi & 31 & Pendaftaran, sebagian juga keuangan & Layanan Identitas Pasien &
+      API pencarian; \textit{event} \texttt{PasienDiperbarui} \\ \hline
+    Penjamin dan status tagihan & 14 & Keuangan, sebagian juga pendaftaran & Layanan Penjaminan dan
+      Layanan Tagihan & API saat pendaftaran \\ \hline
+    Data klinis ringkas & 9 & Laboratorium dan pendaftaran & Layanan Rekam Medis & \textit{Event}
+      \texttt{HasilLabTersedia} \\ \hline
+    Tanpa pemilik jelas & 10 & Tidak diketahui & Ditinjau untuk dihapus & Tidak ada \\ \hline
+    \textbf{Total} & \textbf{64} & 23 akun dengan hak tulis & 4 pemilik & 1 insiden 3 jam, 410
+      pasien manual \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 1}
+  \label{tab:ch10-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm} r >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kelompok kolom} & \textbf{Kolom} & \textbf{Penulis saat ini} & \textbf{Pemilik usulan} &
+      \textbf{Cara pembaca memperoleh} \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textbf{Total} & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, berapa persen kolom yang ditulis lebih dari satu modul, dan berapa persen yang
+        tidak punya pemilik? Apa artinya bagi risiko perubahan berikutnya?
+  \item Insiden pelebaran kolom penjamin menghentikan pendaftaran selama tiga jam. Dengan
+        \textit{database per service}, siapa yang akan terdampak oleh perubahan yang sama, dan apa
+        yang harus dijaga tim pemilik agar pembacanya tidak rusak?
+\end{enumerate}
+
+\subsection*{Latihan 2: Kompensasi Saat Verifikasi Gagal}
+
+Latihan ini membuktikan bahwa kompensasi adalah keputusan bisnis yang urutannya harus dirancang,
+bukan sekadar pembatalan teknis. Pertanyaannya: pada saga pendaftaran rujukan, verifikasi
+kepesertaan BPJS Kesehatan gagal setelah jadwal dokter dikunci. Uraikan langkah kompensasinya.
+
+\begin{enumerate}
+  \item Baca saga pada Gambar \ref{fig:ch10-saga} dan Tabel \ref{tab:ch10-saga-kasus}.
+  \item Pelajari contoh skenario lain pada Tabel \ref{tab:ch10-lat2-contoh}, yaitu slot dokter
+        yang tidak tersedia (T3 gagal).
+  \item Tentukan langkah yang sudah selesai ketika verifikasi kepesertaan (T4) gagal.
+  \item Susun kompensasi secara mundur, termasuk jalur alternatif yang ditawarkan kepada pasien
+        sebelum jadwal dilepas.
+  \item Tentukan pihak yang diberi tahu dan batas waktu setiap kompensasi, lalu isi Tabel
+        \ref{tab:ch10-lat2-hasil}. Templat lengkapnya ada di
+        \berkas{sources/chapter10/templat-rancangan-saga.md}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 2: kompensasi saat slot dokter tidak tersedia (T3 gagal)}
+  \label{tab:ch10-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{Urutan} & \textbf{Kompensasi atau tindakan} & \textbf{Pihak yang diberi tahu} &
+      \textbf{Batas waktu} \\ \hline
+    1 & Tawarkan slot di rumah sakit Medikara lain dalam 7 hari & Pasien & 2 jam kerja \\ \hline
+    2 & Bila pasien menolak: C2, tautan rujukan dilepas, identitas tetap & Tidak ada & Segera
+      setelah penolakan \\ \hline
+    3 & C1, rujukan berstatus \texttt{DITOLAK} dengan alasan "slot tidak tersedia" & Pasien, klinik
+      mitra & 1 jam setelah C2 \\ \hline
+    4 & Catat rujukan yang gagal untuk laporan waktu tunggu & Bagian pelayanan & Otomatis lewat
+      \textit{read model} \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 2: kompensasi saat verifikasi kepesertaan gagal (T4 gagal)}
+  \label{tab:ch10-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{Urutan} & \textbf{Kompensasi atau tindakan} & \textbf{Pihak yang diberi tahu} &
+      \textbf{Batas waktu} \\ \hline
+    1 & \dots & \dots & \dots \\ \hline
+    2 & \dots & \dots & \dots \\ \hline
+    3 & \dots & \dots & \dots \\ \hline
+    4 & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Dengan 144 kegagalan verifikasi per bulan dan slot 15 menit, berapa jam praktik dokter
+        spesialis yang dapat dipulihkan bila slot dilepas dalam dua jam kerja, bukan dua hari?
+        Asumsi apa yang membuat angka itu terlalu optimistis?
+  \item Mengapa urutan kompensasi pada isian berbeda dari contoh, padahal keduanya memakai C2 dan C1
+        yang sama? Langkah mana yang memerlukan keputusan manusia dan mana yang dapat berjalan
+        otomatis?
+\end{enumerate}
+
+\subsection*{Latihan 3: Read Model Pengganti Spreadsheet}
+
+Latihan ini membuktikan bahwa \textit{read model} dapat menggantikan penyusunan laporan manual tanpa
+membebani layanan operasional. Pertanyaannya: laporan manajemen Medikara Health masih disusun dengan
+\textit{spreadsheet}. Jelaskan cara \textit{read model} menggantikan kebiasaan itu tanpa membebani
+layanan operasional.
+
+\begin{enumerate}
+  \item Pilih tiga laporan rutin dari organisasi pilihan (seizin organisasi) atau dari contoh Tabel
+        \ref{tab:ch10-lat3-contoh}.
+  \item Catat cara penyusunan saat ini, sistem yang ditarik datanya, dan waktu kerja yang
+        dibutuhkan.
+  \item Tentukan \textit{event} yang menjadi sumber setiap laporan, dengan bantuan peta kepemilikan
+        data pada Tabel \ref{tab:ch10-peta-kepemilikan}.
+  \item Tetapkan kesegaran yang cukup bagi pengguna laporan, lalu bandingkan dengan kesegaran
+        laporan saat ini.
+  \item Isi Tabel \ref{tab:ch10-lat3-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 3: tiga laporan bulanan Medikara Health}
+  \label{tab:ch10-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{1.8cm}}
+    \hline
+    \textbf{Laporan} & \textbf{Cara saat ini} & \textbf{\textit{Event} sumber} &
+      \textbf{Kesegaran cukup} \\ \hline
+    Kunjungan per fasilitas & Ekspor 5 SIMRS dan 18 klinik, digabung manual; 2 staf, 1 hari &
+      \texttt{KunjunganSelesai} & 1 jam \\ \hline
+    Pendapatan per penjamin & Ekspor ERP dan SIMRS, dicocokkan manual; 2 staf, 1,5 hari &
+      \texttt{TagihanTerbit}, \texttt{PembayaranDiterima} & 1 hari kerja \\ \hline
+    Waktu tunggu rujukan & Catatan telepon dan SIMRS; 2 staf, 0,5 hari & \texttt{RujukanDiterima},
+      \texttt{JadwalDikunci} & 1 jam \\ \hline
+    \textbf{Total} & 48 jam kerja per bulan, sepertiga dari 144 jam untuk 14 laporan; selisih
+      antarlaporan sampai 3 persen & 5 jenis \textit{event} & Dari bulanan ke jam atau hari \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 3}
+  \label{tab:ch10-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{1.8cm}}
+    \hline
+    \textbf{Laporan} & \textbf{Cara saat ini} & \textbf{\textit{Event} sumber} &
+      \textbf{Kesegaran cukup} \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \textbf{Total} & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, laporan mana yang paling diuntungkan oleh \textit{read model}: yang paling
+        banyak menghemat jam kerja, atau yang paling banyak memperbaiki kesegaran? Jelaskan dengan
+        angka dari tabel.
+  \item Selisih jumlah kunjungan sampai 3 persen muncul karena definisi kunjungan berbeda. Mengapa
+        \textit{read model} tidak otomatis menghapus selisih itu, dan keputusan apa yang harus
+        diambil lebih dulu bersama bagian keuangan dan pelayanan?
+  \item Laporan mana yang tetap tidak boleh dibaca dari \textit{read model}, karena keputusan yang
+        diambil darinya memerlukan data saat itu juga?
 \end{enumerate}

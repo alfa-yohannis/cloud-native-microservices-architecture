@@ -1,0 +1,45 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  induk/.style={draw, rounded corners, fill=praditagreen!15, align=center,
+    minimum width=5.4cm, minimum height=0.85cm, font=\footnotesize\bfseries},
+  kelompok/.style={draw, rounded corners, fill=orange!12, align=center,
+    text width=3.4cm, minimum height=0.7cm, font=\scriptsize\bfseries},
+  butir/.style={draw, rounded corners, fill=blue!8, align=left,
+    text width=3.4cm, inner sep=4pt, font=\scriptsize},
+  hasil/.style={draw, rounded corners, fill=green!10, align=center,
+    text width=11.3cm, minimum height=0.75cm, font=\scriptsize\bfseries},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[induk] (nist) at (0,0)
+    {Definisi \textit{cloud}\\{\tiny\mdseries NIST SP 800-145, 2011}};
+
+  \node[kelompok] (kar) at (-4.0,-1.6) {5 karakteristik esensial};
+  \node[kelompok] (lay) at (0,-1.6) {3 model layanan};
+  \node[kelompok] (pen) at (4.0,-1.6) {4 model penerapan};
+
+  \node[butir, anchor=north] (karisi) at (-4.0,-2.3)
+    {\textit{On-demand self-service}\\ \textit{Broad network access}\\
+     \textit{Resource pooling}\\ \textit{Rapid elasticity}\\
+     \textit{Measured service}};
+  \node[butir, anchor=north] (layisi) at (0,-2.3)
+    {\textit{Software as a Service}\\ \textit{Platform as a Service}\\
+     \textit{Infrastructure as a Service}};
+  \node[butir, anchor=north] (penisi) at (4.0,-2.3)
+    {\textit{Private cloud}\\ \textit{Community cloud}\\
+     \textit{Public cloud}\\ \textit{Hybrid cloud}};
+
+  \node[hasil] (bahasa) at (0,-5.25)
+    {Bahasa bersama untuk membaca dan membandingkan tawaran penyedia\\
+     {\tiny\mdseries \textit{Multi-cloud} tidak termasuk definisi NIST,
+     istilah ini lahir dari praktik industri}};
+
+  \draw[panah] (nist.south) -- ++(0,-0.4) -| (kar.north);
+  \draw[panah] (nist.south) -- (lay.north);
+  \draw[panah] (nist.south) -- ++(0,-0.4) -| (pen.north);
+  \draw[panah] (kar.south) -- (karisi.north);
+  \draw[panah] (lay.south) -- (layisi.north);
+  \draw[panah] (pen.south) -- (penisi.north);
+  \draw[panah] (karisi.south) -- (karisi.south |- bahasa.north);
+  \draw[panah] (layisi.south) -- (layisi.south |- bahasa.north);
+  \draw[panah] (penisi.south) -- (penisi.south |- bahasa.north);
+\end{tikzpicture}

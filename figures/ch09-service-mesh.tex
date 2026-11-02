@@ -1,0 +1,46 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, text width=1.6cm,
+    minimum height=0.75cm, align=center},
+  tekan/.style={tahap, fill=orange!12},
+  induk/.style={draw, rounded corners, fill=praditagreen!15, text width=2.4cm,
+    minimum height=0.8cm, align=center},
+  proksi/.style={draw, rounded corners, fill=green!10, text width=1.6cm,
+    minimum height=0.6cm, align=center},
+  ket/.style={font=\tiny, align=center},
+  atur/.style={-{Stealth[length=1.6mm]}, dashed, praditagreen!80!black}
+]
+  % Lalu lintas dari luar masuk lewat API gateway di tepi sistem.
+  \node[tahap, fill=white] (mitra) at (0,0.5) {Aplikasi mitra\\{\tiny\mdseries asuransi}};
+  \node[tekan] (gw) at (2.45,0.5) {\textit{API gateway}\\{\tiny\mdseries tepi sistem}};
+
+  % Dua layanan, masing-masing ditemani proxy sidecar.
+  \node[proksi] (px1) at (5.2,0.5) {\textit{proxy}};
+  \node[tahap] (app1) at (5.2,-0.6) {Layanan Klaim};
+  \node[proksi] (px2) at (9.0,0.5) {\textit{proxy}};
+  \node[tahap] (app2) at (9.0,-0.6) {Layanan Rekam Medis};
+  \node[draw, rounded corners, gray!70, fit=(px1)(app1), inner sep=3pt] (pod1) {};
+  \node[draw, rounded corners, gray!70, fit=(px2)(app2), inner sep=3pt] (pod2) {};
+  \draw[{Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (px1) -- (app1);
+  \draw[{Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (px2) -- (app2);
+
+  % Control plane membagikan aturan ke semua proxy.
+  \node[induk] (cp) at (7.1,2.0) {\textit{Control plane}\\{\tiny\mdseries aturan dan sertifikat}};
+  \draw[atur] (cp.west) -| (px1.north);
+  \draw[atur] (cp.east) -| (px2.north);
+
+  % Lalu lintas utara-selatan dan timur-barat.
+  \draw[panah] (mitra) -- (gw);
+  \draw[panah] (gw) -- (px1);
+  \draw[panah] (px1) -- (px2);
+  \node[ket, above] at (1.25,1.12) {utara-selatan};
+  \node[ket, above] at (7.1,0.55) {timur-barat};
+  \node[ket] at (7.1,0.05) {mTLS, \textit{retry},\\telemetri};
+
+  % Batas klaster yang memakai service mesh.
+  \node[draw, dashed, thick, praditagreen, rounded corners, inner sep=6pt,
+    fit=(pod1)(pod2)(cp)] (klaster) {};
+  \node[font=\tiny\bfseries, praditagreen, anchor=north west] at (klaster.south west)
+    {klaster dengan \textit{service mesh}};
+\end{tikzpicture}

@@ -1,0 +1,36 @@
+# Contoh rekaan akses modul SIMRS rumah sakit Jakarta ke tabel basis data, dipakai oleh cocokkan-tabel-konteks.py. Kolom konteks berisi bounded context hasil lokakarya.
+modul,konteks,tabel,akses
+jadwal,Janji temu,jadwal_dokter,tulis
+pendaftaran,Pendaftaran,pasien,tulis
+pendaftaran,Pendaftaran,kunjungan,tulis
+pendaftaran,Pendaftaran,penjamin_pasien,tulis
+pendaftaran,Pendaftaran,jadwal_dokter,baca
+rawat_jalan,Pelayanan klinis,kunjungan,tulis
+rawat_jalan,Pelayanan klinis,diagnosis,tulis
+rawat_jalan,Pelayanan klinis,tindakan,tulis
+rawat_jalan,Pelayanan klinis,resep,tulis
+rawat_jalan,Pelayanan klinis,permintaan_lab,tulis
+rawat_jalan,Pelayanan klinis,pasien,baca
+rawat_jalan,Pelayanan klinis,hasil_lab,baca
+rekam_medis,Pelayanan klinis,pasien,tulis
+rekam_medis,Pelayanan klinis,diagnosis,baca
+rekam_medis,Pelayanan klinis,tindakan,baca
+laboratorium,Laboratorium,permintaan_lab,baca
+laboratorium,Laboratorium,hasil_lab,tulis
+laboratorium,Laboratorium,pasien,baca
+laboratorium,Laboratorium,item_tagihan,tulis
+farmasi,Apotek,resep,baca
+farmasi,Apotek,stok_obat,tulis
+farmasi,Apotek,pasien,baca
+farmasi,Apotek,item_tagihan,tulis
+kasir,Penagihan,tarif,tulis
+kasir,Penagihan,tagihan,tulis
+kasir,Penagihan,item_tagihan,tulis
+kasir,Penagihan,penjamin_pasien,tulis
+kasir,Penagihan,kunjungan,tulis
+kasir,Penagihan,tindakan,baca
+klaim_bpjs,Klaim,klaim,tulis
+klaim_bpjs,Klaim,diagnosis,tulis
+klaim_bpjs,Klaim,tindakan,baca
+klaim_bpjs,Klaim,tagihan,baca
+klaim_bpjs,Klaim,penjamin_pasien,baca

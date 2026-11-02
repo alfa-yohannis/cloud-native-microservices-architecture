@@ -1,0 +1,39 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  pengguna/.style={draw, rounded corners, fill=blue!8, align=center,
+    text width=1.9cm, minimum height=1.2cm},
+  zona/.style={draw, rounded corners, fill=blue!8, align=center,
+    text width=1.45cm, minimum height=1.6cm},
+  luar/.style={draw, rounded corners, fill=gray!35, align=center,
+    text width=1.7cm, minimum height=1.2cm},
+  tanda/.style={draw, rounded corners, fill=red!22, align=center,
+    text width=2.0cm, font=\tiny},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[draw, rounded corners, thick, fill=praditagreen!15,
+    minimum width=5.8cm, minimum height=3.1cm] (region) at (4.9,0.1) {};
+  \node[font=\scriptsize\bfseries, anchor=north] at (region.north)
+    {\textit{Region} Jakarta};
+
+  \node[zona] (z1) at (2.95,-0.15)
+    {\textbf{AZ 1}\\{\tiny\mdseries satu atau lebih pusat data}};
+  \node[zona] (z2) at (4.9,-0.15)
+    {\textbf{AZ 2}\\{\tiny\mdseries listrik dan pendingin sendiri}};
+  \node[zona] (z3) at (6.85,-0.15)
+    {\textbf{AZ 3}\\{\tiny\mdseries jaringan sendiri}};
+  \draw[thick, dashed] (z1.east) -- (z2.west);
+  \draw[thick, dashed] (z2.east) -- (z3.west);
+  \node[font=\tiny, anchor=north] at (region.south)
+    {zona saling terhubung dengan jaringan berlatensi rendah};
+
+  \node[pengguna] (rs) at (0,0.1)
+    {Rumah sakit dan klinik\\{\tiny\mdseries Jabodetabek, Bandung}};
+  \draw[panah] (rs.east) -- node[above, font=\tiny] {dekat} (region.west);
+
+  \node[luar] (luar) at (9.7,0.1)
+    {\textit{Region} luar negeri\\{\tiny\mdseries lebih jauh}};
+  \draw[panah, dashed] (region.east) -- node[above, font=\tiny] {salinan?}
+    (luar.west);
+  \node[tanda] at (9.7,-1.35)
+    {Data keluar wilayah Indonesia: periksa aturan lebih dahulu};
+\end{tikzpicture}

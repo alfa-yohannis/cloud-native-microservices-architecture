@@ -1,0 +1,37 @@
+% Faktor I, III, dan V dalam satu gambar: satu codebase dibangun sekali, lalu
+% digabung dengan konfigurasi tiap rumah sakit menjadi lima release.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  kotak/.style={draw, rounded corners, align=center, minimum height=1.05cm,
+                text width=2.2cm},
+  rilis/.style={draw, rounded corners, align=center, minimum height=0.62cm,
+                text width=2.7cm, fill=orange!12, inner sep=2pt},
+  catatan/.style={draw, rounded corners, align=center, minimum height=0.62cm,
+                  text width=1.9cm, fill=blue!8, inner sep=2pt},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[kotak, fill=praditagreen!15] (kode) at (0,0)
+    {\textbf{Satu \textit{codebase}}\\{\tiny\mdseries SIMRS di satu repositori}};
+  \node[kotak, fill=blue!8] (build) at (2.9,0)
+    {\textbf{\textit{Build}}\\{\tiny\mdseries satu paket siap jalan, versi 5.3}};
+
+  \foreach \kota/\y in {Jakarta/1.6, Bekasi/0.8, Depok/0, Bogor/-0.8, Bandung/-1.6} {
+    \node[rilis] (r\kota) at (6.4,\y)
+      {\textit{Release} \kota\ {\tiny\mdseries 5.3 + konfigurasi}};
+    \node[catatan] (k\kota) at (9.6,\y)
+      {{\tiny konfigurasi \kota}};
+    \draw[panah] (build.east) -- (r\kota.west);
+    \draw[panah, dashed, gray] (k\kota.west) -- (r\kota.east);
+  }
+
+  \draw[panah] (kode) -- (build);
+
+  \node[font=\tiny, gray, anchor=south] at (rJakarta.north)
+    {\textit{release} = \textit{build} + konfigurasi};
+  \node[font=\tiny, gray, align=center, anchor=south] at (kJakarta.north)
+    {disimpan di lingkungan,\\bukan di kode};
+  \node[font=\tiny, text=praditagreen, align=center, anchor=north]
+    at ([yshift=-4pt]rBandung.south)
+    {\textit{run}: lima lokasi menjalankan paket yang sama};
+\end{tikzpicture}

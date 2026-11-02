@@ -1,0 +1,53 @@
+% Sisa error budget layanan pemesanan Medikara+ selama satu jendela 30 hari.
+% Garis putus-putus: laju pembakaran 1, anggaran habis tepat di hari ke-30.
+% Garis hijau: sisa anggaran teramati, dengan dua kejadian yang memakan anggaran.
+\begin{tikzpicture}[
+  x=0.29cm, y=0.045cm,
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  catatan/.style={font=\tiny, align=left, inner sep=1pt},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  % Zona kebijakan
+  \fill[red!22] (0, 0) rectangle (30, 25);
+  \fill[orange!12] (0, 25) rectangle (30, 50);
+  \node[catatan, anchor=south west] at (0.5, 3)
+    {di bawah 25\%: hanya perubahan untuk keandalan};
+  \node[catatan, anchor=north west] at (0.5, 49)
+    {25 sampai 50\%: rilis berisiko ditinjau};
+
+  % Sumbu dan garis bantu
+  \foreach \hari in {0, 5, 10, 15, 20, 25, 30} {
+    \draw[gray!60] (\hari, 0) -- (\hari, -2.5);
+    \node[anchor=north] at (\hari, -3) {\hari};
+  }
+  \foreach \persen in {0, 25, 50, 75, 100} {
+    \draw[gray!60] (0, \persen) -- (-0.6, \persen);
+    \node[anchor=east] at (-0.7, \persen) {\persen\%};
+  }
+  \draw[gray!70] (0, 0) -- (30.8, 0);
+  \draw[gray!70] (0, 0) -- (0, 106);
+  \node[anchor=north] at (15, -15) {hari ke- dalam jendela 30 hari};
+  \node[rotate=90, anchor=south] at (-5.6, 50) {sisa \textit{error budget}};
+
+  % Laju pembakaran 1
+  \draw[gray!70, dashed, thick] (0, 100) -- (30, 0);
+
+  % Sisa anggaran teramati
+  \draw[praditagreen, very thick, line join=round]
+    (0, 100) -- (9, 88) -- (9.5, 70) -- (17, 62) -- (17.2, 22) -- (30, 14);
+  \fill[praditagreen] (30, 14) circle (1.2pt);
+
+  % Keterangan kejadian
+  \node[catatan, anchor=south west] at (9.8, 72)
+    {rilis bermasalah\\25 upaya gagal};
+  \node[catatan, anchor=east, align=right] at (16.6, 32)
+    {gangguan basis data\\56 upaya gagal};
+  \node[catatan, anchor=west] at (30.4, 14) {sisa 14\%\\sekitar 20 upaya};
+
+  % Legenda
+  \draw[gray!70, dashed, thick] (19, 98) -- (22, 98);
+  \node[catatan, anchor=west] at (22.3, 98) {laju pembakaran 1};
+  \draw[praditagreen, very thick] (19, 88) -- (22, 88);
+  \node[catatan, anchor=west] at (22.3, 88) {sisa anggaran teramati};
+\end{tikzpicture}

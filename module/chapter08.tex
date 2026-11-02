@@ -1,4 +1,5 @@
 \chapter{Container, Kubernetes, dan Serverless}
+\label{ch:ch08}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,55 +10,1137 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: aplikasi yang berjalan baik di satu rumah sakit sering gagal di rumah sakit lain karena lingkungannya berbeda; pada saat yang sama, sebagian layanan hanya dipakai beberapa menit sehari tetapi servernya menyala terus.
+Misalkan tim teknologi informasi (TI) pusat Medikara Health merilis modul pendaftaran rawat jalan
+yang baru. Di rumah sakit Jakarta modul itu berjalan mulus. Di rumah sakit Bandung modul yang sama
+gagal menyimpan tanggal kunjungan. Kodenya tidak berbeda. Yang berbeda adalah lingkungannya: server
+Bandung, warisan akuisisi, memakai versi sistem operasi dan pustaka yang lain. Tim butuh tiga hari
+untuk menemukan bahwa satu pustaka pembaca format tanggal berbeda versi. Pada saat yang sama, skrip
+pengingat jadwal kontrol pasien berjalan di server yang menyala 24 jam sehari, padahal pekerjaannya
+selesai dalam beberapa menit setiap pagi dan sore.
+
+Dua masalah itu bermuara pada satu pertanyaan: di mana dan dengan cara apa sebuah layanan
+dijalankan. Tempat dan cara menjalankan itu disebut \textit{runtime}. Bab ini membahas enam pilihan
+\textit{runtime}: \textit{virtual machine} (VM), \textit{container}, Kubernetes yang dikelola
+sendiri, \textit{managed} Kubernetes, Platform as a Service (PaaS), dan \textit{serverless}. Setiap
+pilihan memindahkan sebagian pekerjaan dari organisasi ke penyedia, dan setiap pilihan membawa
+\textit{tradeoff} sendiri antara kendali, biaya, keterampilan, dan ketergantungan. Tidak ada pilihan
+yang terbaik untuk semua layanan. Pertanyaan yang tepat adalah pilihan mana yang paling cocok untuk
+layanan tertentu, dengan pola beban tertentu, yang dijalankan oleh tim tertentu.
+\IfFileExists{../figures/ch08-diagram-konsep.png}{%
+Pada Kubernetes, controller membandingkan keadaan aktual dengan target
+deklaratif, lalu membuat, mengganti, atau menambah pod sesuai kebutuhan.
+Gambar \ref{fig:ch08-pelabuhan} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch08-diagram-konsep.png}
+  \caption{Kubernetes merekonsiliasi keadaan yang diinginkan}
+  \label{fig:ch08-pelabuhan}
+\end{figure}}{}
+
+Rujukan utama bab ini adalah panduan keamanan \textit{container} dari National Institute of
+Standards and Technology (NIST), NIST SP 800-190 \cite{c08-nist800-190}, dokumentasi resmi
+Kubernetes \cite{c08-k8s-overview}, tulisan Burns dan rekan tentang asal-usul Kubernetes
+\cite{c08-burns2016}, kajian Berkeley tentang \textit{serverless} \cite{c08-jonas2019}, dan survei
+tahunan Cloud Native Computing Foundation (CNCF) untuk tahun 2025 \cite{cncf-survey2025}. Bab ini
+juga memakai matriks kendala penempatan \textit{workload} dari Bab 2 dan model biaya dari Bab 3.
+Hasilnya adalah matriks keputusan \textit{runtime} per layanan untuk tonggak capstone C3.
 
 \section{Virtual Machine dan Container}
+\label{sec:ch08-vm-container}
 
-% TODO
-% Cakupan: VM dan container dengan analogi peti kemas; container image dan registry; manfaat konsistensi lingkungan; batas isolasi container dibandingkan VM.
-% Pendalaman teknis: menulis Dockerfile untuk aplikasi contoh dan menyimpan image di registry.
+VM adalah komputer tiruan yang dibuat oleh perangkat lunak bernama \textit{hypervisor} di atas
+server fisik. Setiap VM membawa sistem operasi lengkapnya sendiri, yang disebut sistem operasi
+tamu, sehingga satu server fisik dapat menampung banyak VM yang saling terpisah seperti komputer
+yang berbeda. \textit{Container} adalah paket berisi aplikasi beserta pustaka dan pengaturan yang
+dibutuhkannya, yang dijalankan sebagai proses terisolasi di atas satu sistem operasi host.
+\textit{Container} tidak membawa sistem operasi lengkap. Semua \textit{container} pada satu host
+berbagi \textit{kernel}, yaitu inti sistem operasi, yang sama \cite{c08-nist800-190}. Akibatnya
+\textit{container} jauh lebih kecil dan lebih cepat menyala, sedangkan VM lebih berat tetapi batas
+isolasinya lebih tebal. Gambar \ref{fig:ch08-vm-container} memperlihatkan perbedaan susunannya.
+
+Analoginya adalah peti kemas. Sebelum ukuran peti kemas distandarkan, barang dimuat ke kapal satu
+per satu: karung, peti kayu, dan drum, masing-masing dengan cara angkat sendiri. Setelah ukurannya
+seragam, isi peti boleh apa saja, tetapi \textit{crane}, kapal, dan truk di pelabuhan mana pun
+mengangkutnya dengan cara yang sama. \textit{Container} perangkat lunak memakai gagasan yang sama:
+isinya berbeda-beda, cara menjalankannya seragam. VM lebih mirip gudang utuh yang disewa setiap
+pemilik barang: lebih lega dan lebih aman, tetapi setiap gudang punya pintu, satpam, dan listrik
+sendiri.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch08-vm-container.tex}
+  \caption{Susunan lapisan pada \textit{virtual machine} dan \textit{container}: VM menggandakan
+           sistem operasi, \textit{container} berbagi satu \textit{kernel}}
+  \label{fig:ch08-vm-container}
+\end{figure}
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Modul pendaftaran rawat jalan pada pendahuluan dikemas sebagai satu \textit{container}
+        bersama pustaka pembaca tanggal versi yang sudah diuji. Kemasan yang sama dijalankan di
+        lima rumah sakit. Tiga hari pencarian penyebab tadi tidak perlu terulang, karena
+        lingkungan aplikasi ikut terbawa di dalam kemasannya.
+  \item Misalkan rumah sakit Depok menjalankan 12 aplikasi pendukung kecil, masing-masing di VM
+        sendiri. Bila setiap sistem operasi tamu memakai sekitar 2 GB memori, 24 GB memori habis
+        hanya untuk sistem operasi, dan 12 sistem operasi harus diberi \textit{patch} setiap
+        bulan. Bila keduabelas aplikasi itu dikemas sebagai \textit{container} di atas dua host,
+        sistem operasi yang harus dirawat tinggal dua.
+\end{enumerate}
+
+\subsection{Container Image dan Registry}
+
+\textit{Container image} adalah templat baca-saja yang berisi aplikasi, pustaka, dan pengaturan
+awalnya, disusun berlapis-lapis. \textit{Container} adalah \textit{image} yang sedang dijalankan.
+Format \textit{image} distandarkan oleh Open Container Initiative \cite{c08-oci-image}, sehingga
+\textit{image} yang dibuat dengan satu alat dapat dijalankan oleh \textit{runtime} lain.
+\textit{Registry} adalah tempat menyimpan dan membagikan \textit{image}. Cara \textit{registry}
+menerima dan mengirim \textit{image} juga distandarkan \cite{c08-oci-distribution}. Setiap
+\textit{image} diberi \textit{tag}, yaitu nama versi yang mudah dibaca, dan \textit{digest}, yaitu
+sidik jari yang dihitung dari isi \textit{image} itu sendiri.
+
+Analoginya seperti dokumen induk di lemari arsip kantor pusat. Dokumen induk dikunci dan tidak
+pernah dicoret. Setiap cabang mengambil salinan dari lemari yang sama, lalu bekerja dengan salinan
+itu. Bila salinan rusak, cabang cukup mengambil salinan baru. Dokumen induk adalah \textit{image},
+salinan yang sedang dikerjakan adalah \textit{container}, dan lemari arsip bersama adalah
+\textit{registry}.
+
+Tabel \ref{tab:ch08-istilah-container} merangkum istilah yang paling sering muncul dalam percakapan
+tentang \textit{container}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Istilah dasar \textit{container} dan contohnya di Medikara Health}
+  \label{tab:ch08-istilah-container}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Istilah} & \textbf{Arti} & \textbf{Contoh di Medikara Health} \\ \hline
+    \textit{Container image} & Paket baca-saja berisi aplikasi dan dependensinya &
+      \texttt{jadwal-dokter:1.4.2} \\ \hline
+    \textit{Container} & \textit{Image} yang sedang berjalan sebagai proses terisolasi & Tiga
+      \textit{container} layanan jadwal dokter di rumah sakit Bandung \\ \hline
+    \textit{Registry} & Gudang \textit{image}, publik atau privat & \textit{Registry} privat di
+      \textit{region} Jakarta \\ \hline
+    \textit{Tag} & Nama versi yang mudah dibaca dan dapat dipindahkan ke \textit{image} lain &
+      \texttt{1.4.2} \\ \hline
+    \textit{Digest} & Sidik jari isi \textit{image}; berubah bila satu bit isinya berubah &
+      Dipakai di produksi agar versi yang berjalan pasti sama dengan yang diuji \\ \hline
+    Dockerfile & Resep tertulis untuk membangun \textit{image} &
+      \berkas{sources/chapter08/contoh-container/Dockerfile} \\ \hline
+  \end{tabularx}
+\end{table}
+
+Konsistensi lingkungan ini punya dua konsekuensi. Pertama, \textit{image} yang diuji adalah
+\textit{image} yang sama dengan yang dijalankan di produksi. Gagasan ini sejalan dengan pemisahan
+tahap \textit{build}, \textit{release}, dan \textit{run} serta \textit{immutable infrastructure} pada
+Bab 5. Kedua, \textit{registry} menjadi aset kritis. \textit{Image} yang disusupi akan tersebar ke
+lima rumah sakit sekaligus, sehingga \textit{registry} memerlukan kontrol akses dan pemindaian
+kerentanan. \textit{Image} juga tidak boleh memuat data pasien, karena \textit{image} disalin ke
+banyak tempat.
+
+\subsection{Batas Isolasi Container}
+
+Karena berbagi satu \textit{kernel}, \textit{container} pada satu host tidak terpisah setebal VM.
+Celah keamanan pada \textit{kernel}, atau satu \textit{container} yang diberi hak berlebihan, dapat
+berdampak pada semua \textit{container} di host itu. NIST SP 800-190 menyarankan beberapa langkah,
+antara lain mengelompokkan \textit{container} dengan tujuan, tingkat sensitivitas, dan profil
+ancaman yang sama pada host yang sama, memakai sistem operasi host yang khusus untuk
+\textit{container}, dan memindai \textit{image} sebelum dijalankan \cite{c08-nist800-190}.
+
+Dua hal pada isolasi sering tertukar. Pembagiannya begini. VM memisahkan beban pada tingkat
+perangkat keras tiruan, dan setiap VM punya \textit{kernel} sendiri. \textit{Container} memisahkan
+beban pada tingkat proses di dalam satu \textit{kernel}. \textit{Container} bukan VM kecil.
+Tabel \ref{tab:ch08-vm-vs-container} membandingkan keduanya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbandingan \textit{virtual machine} dan \textit{container}}
+  \label{tab:ch08-vm-vs-container}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Virtual machine}} & \textbf{\textit{Container}} \\ \hline
+    Isi kemasan & Sistem operasi tamu, pustaka, aplikasi & Pustaka dan aplikasi saja \\ \hline
+    Ukuran & Besar, karena memuat sistem operasi lengkap & Kecil, hanya yang dibutuhkan aplikasi \\ \hline
+    Waktu menyala & Lebih lama, sistem operasi harus dinyalakan dulu & Cepat, cukup memulai
+      proses \\ \hline
+    Batas isolasi & \textit{Kernel} sendiri untuk setiap VM & Berbagi satu \textit{kernel} host \\ \hline
+    Kepadatan per server & Lebih sedikit beban per server & Lebih banyak beban per server \\ \hline
+    Cocok untuk & Aplikasi lama yang menuntut sistem operasi tertentu; beban yang menuntut isolasi
+      ketat & Layanan baru yang sering diperbarui dan perlu bertambah kapasitas dengan cepat \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dalam praktik keduanya sering dipakai bersamaan: \textit{container} dijalankan di atas VM yang
+disewa dari penyedia \textit{cloud}. Bagi Medikara Health, saran pengelompokan tadi berarti
+\textit{container} yang melayani permintaan dari internet, misalnya antarmuka Medikara+, sebaiknya
+tidak satu host dengan \textit{container} yang mengolah rekam medis elektronik.
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Membangun Container Image}]
+  Listing \ref{lst:ch08-dockerfile} adalah Dockerfile untuk layanan jadwal dokter tiruan di
+  \berkas{sources/chapter08/contoh-container/app.py}. Layanan itu hanya memakai pustaka standar
+  Python, sehingga \textit{image}-nya tidak membawa dependensi pihak ketiga. Setiap instruksi
+  Dockerfile dijelaskan di dokumentasi resminya \cite{c08-dockerfile}.
+
+\begin{lstlisting}[language=bash, caption={Dockerfile layanan jadwal dokter, tersedia di
+\berkas{sources/chapter08/contoh-container/Dockerfile}}, label={lst:ch08-dockerfile}]
+# Membangun image layanan jadwal dokter. Jalankan di folder ini:
+#   docker build -t jadwal-dokter:1.0.0 .
+# Image dasar versi slim: ukuran kecil, permukaan serangan lebih sempit.
+FROM python:3.12-slim
+
+# Aplikasi berjalan sebagai pengguna biasa, bukan root. Bila aplikasi
+# dibobol, penyerang tidak langsung berkuasa penuh atas container.
+RUN useradd --create-home --uid 10001 layanan
+WORKDIR /app
+COPY app.py .
+USER layanan
+
+# Nilai bawaan. Nilai sebenarnya diisi saat container dijalankan.
+ENV PORT=8080
+ENV NAMA_FASILITAS="RS Medikara Jakarta"
+EXPOSE 8080
+
+# Satu proses per container, keluarannya langsung ke stdout.
+CMD ["python", "app.py"]
+\end{lstlisting}
+
+  Tiga keputusan dalam berkas itu layak diperhatikan. Pertama, \textit{image} dasar versi
+  \texttt{slim} dipilih agar ukuran dan permukaan serangan kecil. Kedua, aplikasi berjalan sebagai
+  pengguna biasa, bukan \texttt{root}, sesuai saran NIST SP 800-190. Ketiga, nama fasilitas dan
+  port diisi saat \textit{container} dijalankan, sehingga satu \textit{image} melayani lima rumah
+  sakit. \textit{Image} dibangun dengan \texttt{docker build}, diberi nama \textit{registry} dengan
+  \texttt{docker tag}, lalu dikirim dengan \texttt{docker push}. Untuk latihan, \textit{registry}
+  lokal atau \textit{registry} gratis sudah cukup.
+\end{pendalaman}
 
 \section{Orkestrasi Container dan Konsep Kubernetes}
+\label{sec:ch08-kubernetes}
 
-% TODO
-% Cakupan: mengapa container perlu orkestrasi; konsep desired state dan rekonsiliasi; pod, deployment, service, self-healing, dan autoscaling pada tingkat konsep; data survei CNCF 2025 tentang adopsi Kubernetes di produksi dan sebagai platform workload AI.
-% Pendalaman teknis: menjalankan aplikasi contoh di klaster Kubernetes lokal dengan kind atau minikube.
+Menjalankan tiga \textit{container} di satu server cukup dengan beberapa perintah manual. Misalkan
+arsitektur target Medikara Health memuat sembilan kandidat layanan, masing-masing dengan tiga
+replika, di tiga lingkungan (pengembangan, uji, dan produksi). Jumlahnya 81 \textit{container} yang
+tersebar di belasan server. Server mana yang masih punya ruang? Siapa yang menyalakan ulang
+\textit{container} yang mati pukul 02.00? Bagaimana versi baru dipasang tanpa menghentikan layanan?
+Siapa yang menambah kapasitas ketika pasien berebut kuota poli pukul 07.00?
+
+Pertanyaan kemudian muncul: siapa yang mengurus semua itu? Jawabannya adalah orkestrator.
+Orkestrasi \textit{container} adalah pengelolaan otomatis atas penempatan, penjalanan, pemulihan,
+penambahan kapasitas, dan pembaruan \textit{container} pada sekumpulan server yang disebut klaster.
+Kubernetes adalah orkestrator \textit{open source} yang paling banyak dipakai. Kubernetes lahir dari
+pengalaman Google lebih dari satu dasawarsa menjalankan Borg dan Omega, dua sistem pengelola
+klaster internalnya \cite{c08-burns2016}. Dokumentasi resminya menyebut kemampuan inti Kubernetes,
+antara lain penemuan layanan dan pembagian beban, pembaruan dan pembatalan bertahap, serta pemulihan
+diri \cite{c08-k8s-overview}.
+
+\subsection{Desired State dan Rekonsiliasi}
+
+Dalam Kubernetes, tim tidak memberi perintah langkah demi langkah seperti "jalankan
+\textit{container} ini di server 3". Tim menuliskan keadaan yang diinginkan (\textit{desired
+state}) dalam berkas yang disebut manifest, misalnya "layanan jadwal dokter selalu punya tiga
+replika versi 1.4.2". Kontroler adalah lingkaran kendali yang terus mengamati keadaan klaster,
+membandingkannya dengan keadaan yang diinginkan, lalu bertindak untuk mendekatkan keduanya
+\cite{c08-k8s-controller}. Proses membandingkan dan membetulkan itu disebut rekonsiliasi. Gambar
+\ref{fig:ch08-rekonsiliasi} memperlihatkan satu putaran rekonsiliasi.
+
+Analoginya adalah kepala ruang perawat di bangsal rumah sakit. Aturan di papan jaga hanya satu
+angka: enam perawat setiap sif. Kepala ruang tidak menunggu keluhan pasien. Setiap awal sif ia
+menghitung perawat yang hadir. Bila satu perawat sakit, ia memanggil pengganti dari daftar
+cadangan. Bila yang hadir tujuh karena salah jadwal, satu orang diminta pulang. Yang ditulis di
+papan hanya angka enam; cara memenuhinya diurus kepala ruang.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch08-rekonsiliasi.tex}
+  \caption{Satu putaran rekonsiliasi: kontroler membandingkan keadaan yang diinginkan dengan keadaan
+           aktual, lalu bertindak sampai keduanya sama}
+  \label{fig:ch08-rekonsiliasi}
+\end{figure}
+
+\textit{Desired state} punya dua konsekuensi. Pertama, keadaan sistem dapat dibaca dan diaudit dari
+berkas manifest, bukan dari ingatan petugas. Manifest disimpan di repositori kode bersama riwayat
+perubahannya, sejalan dengan konfigurasi deklaratif pada Bab 5 dan GitOps pada Bab 13. Kedua,
+perubahan manual langsung di klaster akan dikembalikan oleh kontroler bila bertentangan dengan
+manifest. Disiplin perubahan karena itu harus lewat manifest, bukan lewat perintah dadakan di
+tengah malam.
+
+\subsection{Pod, Deployment, dan Service}
+
+\textit{Pod} adalah unit terkecil yang dijalankan Kubernetes: satu atau beberapa
+\textit{container} yang selalu ditempatkan bersama dan berbagi alamat jaringan
+\cite{c08-k8s-pods}. \textit{Pod} bersifat sementara; \textit{pod} yang mati diganti dengan
+\textit{pod} baru, bukan diperbaiki. \textit{Deployment} adalah objek yang menyatakan jumlah replika
+\textit{pod} dan versi \textit{image} yang diinginkan. Kontroler \textit{deployment} mengganti
+\textit{pod} yang hilang dan memasang versi baru secara bertahap \cite{c08-k8s-deployment}.
+\textit{Service} memberi satu alamat tetap dan membagi permintaan ke sekelompok \textit{pod},
+karena \textit{pod} datang dan pergi dengan alamat yang berubah-ubah \cite{c08-k8s-service}. Klaster
+terdiri atas \textit{control plane} yang mengambil keputusan dan \textit{node}, yaitu server tempat
+\textit{pod} berjalan \cite{c08-k8s-components}.
+
+Tabel \ref{tab:ch08-konsep-k8s} merangkum konsep itu beserta contohnya pada layanan Medikara
+Health.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Konsep Kubernetes pada tingkat konsep dan contohnya di Medikara Health}
+  \label{tab:ch08-konsep-k8s}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Konsep} & \textbf{Fungsi} & \textbf{Contoh di Medikara Health} \\ \hline
+    Klaster dan \textit{node} & Sekumpulan server yang dikelola sebagai satu kesatuan;
+      \textit{node} adalah satu server di dalamnya & Klaster produksi dengan enam \textit{node} di
+      \textit{region} Jakarta \\ \hline
+    \textit{Control plane} & Bagian yang menyimpan keadaan klaster, menjadwalkan \textit{pod}, dan
+      menjalankan kontroler & Dikelola penyedia bila memakai \textit{managed} Kubernetes \\ \hline
+    \textit{Pod} & Unit terkecil yang dijalankan, berisi satu atau beberapa \textit{container} &
+      Satu \textit{pod} layanan jadwal dokter \\ \hline
+    \textit{Deployment} & Menyatakan jumlah replika dan versi \textit{image} & Tiga replika
+      \texttt{jadwal-dokter:1.4.2} \\ \hline
+    \textit{Service} & Alamat tetap untuk \textit{pod} yang berganti-ganti & Layanan janji temu
+      memanggil \texttt{jadwal-dokter} tanpa tahu \textit{pod} mana yang hidup \\ \hline
+    \textit{Self-healing} & Mengganti \textit{container} atau \textit{pod} yang mati atau tidak
+      sehat & \textit{Pod} pengganti muncul sekitar satu menit setelah satu \textit{node} mati \\ \hline
+    \textit{Autoscaling} & Menambah atau mengurangi replika menurut beban & Tiga sampai delapan
+      replika layanan janji temu antara pukul 07.00 dan 09.00 \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Self-Healing dan Autoscaling}
+
+\textit{Self-healing} adalah kemampuan Kubernetes memulihkan dirinya tanpa campur tangan petugas:
+menyalakan ulang \textit{container} yang gagal, mengganti \textit{pod} di \textit{node} yang mati,
+dan mematikan \textit{container} yang tidak menjawab pemeriksaan kesehatan
+\cite{c08-k8s-overview}. \textit{Autoscaling} adalah penambahan dan pengurangan kapasitas secara
+otomatis. Pada tingkat \textit{pod}, Horizontal Pod Autoscaler menambah atau mengurangi replika
+berdasarkan ukuran beban, misalnya rata-rata pemakaian prosesor \cite{c08-k8s-hpa}. Kedua
+kemampuan ini adalah buah langsung dari rekonsiliasi: \textit{autoscaler} cukup mengubah angka
+replika yang diinginkan, lalu kontroler mengerjakan sisanya.
+
+Dua contoh kasus dari Medikara Health:
+\begin{enumerate}
+  \item Misalkan pukul 02.10 satu \textit{node} di klaster produksi mati karena gangguan perangkat
+        keras. Dua dari tiga replika layanan jadwal dokter tetap melayani. Kontroler membuat
+        \textit{pod} pengganti di \textit{node} lain dalam sekitar satu menit. Tidak ada petugas
+        yang ditelepon tengah malam; tim membaca laporan kejadian pagi harinya.
+  \item Permintaan ke layanan janji temu, termasuk pengecekan jadwal dan kuota, naik dari sekitar
+        10 permintaan per detik pada pukul 05.00 menjadi 50 permintaan per detik antara pukul 07.00
+        dan 09.00, ketika pasien berebut kuota poli. Yang berakhir menjadi janji temu sekitar 175
+        per jam (Bab 9). \textit{Autoscaler} diatur untuk menjaga pemakaian prosesor rata-rata 70
+        persen, dengan batas tiga sampai delapan replika. Replika naik menjadi delapan pada
+        puncak, lalu turun lagi menjadi tiga menjelang siang. Kapasitas tambahan hanya dibayar
+        selama dipakai, asalkan jumlah \textit{node} juga ikut menyusut.
+\end{enumerate}
+
+\subsection{Adopsi Kubernetes menurut Survei CNCF 2025}
+
+Survei tahunan CNCF untuk tahun 2025, yang terbit pada Januari 2026, mengumpulkan jawaban 628
+responden pada September 2025. Survei itu mencatat bahwa 82 persen pengguna \textit{container}
+menjalankan Kubernetes di produksi, naik dari 66 persen pada 2023. Survei yang sama mencatat bahwa
+66 persen organisasi yang menjalankan sendiri model Artificial Intelligence (AI) generatif memakai
+Kubernetes untuk mengelola sebagian atau seluruh beban inferensinya
+\cite{cncf-survey2025,c08-cncf-announce2026}. Kubernetes dengan demikian sedang menjadi platform
+bersama, bukan hanya untuk aplikasi biasa tetapi juga untuk \textit{workload} AI.
+
+Pembacaan tingkat S2 tidak berhenti pada angka utama. Tabel \ref{tab:ch08-survei-cncf} menaruh
+setiap angka bersama penyebutnya, yaitu kelompok yang menjadi dasar persentase itu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Membaca angka utama survei CNCF 2025 secara kritis}
+  \label{tab:ch08-survei-cncf}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Indikator} & \textbf{Angka} & \textbf{Cara membaca} \\ \hline
+    Jumlah responden dan waktu survei & 628, September 2025 & Sampel dari komunitas
+      \textit{cloud native}, bukan sensus seluruh organisasi \\ \hline
+    Pengguna \textit{container} yang menjalankan Kubernetes di produksi & 82 persen (2023: 66
+      persen) & Penyebutnya pengguna \textit{container}, bukan seluruh organisasi \\ \hline
+    Organisasi yang menjalankan sendiri model AI generatif dan memakai Kubernetes untuk inferensi &
+      66 persen & Penyebutnya hanya organisasi yang menjalankan model sendiri \\ \hline
+  \end{tabularx}
+\end{table}
+
+Hasil pembacaan ini punya dua konsekuensi. Pertama, ekosistem Kubernetes besar: alat, dokumentasi,
+dan tenaga kerja relatif mudah ditemukan, dan hal ini menurunkan risiko memilih teknologi yang
+ditinggalkan. Kedua, angka adopsi tidak menjawab apakah Kubernetes tepat untuk organisasi dengan
+tim kecil. Responden survei adalah komunitas yang sudah dekat dengan \textit{container}, sehingga
+angka 82 persen tidak berlaku bagi organisasi yang belum memakai \textit{container} sama sekali.
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Menjalankan Layanan di Klaster Lokal}]
+  Klaster Kubernetes lokal dapat dibuat di laptop dengan kind, yang menjalankan \textit{node}
+  Kubernetes sebagai \textit{container} \cite{c08-kind}, atau dengan minikube
+  \cite{c08-minikube}. Listing \ref{lst:ch08-deployment} adalah manifest \textit{deployment} untuk
+  layanan jadwal dokter. Baris \texttt{replicas: 3} adalah \textit{desired state} yang dijaga
+  kontroler. Pasangannya, \berkas{sources/chapter08/contoh-container/service.yaml}, memberi alamat
+  tetap bagi ketiga \textit{pod}.
+
+\begin{lstlisting}[language=yaml, caption={Manifest \textit{deployment} layanan jadwal dokter,
+tersedia di \berkas{sources/chapter08/contoh-container/deployment.yaml}},
+label={lst:ch08-deployment}]
+# Deployment contoh Bab 08: tiga replika layanan jadwal dokter.
+# Pakai: kubectl apply -f deployment.yaml pada klaster lokal kind/minikube.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jadwal-dokter
+  labels:
+    app: jadwal-dokter
+spec:
+  # Keadaan yang diinginkan: selalu tiga pod. Bila satu mati,
+  # kontroler membuat penggantinya tanpa perintah manual.
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jadwal-dokter
+  template:
+    metadata:
+      labels:
+        app: jadwal-dokter
+    spec:
+      containers:
+        - name: jadwal-dokter
+          image: jadwal-dokter:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NAMA_FASILITAS
+              value: "RS Medikara Bandung"
+          # Jatah sumber daya: satu pod tidak boleh menghabiskan node.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+          # Tiga kali /sehat tidak menjawab, container dimulai ulang.
+          livenessProbe:
+            httpGet:
+              path: /sehat
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+\end{lstlisting}
+
+  Listing \ref{lst:ch08-perintah-kind} memuat urutan perintah dari membangun \textit{image} sampai
+  menghapus klaster. Perintah \texttt{kubectl delete pod} sengaja mematikan satu \textit{pod}
+  agar \textit{self-healing} terlihat: dalam beberapa detik \textit{pod} pengganti muncul dengan
+  nama baru.
+
+\begin{lstlisting}[language=bash, caption={Menjalankan layanan jadwal dokter di klaster kind,
+tersedia di \berkas{sources/chapter08/README.md}}, label={lst:ch08-perintah-kind}]
+# Jalankan dari folder sources/chapter08/contoh-container.
+docker build -t jadwal-dokter:1.0.0 .
+kind create cluster --name medikara-lokal
+kind load docker-image jadwal-dokter:1.0.0 --name medikara-lokal
+kubectl apply -f deployment.yaml -f service.yaml
+kubectl get pods -l app=jadwal-dokter
+# Hapus satu pod, lalu lihat penggantinya muncul (self-healing).
+kubectl delete pod NAMA-POD-DARI-PERINTAH-SEBELUMNYA
+kubectl get pods -l app=jadwal-dokter
+kubectl port-forward service/jadwal-dokter 8080:80
+# Selesai: hapus klaster agar laptop tidak terbebani.
+kind delete cluster --name medikara-lokal
+\end{lstlisting}
+
+  Peringatan: uji beban untuk melihat \textit{autoscaling} hanya dijalankan pada klaster lokal
+  milik sendiri atau sistem yang sudah berizin tertulis, tidak pada sistem milik pihak lain.
+\end{pendalaman}
 
 \section{Managed Kubernetes dan PaaS}
+\label{sec:ch08-managed-paas}
 
-% TODO
-% Cakupan: tanggung jawab yang diambil alih penyedia pada managed Kubernetes; PaaS sebagai alternatif yang lebih sederhana; biaya keterampilan dan operasi yang sering diremehkan.
-% Kasus Medikara: apakah tim TI Medikara Health yang kecil sanggup mengelola Kubernetes sendiri.
+Kubernetes tidak menghapus pekerjaan operasi; Kubernetes memindahkannya. Klaster harus dijalankan,
+diamankan, dipantau, dan diperbarui. \textit{Managed} Kubernetes adalah layanan penyedia
+\textit{cloud} yang menjalankan \textit{control plane} untuk pelanggan: ketersediaannya, cadangan
+datanya, dan pembaruan versinya. Pelanggan tetap mengurus manifest dan layanannya, \textit{image}
+beserta kerentanannya, hak akses, jaringan, komponen tambahan, dan umumnya juga pembaruan
+\textit{node}. Layanan ini berbayar per klaster. Amazon Web Services (AWS), misalnya, menagih 0,10
+dolar AS per klaster per jam untuk versi Kubernetes yang masih dalam dukungan standar, dan 0,60
+dolar AS per klaster per jam untuk versi yang sudah masuk dukungan diperpanjang
+\cite{c08-eks-pricing}.
+
+PaaS menyembunyikan lebih banyak lagi. Tim cukup menyerahkan kode atau \textit{image} beserta
+beberapa pengaturan, lalu platform mengurus server, \textit{runtime}, penambahan kapasitas, dan
+pembaruan sistem operasi. Banyak PaaS modern dibangun di atas orkestrator, tetapi orkestratornya
+tidak terlihat oleh pelanggan. Imbalannya, kendali berkurang: pilihan jaringan, versi
+\textit{runtime}, dan aturan penambahan kapasitas mengikuti apa yang disediakan platform. Gambar
+\ref{fig:ch08-spektrum} memetakan pembagian tanggung jawab itu dari VM pada Infrastructure as a
+Service (IaaS) sampai Software as a Service (SaaS).
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch08-spektrum-tanggung-jawab.tex}
+  \caption{Pembagian tanggung jawab pada enam pilihan \textit{runtime}; kolom Kubernetes sendiri
+           diasumsikan berjalan di atas VM sewaan}
+  \label{fig:ch08-spektrum}
+\end{figure}
+
+Analoginya adalah dapur. Kubernetes yang dikelola sendiri sama dengan membangun dan mengoperasikan
+dapur sendiri: semua bebas diatur, tetapi kompor rusak, gas habis, dan izin usaha menjadi urusan
+sendiri. \textit{Managed} Kubernetes sama dengan menyewa dapur komersial: gedung, gas, dan
+perawatan alat diurus pengelola, tetapi koki, menu, dan kebersihan tetap tanggung jawab penyewa.
+PaaS sama dengan katering yang memasak resep pelanggan: resep diserahkan, katering memasak dan
+mengantar, tetapi alat masak dan cara penyajian mengikuti kebiasaan katering itu.
+
+Dua hal pada bagian ini sering tertukar. Pembagiannya begini. \textit{Managed} Kubernetes tetap
+memperlihatkan Kubernetes secara utuh: tim menulis manifest, memilih komponen tambahan, dan
+mengatur kebijakan jaringan sendiri. PaaS menyembunyikan Kubernetes, walaupun di baliknya mungkin
+ada Kubernetes. Keterampilan yang dibutuhkan keduanya berbeda jauh.
+
+Dua contoh berangka:
+\begin{enumerate}
+  \item Medikara Health butuh tiga klaster: pengembangan, uji, dan produksi. Dengan tarif 0,10
+        dolar AS per jam dan sekitar 730 jam per bulan, biaya \textit{control plane} sebesar 219
+        dolar AS per bulan, atau sekitar Rp3,6 juta dengan kurs asumsi Rp16.500 per dolar AS.
+        Bila tim terlambat memperbarui versi sehingga ketiganya masuk dukungan diperpanjang,
+        tarifnya menjadi 1.314 dolar AS per bulan, atau sekitar Rp21,7 juta. Keterlambatan
+        pembaruan punya harga yang dapat dihitung.
+  \item Proyek Kubernetes merilis versi minor sekitar tiga kali setahun, dan setiap versi minor
+        mendapat dukungan \textit{patch} sekitar satu tahun \cite{c08-k8s-releases}. Agar tetap
+        dalam dukungan, setiap klaster harus diperbarui paling tidak sekali setahun, dan dalam
+        praktik lebih sering. Misalkan setiap pembaruan, termasuk pengujian sembilan layanan,
+        menyita lima hari kerja dua orang. Dengan tiga pembaruan per klaster per tahun di tiga
+        klaster, beban itu mencapai 90 hari kerja per tahun.
+\end{enumerate}
+
+Biaya yang paling sering diremehkan adalah biaya keterampilan. Tarif \textit{control plane} mudah
+dibaca di halaman harga. Gaji orang yang mampu mengoperasikan klaster, pelatihannya, waktu
+rekrutmennya, dan risiko bila orang itu keluar tidak tercantum di halaman mana pun.
+
+\begin{kasus}[title={Kasus Medikara Health: Sanggupkah Tim TI Mengelola Kubernetes?}]
+  Misalkan arsitektur target memuat sembilan kandidat layanan baru di belakang Medikara+ dan
+  SIMRS (Sistem Informasi Manajemen Rumah Sakit). Angka ini asumsi perencanaan yang memperluas
+  Tabel \ref{tab:ch06-kandidat-layanan}. Inti SIMRS tetap \textit{modular monolith} sesuai ADR-001
+  di Bab 7 dan tidak dihitung. Yang dihitung adalah janji temu dan layanan pendukung di sekitarnya,
+  misalnya jadwal dokter, identitas pasien, notifikasi, pengingat jadwal kontrol, dan integrasi.
+  Dari 52 staf TI, hanya 4 orang yang
+  bersertifikat \textit{cloud} (Bab 4), dan belum ada yang pernah mengoperasikan Kubernetes di
+  produksi. Tim transformasi membandingkan tiga opsi untuk menjalankan sembilan layanan itu selama
+  satu tahun: Kubernetes yang dikelola sendiri di atas VM sewaan, \textit{managed} Kubernetes di
+  \textit{region} Jakarta, dan PaaS di \textit{region} Jakarta. Hasilnya ada di Tabel
+  \ref{tab:ch08-biaya-runtime}.
+
+  Hasil ini punya dua konsekuensi. Pertama, biaya tenaga kerja mendominasi. Pada opsi
+  \textit{managed} Kubernetes, tenaga kerja platform menelan Rp780 juta atau 46,9 persen dari
+  total, sedangkan tarif \textit{control plane} hanya Rp43 juta atau 2,6 persen. Diskusi yang hanya
+  membandingkan tarif layanan melewatkan hampir separuh biaya. Kedua, keputusan tidak berhenti
+  pada angka. Merekrut dua \textit{platform engineer} berpengalaman diperkirakan memakan empat
+  sampai enam bulan, dan bila salah satunya keluar, operasi klaster bergantung pada satu orang.
+
+  Tim mengusulkan PaaS untuk layanan baru pertama, yang menurut peta jalan Bab 14 mulai berjalan
+  pada gelombang 2, karena lebih murah Rp463 juta atau 27,8 persen
+  daripada \textit{managed} Kubernetes dan dapat dijalankan oleh tim yang ada. \textit{Managed}
+  Kubernetes ditinjau ulang bila jumlah layanan melewati 15 atau bila dua \textit{platform
+  engineer} sudah bergabung. Kubernetes yang dikelola sendiri ditolak.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Biaya satu tahun untuk menjalankan sembilan layanan Medikara Health, dalam juta rupiah
+           (angka rekaan kecuali tarif \textit{control plane})}
+  \label{tab:ch08-biaya-runtime}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r}
+    \hline
+    \textbf{Komponen} & \textbf{Kubernetes sendiri} & \textbf{\textit{Managed} Kubernetes} &
+      \textbf{PaaS} \\ \hline
+    \textit{Control plane} (sendiri: 3 klaster dengan VM khusus; \textit{managed}: tarif
+      penyedia) & 180 & 43 & 0 \\ \hline
+    Kapasitas komputasi untuk sembilan layanan & 600 & 600 & 720 \\ \hline
+    Tenaga kerja platform (Rp30 juta per orang per bulan, 13 kali setahun) & 1.560 & 780 & 390 \\ \hline
+    \quad Jumlah orang & 4 & 2 & 1 \\ \hline
+    Pelatihan dan sertifikasi & 120 & 90 & 30 \\ \hline
+    Alat pemantauan dan keamanan klaster & 150 & 150 & 60 \\ \hline
+    \textbf{Total satu tahun} & \textbf{2.610} & \textbf{1.663} & \textbf{1.200} \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Serverless dan Function as a Service}
+\label{sec:ch08-serverless}
 
-% TODO
-% Cakupan: serverless dan FaaS; skala sampai nol dan biaya per eksekusi; cold start, batas waktu eksekusi, dan ketergantungan pada layanan penyedia; pola beban yang cocok.
-% Kasus Medikara: pengingat jadwal kontrol pasien dan pemrosesan hasil laboratorium yang datang berkala.
+\textit{Serverless} adalah model komputasi tempat server tetap ada, tetapi sepenuhnya diurus
+penyedia. Pelanggan tidak menyediakan atau mengatur kapasitas. Kapasitas bertambah otomatis ketika
+beban naik, menyusut sampai nol ketika tidak ada beban, dan tagihan mengikuti pemakaian nyata
+\cite{c08-cncf-serverless}. Function as a Service (FaaS) adalah bentuk \textit{serverless} yang
+paling dikenal. Kode ditulis sebagai fungsi kecil yang dijalankan setiap kali ada pemicu: permintaan
+dari aplikasi, berkas yang tiba di penyimpanan, jadwal waktu, atau pesan di antrean. Kajian
+Berkeley merumuskan \textit{serverless} sebagai gabungan FaaS dengan layanan pendukung terkelola,
+seperti penyimpanan objek dan basis data, yang mereka sebut \textit{Backend as a Service}
+\cite{c08-jonas2019}. Gambar \ref{fig:ch08-alur-serverless} memperlihatkan alurnya.
+
+Analoginya adalah lampu sensor gerak di lorong kantor. Lampu menyala sendiri ketika ada orang
+lewat, padam lagi ketika lorong sepi, dan listrik hanya terpakai selama lampu menyala. Ada jeda
+sesaat sebelum lampu menyala ketika orang pertama masuk. Untuk lorong, jeda itu tidak masalah.
+Untuk ruang operasi yang harus terang tanpa jeda sedetik pun, lampu sensor bukan pilihan.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch08-alur-serverless.tex}
+  \caption{Alur FaaS: pemicu menyalakan instans fungsi sesuai kebutuhan, lalu hasilnya dikirim ke
+           layanan tujuan}
+  \label{fig:ch08-alur-serverless}
+\end{figure}
+
+\subsection{Skala sampai Nol dan Biaya per Eksekusi}
+
+Skala sampai nol berarti tidak ada instans yang berjalan, dan tidak ada biaya komputasi, ketika
+tidak ada pemicu. Biaya dihitung per eksekusi. Contohnya AWS Lambda, yang menagih dua komponen:
+jumlah permintaan, sebesar 0,20 dolar AS per satu juta permintaan, dan durasi eksekusi, sebesar
+0,0000166667 dolar AS per GB-detik untuk prosesor x86 di \textit{region} AS Timur. Kuota gratis
+bulanannya satu juta permintaan dan 400.000 GB-detik \cite{c08-lambda-pricing}. GB-detik adalah
+memori yang dipesan dikalikan lamanya eksekusi. Fungsi bermemori 0,25 GB yang berjalan 0,5 detik
+memakai 0,125 GB-detik. Harga di \textit{region} Jakarta dan skema penyedia lain perlu dicek di
+halaman harga masing-masing.
+
+\subsection{Cold Start, Batas Waktu, dan Ketergantungan pada Penyedia}
+
+Kemudahan ini datang bersama tiga keterbatasan. Pertama, \textit{cold start}. Ketika belum ada
+instans yang siap, platform harus menyiapkan lingkungan dan memuat kode lebih dahulu, sehingga
+permintaan pertama setelah masa sepi menunggu lebih lama \cite{c08-jonas2019}. Kedua, batas waktu
+eksekusi. AWS Lambda, misalnya, membatasi satu eksekusi paling lama 900 detik atau 15 menit
+\cite{c08-lambda-quotas}. Proses yang lebih panjang harus dipecah. Ketiga, ketergantungan pada
+penyedia. Format pemicu, format \textit{event}, pengaturan izin akses, dan layanan pendukungnya
+umumnya khas penyedia itu. Fungsi juga tidak menyimpan keadaan di antara eksekusi, sehingga data
+harus disimpan di layanan lain, sejalan dengan prinsip proses tanpa keadaan pada Bab 5.
+
+Keterbatasan itu menentukan pola beban yang cocok. Tabel \ref{tab:ch08-pola-beban} memetakan
+enam pola beban yang lazim di Medikara Health.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kecocokan pola beban dengan \textit{serverless}}
+  \label{tab:ch08-pola-beban}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Pola beban} & \textbf{Contoh di Medikara Health} & \textbf{Kecocokan} &
+      \textbf{Alasan} \\ \hline
+    Jarang dan tidak menentu & Ekspor data atas permintaan auditor, beberapa kali sebulan &
+      Sangat cocok & Tidak ada biaya saat menganggur \\ \hline
+    Berkala terjadwal & Pengingat jadwal kontrol pukul 06.00 dan 18.00 & Cocok & Berjalan
+      singkat, tidak ada pasien yang menunggu jawaban \\ \hline
+    Dipicu kedatangan data & Berkas hasil laboratorium setiap 30 menit & Cocok, dengan syarat &
+      Setiap eksekusi harus selesai di bawah batas waktu \\ \hline
+    Lonjakan tajam yang singkat & Pendaftaran kampanye vaksinasi dibuka & Cocok, dengan catatan
+      & Kapasitas menyusul otomatis; \textit{cold start} dan batas eksekusi serentak perlu
+      diuji \\ \hline
+    Tinggi dan stabil 24 jam & Antarmuka SIMRS untuk ruang rawat inap & Kurang cocok & Pada beban
+      tetap yang tinggi, bayar per eksekusi lebih mahal daripada kapasitas tetap \\ \hline
+    Proses panjang & Rekonsiliasi klaim bulanan selama tiga jam & Tidak cocok tanpa dipecah &
+      Melampaui batas waktu eksekusi \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{kasus}[title={Kasus Medikara Health: Pengingat Kontrol dan Hasil Laboratorium}]
+  \textbf{Pengingat jadwal kontrol.} Medikara Health melayani sekitar 1,2 juta kunjungan per
+  tahun. Misalkan 40 persen kunjungan berakhir dengan jadwal kontrol. Hasilnya sekitar 480.000
+  jadwal kontrol per tahun, atau 40.000 per bulan. Setiap jadwal mendapat dua pengingat, tiga hari
+  dan satu hari sebelumnya, sehingga ada 80.000 eksekusi per bulan. Setiap eksekusi berjalan 0,5
+  detik dengan memori 0,25 GB, sehingga total pemakaiannya 10.000 GB-detik per bulan.
+
+  Dengan tarif AWS Lambda di atas dan tanpa kuota gratis, biayanya sekitar 0,18 dolar AS per
+  bulan, atau sekitar Rp3.000. Angka itu masih jauh di dalam kuota gratis. Saat ini skrip yang
+  sama berjalan di VM yang menyala 720 jam per bulan dengan biaya Rp650.000, padahal total waktu
+  kerjanya hanya 80.000 kali 0,5 detik, yaitu sekitar 11,1 jam. Pemanfaatan VM itu sekitar 1,5
+  persen. Biaya terbesar justru ada di luar komputasi: dengan biaya pesan WhatsApp Rp350 per
+  pengingat, biaya pesannya Rp28 juta per bulan, apa pun \textit{runtime}-nya.
+
+  Hasil ini punya dua konsekuensi. Pertama, penghematan komputasinya sekitar Rp647.000 per bulan
+  atau Rp7,8 juta per tahun, angka yang kecil. Argumen yang lebih kuat adalah hilangnya server yang
+  harus diberi \textit{patch}, dan kapasitas yang menyesuaikan sendiri ketika jumlah pengingat
+  naik tiga kali lipat pada bulan kampanye vaksinasi. Kedua, penghematan terbesar ada di sisi
+  pesan, misalnya mengirim pengingat lewat notifikasi aplikasi Medikara+ bagi pasien yang sudah
+  memasangnya.
+
+  \textbf{Hasil laboratorium.} Laboratorium rujukan mengirim berkas hasil setiap 30 menit antara
+  pukul 06.00 dan 22.00, yaitu 32 berkas per hari dengan sekitar 150 hasil per berkas. Misalkan
+  desain awal memakai satu fungsi terjadwal yang memproses semua berkas yang menunggu: mengubahnya
+  ke format HL7 Fast Healthcare Interoperability Resources (FHIR), menyimpannya ke rekam medis
+  elektronik, mengirimnya ke SATUSEHAT, dan memberi tahu dokter. Biasanya hanya ada satu berkas,
+  selesai dalam dua menit. Suatu hari sistem laboratorium mati lima jam, lalu sepuluh berkas tiba
+  bersamaan. Pemrosesannya butuh 20 menit, melampaui batas 15 menit, sehingga eksekusi gagal,
+  diulang, dan gagal lagi.
+
+  Desain diperbaiki dengan dua fungsi. Fungsi pertama dipicu setiap kali satu berkas tiba dan
+  hanya memecah berkas itu menjadi 150 pesan di antrean. Fungsi kedua memproses satu hasil per
+  eksekusi, sekitar satu detik. Hasil laboratorium adalah bagian rekam medis, sehingga fungsi,
+  antrean, dan penyimpanannya wajib berada di \textit{region} Jakarta sesuai matriks lokasi data
+  Bab 2. Sebelum memilih, tim memastikan layanan FaaS dan pemicunya tersedia di \textit{region}
+  itu.
+\end{kasus}
 
 \section{Memilih Runtime dan Mengelola Vendor Lock-in}
+\label{sec:ch08-memilih}
 
-% TODO
-% Cakupan: kriteria memilih runtime (pola beban, latensi, keterampilan tim, biaya, lokasi data); matriks keputusan dari SaaS sampai VM; vendor lock-in, portabilitas, dan biaya keluar dari penyedia; kaitan dengan matriks lokasi data Bab 2.
+Enam pilihan \textit{runtime} sudah dibahas. Pertanyaan kemudian muncul: bagaimana memilih di
+antaranya tanpa terjebak selera pribadi atau tren industri? Jawabannya adalah kriteria yang ditulis
+dan dibobot sebelum opsi mana pun dinilai. Urutan ini penting. Kriteria yang disusun setelah opsi
+favorit dipilih cenderung dibuat agar opsi itu menang.
+
+\subsection{Kriteria Memilih Runtime}
+
+Keputusan \textit{runtime} memakai dua jenis kriteria. Kriteria gugur adalah syarat mutlak: opsi
+yang tidak memenuhinya dicoret tanpa dinilai lebih lanjut. Untuk Medikara Health, kriteria gugur
+utamanya adalah lokasi data dari matriks kendala penempatan Bab 2. Kriteria berbobot dinilai
+dengan skor 1 sampai 5, lalu dikalikan bobotnya. Bobot mencerminkan apa yang paling penting bagi
+organisasi dan disepakati seluruh tim sebelum penilaian.
+
+Analoginya seperti kantor yang memilih kendaraan operasional: motor, mobil, bus jemputan, atau
+taksi daring. Sebelum membandingkan merek, kantor menulis kebutuhannya: jumlah penumpang, jarak,
+ketersediaan sopir, dan biaya. Ada juga syarat mutlak. Mobil berpelat ganjil tidak boleh melewati
+ruas ganjil-genap pada tanggal genap, senyaman apa pun mobilnya. Untuk rute itu, opsi tersebut
+gugur sebelum penilaian dimulai.
+
+Tabel \ref{tab:ch08-kriteria} memuat kriteria yang dipakai dalam Aktivitas bab ini.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria memilih \textit{runtime} beserta bobot contoh}
+  \label{tab:ch08-kriteria}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.1cm}
+      >{\raggedright\arraybackslash}p{2.6cm}}
+    \hline
+    \textbf{Kriteria} & \textbf{Pertanyaan kunci} & \textbf{Bobot} & \textbf{Sumber data} \\ \hline
+    Lokasi data & Apakah opsi tersedia di lokasi yang diizinkan untuk data layanan ini? & Gugur &
+      Matriks kendala penempatan Bab 2 \\ \hline
+    Kecocokan pola beban & Kapan dan seberapa sering layanan dipakai? Adakah lonjakan atau masa
+      sepi yang panjang? & 25 & Catatan permintaan, data kunjungan \\ \hline
+    Kebutuhan latensi & Adakah orang yang menunggu jawaban? Berapa target waktu tanggapnya? & 15
+      & Target layanan, dirinci di Bab 11 \\ \hline
+    Keterampilan tim dan pasar tenaga kerja & Siapa yang mengoperasikan layanan ini pukul 02.00?
+      Mudahkah mencari penggantinya? & 25 & Daftar keterampilan dan penilaian kesiapan Bab 4 \\ \hline
+    Biaya total tiga tahun & Berapa biaya termasuk tenaga kerja, pelatihan, dan biaya keluar? & 20
+      & Model biaya Bab 3 \\ \hline
+    Portabilitas dan risiko \textit{lock-in} & Berapa besar upaya untuk pindah penyedia? & 15 &
+      Daftar layanan khas penyedia yang dipakai \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Matriks Keputusan dari SaaS sampai VM}
+
+Matriks keputusan menilai setiap opsi, dari SaaS yang paling sedikit dikelola sampai VM yang
+paling banyak dikelola, dengan kriteria yang sama. Nilai berbobot dihitung dengan mengalikan skor
+setiap kriteria dengan bobotnya, menjumlahkan hasilnya, lalu membaginya dengan 100. Hasilnya
+berada pada skala 1 sampai 5, sama dengan skala skor.
+
+Tabel \ref{tab:ch08-matriks-janji-temu} memperlihatkan matriks untuk layanan janji temu, yaitu
+layanan baru di belakang Medikara+ yang mengatur kuota poli dan pemesanan jadwal. Opsi SaaS gugur
+karena vendor sistem janji temu yang dinilai menyimpan datanya di luar negeri, sedangkan data janji
+temu memuat identitas pasien.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Matriks keputusan \textit{runtime} untuk layanan janji temu Medikara Health (skor
+           rekaan)}
+  \label{tab:ch08-matriks-janji-temu}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r r r r}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{SaaS} & \textbf{PaaS} &
+      \textbf{\textit{Managed} K8s} & \textbf{\textit{Serverless}} & \textbf{VM} \\ \hline
+    Lokasi data (gugur) & & Gugur & Lolos & Lolos & Lolos & Lolos \\ \hline
+    Kecocokan pola beban & 25 & & 4 & 5 & 4 & 2 \\ \hline
+    Kebutuhan latensi & 15 & & 4 & 5 & 3 & 4 \\ \hline
+    Keterampilan tim & 25 & & 5 & 2 & 4 & 4 \\ \hline
+    Biaya total tiga tahun & 20 & & 4 & 2 & 4 & 3 \\ \hline
+    Portabilitas dan \textit{lock-in} & 15 & & 3 & 4 & 2 & 4 \\ \hline
+    \textbf{Nilai berbobot} & \textbf{100} & \textbf{-} & \textbf{4,10} & \textbf{3,50} &
+      \textbf{3,55} & \textbf{3,30} \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh pembacaan matriks:
+\begin{enumerate}
+  \item Untuk layanan janji temu, PaaS menang dengan nilai 4,10. Keunggulannya datang dari
+        keterampilan tim, bukan dari teknologinya. \textit{Managed} Kubernetes justru unggul di
+        pola beban dan latensi, tetapi skor keterampilan 2 menariknya ke 3,50. Bila kelak ada dua
+        \textit{platform engineer} dan skor keterampilan naik menjadi 4, nilai \textit{managed}
+        Kubernetes menjadi 4,00, hampir menyamai PaaS. Keputusan ini karena itu perlu pemicu
+        tinjau ulang yang tertulis.
+  \item Untuk layanan pengingat jadwal kontrol, matriks yang sama memberi \textit{serverless} nilai
+        4,45, jauh di atas VM dengan 3,00. Pola bebannya yang berkala dan singkat mendapat skor 5,
+        dan biayanya juga mendapat skor 5 karena layanan ini hanya bekerja sekitar 11 jam per
+        bulan.
+\end{enumerate}
+
+Satu organisasi karena itu wajar memakai beberapa \textit{runtime} sekaligus. Yang perlu dijaga
+adalah jumlahnya: setiap \textit{runtime} tambahan berarti keterampilan, pemantauan, dan kontrak
+tambahan.
+
+\subsection{Vendor Lock-in, Portabilitas, dan Biaya Keluar}
+
+\textit{Vendor lock-in} adalah keadaan ketika pindah dari satu penyedia menjadi mahal atau sulit
+karena organisasi bergantung pada teknologi, format data, atau kontrak penyedia itu
+\cite{c08-opara2016}. Portabilitas adalah kebalikannya: kemampuan memindahkan aplikasi dan data ke
+penyedia lain dengan perubahan kecil. Biaya keluar mencakup biaya transfer data keluar yang dibahas
+di Bab 3, penulisan ulang kode, pelatihan ulang, dan masa operasi paralel selama perpindahan.
+
+Analoginya seperti membuka toko di pusat perbelanjaan yang menyediakan rak, mesin kasir, dan sistem
+pembayaran milik pengelola. Toko cepat buka karena semuanya sudah tersedia. Ketika pindah, pemilik
+toko harus membeli rak dan mesin kasir sendiri dan membiasakan pelanggan dengan cara bayar yang
+baru. Toko yang sejak awal memakai rak sendiri lebih lama siap, tetapi raknya dapat diangkut.
+
+Tabel \ref{tab:ch08-sumber-lockin} membandingkan sumber ketergantungan pada \textit{serverless} dan
+\textit{managed} Kubernetes beserta cara meredamnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Sumber \textit{vendor lock-in} pada \textit{serverless} dan \textit{managed} Kubernetes}
+  \label{tab:ch08-sumber-lockin}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Sumber} & \textbf{\textit{Serverless}} & \textbf{\textit{Managed} Kubernetes} &
+      \textbf{Cara meredam} \\ \hline
+    Kemasan kode & Paket fungsi mengikuti aturan penyedia & \textit{Container image} berformat
+      standar & Pisahkan logika bisnis dari kode penghubung ke platform \\ \hline
+    Pemicu dan format \textit{event} & Khas penyedia & Diterima oleh kode sendiri & Buat lapisan
+      penerjemah \textit{event} yang tipis \\ \hline
+    Izin akses & Memakai sistem izin penyedia & Sebagian memakai sistem izin penyedia &
+      Dokumentasikan dan otomatiskan pemetaan izin \\ \hline
+    Layanan pendukung & Antrean, basis data, dan penyimpanan terkelola milik penyedia &
+      Penyeimbang beban dan kelas penyimpanan khas penyedia & Pilih layanan berprotokol
+      standar \\ \hline
+    Data & Format penyimpanan penyedia & Format penyimpanan penyedia & Simpan data klinis dalam
+      format terbuka seperti HL7 FHIR \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh berangka:
+\begin{enumerate}
+  \item Misalkan dalam tiga tahun Medikara Health memiliki 40 fungsi \textit{serverless}, dan 25 di
+        antaranya memakai pemicu khas penyedia. Menulis ulang satu pemicu beserta pengujiannya
+        butuh sekitar tiga hari kerja, sehingga perpindahan memerlukan 75 hari kerja atau sekitar
+        3,5 bulan kerja satu orang.
+  \item Sembilan layanan di \textit{managed} Kubernetes memakai 60 berkas manifest. Dari jumlah
+        itu, 12 berkas atau 20 persen memuat pengaturan khas penyedia, misalnya penyeimbang beban
+        dan kelas penyimpanan. Menyesuaikan satu berkas butuh sekitar setengah hari kerja, sehingga
+        totalnya 6 hari kerja. Ditambah pemindahan \textit{registry} dan pemetaan izin sekitar 10
+        hari kerja, perpindahan memerlukan sekitar 16 hari kerja.
+\end{enumerate}
+
+Biaya transfer data keluar sama besarnya pada kedua contoh, karena besarnya ditentukan jumlah data,
+bukan \textit{runtime}. \textit{Lock-in} juga tidak selalu buruk. \textit{Serverless} menukar
+portabilitas dengan kecepatan membangun dan beban operasi yang kecil, dan pertukaran itu sering
+masuk akal. Yang berbahaya adalah \textit{lock-in} yang tidak disadari. Karena itu setiap keputusan
+\textit{runtime} memuat rencana keluar: apa yang dipindahkan, berapa perkiraan upayanya, dan data
+apa yang disimpan dalam format terbuka.
+
+Matriks lokasi data Bab 2 berkaitan langsung dengan risiko ini. Bila data rekam medis wajib berada
+di Indonesia, pilihan penyedia menyempit menjadi penyedia yang punya \textit{region} di Indonesia
+dan menyediakan layanan yang dibutuhkan di \textit{region} itu. Makin sedikit penyedia yang
+memenuhi syarat, makin lemah posisi tawar organisasi, dan makin penting rencana keluar ditulis
+sejak awal.
 
 \section{Aktivitas: Matriks Keputusan Runtime}
+\label{sec:ch08-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menetapkan runtime untuk setiap kandidat layanan dengan kriteria yang dituliskan lebih dulu.
-% Peran dalam tim: anggota teknis menjelaskan konsekuensi operasional setiap opsi; anggota non-teknis menilai biaya, ketersediaan tenaga kerja di pasar, dan risiko ketergantungan pada penyedia; seluruh anggota menyepakati bobot kriteria.
-% Langkah: (1) ambil kandidat layanan dari Bab 6 dan 7; (2) tetapkan kriteria dan bobotnya; (3) nilai opsi SaaS, PaaS, managed Kubernetes, serverless, dan VM; (4) pilih runtime dan catat alasannya dalam ADR singkat.
-% Luaran dan tonggak capstone: C3, matriks keputusan runtime per layanan.
-% Berkas sources yang direncanakan: sources/chapter08/matriks-keputusan-runtime.xlsx, sources/chapter08/contoh-container/ (opsional, Dockerfile dan manifest Kubernetes)
+\subsection*{Tujuan}
+
+Tim menetapkan \textit{runtime} untuk setiap kandidat layanan dengan kriteria yang dituliskan lebih
+dahulu. Setiap pilihan disertai alasan yang dapat dipertanggungjawabkan di depan manajemen, termasuk
+opsi yang ditolak dan rencana keluarnya.
+
+\subsection*{Pembagian Peran}
+
+\begin{itemize}
+  \item Anggota berlatar teknis menjelaskan konsekuensi operasional setiap opsi: siapa yang
+        memperbarui versi, siapa yang dipanggil ketika layanan mati, dan keterampilan apa yang
+        dibutuhkan.
+  \item Anggota berlatar non-teknis menilai biaya, ketersediaan tenaga kerja di pasar, dan risiko
+        ketergantungan pada penyedia, termasuk isi kontrak dan biaya keluar.
+  \item Seluruh anggota menyepakati bobot kriteria sebelum penilaian dimulai, lalu memeriksa bahwa
+        tidak ada opsi yang lolos padahal melanggar kriteria gugur.
+\end{itemize}
+
+\subsection*{Langkah Kerja}
+
+\begin{enumerate}
+  \item Ambil kandidat layanan dari Bab 6 dan Bab 7. Untuk setiap layanan, tulis pola bebannya,
+        kebutuhan latensinya, dan jenis datanya.
+  \item Tetapkan kriteria dan bobotnya di lembar \texttt{Kriteria}. Kriteria pada Tabel
+        \ref{tab:ch08-kriteria} boleh diubah, asalkan perubahannya disepakati sebelum penilaian
+        dan alasannya ditulis.
+  \item Nilai opsi SaaS, PaaS, \textit{managed} Kubernetes, \textit{serverless}, dan VM untuk setiap
+        layanan di lembar \texttt{Isian}. Terapkan kriteria gugur lokasi data lebih dahulu,
+        memakai matriks kendala penempatan dari Bab 2.
+  \item Pilih \textit{runtime} untuk setiap layanan, lalu catat alasannya dalam Architecture
+        Decision Record (ADR) singkat di lembar \texttt{ADR singkat}: konteks, opsi, keputusan,
+        konsekuensi, rencana keluar, dan pemicu tinjau ulang.
+\end{enumerate}
+
+\subsection*{Luaran dan Kaitan dengan Capstone}
+
+Luarannya adalah matriks keputusan \textit{runtime} per layanan beserta satu ADR singkat untuk
+setiap layanan. Matriks ini menjadi bagian tonggak C3 Kondisi Target. Pilihan \textit{runtime}
+akan dipakai lagi pada Bab 9 ketika pola komunikasi antarlayanan dirancang, pada Bab 11 ketika
+target keandalan ditetapkan, dan pada Bab 12 ketika strategi pemulihan dipilih.
+
+\subsection*{Kriteria Penilaian}
+
+\begin{itemize}
+  \item Kriteria dan bobot ditulis sebelum penilaian, dan perubahannya beralasan (25 persen).
+  \item Kriteria gugur lokasi data diterapkan dengan benar dan merujuk matriks Bab 2 (20 persen).
+  \item Skor setiap opsi disertai alasan yang memakai data, bukan kesan (30 persen).
+  \item ADR memuat opsi yang ditolak, konsekuensi, rencana keluar, dan pemicu tinjau ulang (25
+        persen).
+\end{itemize}
+
+\subsection*{Berkas Pendukung}
+
+\begin{itemize}
+  \item \berkas{sources/chapter08/matriks-keputusan-runtime.xlsx}: lembar petunjuk, kriteria,
+        contoh layanan janji temu dan pengingat, lembar isian, templat ADR singkat, dan kalkulator
+        biaya \textit{serverless} untuk Latihan 1.
+  \item \berkas{sources/chapter08/contoh-container/}: Dockerfile, aplikasi contoh, dan manifest
+        Kubernetes untuk pendalaman teknis.
+\end{itemize}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Menguji Asumsi Matriks}]
+  Anggota teknis menjalankan layanan jadwal dokter di kind (kotak pendalaman Seksi
+  \ref{sec:ch08-kubernetes}), mematikan satu \textit{pod}, lalu mencatat waktu sampai
+  penggantinya siap. Catatan itu menjadi bukti bagi skor latensi dan keterampilan.
+\end{pendalaman}
 
 \section{Ringkasan}
 
-% TODO
+Bab ini berangkat dari dua masalah Medikara Health: aplikasi yang berjalan di satu rumah sakit
+tetapi gagal di rumah sakit lain, dan server yang menyala sepanjang hari untuk pekerjaan beberapa
+menit. Keduanya adalah pertanyaan tentang \textit{runtime}. VM memisahkan beban dengan sistem
+operasi masing-masing. \textit{Container} mengemas aplikasi bersama pustakanya dan berbagi satu
+\textit{kernel}, sehingga lingkungan yang diuji sama dengan lingkungan produksi. \textit{Image}
+disimpan di \textit{registry}, yang karena itu menjadi aset kritis, dan \textit{container} tidak
+boleh diperlakukan sebagai VM kecil karena batas isolasinya lebih tipis.
+
+Ketika jumlah \textit{container} mencapai puluhan atau ratusan, penempatan, pemulihan, penambahan
+kapasitas, dan pembaruannya perlu diorkestrasi. Kubernetes bekerja dengan \textit{desired state}:
+tim menulis keadaan yang diinginkan dalam manifest, lalu kontroler terus membandingkan dan
+membetulkan keadaan aktual. \textit{Pod}, \textit{deployment}, dan \textit{service} adalah bahan
+dasarnya, sedangkan \textit{self-healing} dan \textit{autoscaling} adalah buah dari rekonsiliasi.
+Survei CNCF 2025 menunjukkan Kubernetes sudah menjadi platform bersama, termasuk untuk
+\textit{workload} AI, tetapi angka itu perlu dibaca bersama penyebutnya.
+
+Kubernetes memindahkan pekerjaan operasi, bukan menghapusnya. \textit{Managed} Kubernetes mengambil
+alih \textit{control plane}, tetapi pembaruan versi, keamanan, dan manifest tetap tanggung jawab
+pelanggan. PaaS menyembunyikan orkestrasi dengan imbalan kendali yang lebih kecil. Pada kasus
+Medikara Health, tenaga kerja platform menelan hampir separuh biaya \textit{managed} Kubernetes,
+jauh di atas tarif layanannya, sehingga PaaS dipilih untuk layanan baru pertama.
+
+\textit{Serverless} dan FaaS menjalankan kode hanya ketika ada pemicu, menyusut sampai nol, dan
+menagih per eksekusi. Model ini cocok untuk beban yang jarang, berkala, atau dipicu kedatangan
+data, seperti pengingat jadwal kontrol dan hasil laboratorium. Keterbatasannya adalah \textit{cold
+start}, batas waktu eksekusi, dan ketergantungan pada format serta layanan penyedia. Kasus
+pengingat juga memperlihatkan bahwa biaya komputasi kadang kecil dibandingkan biaya lain di sekitar
+layanan itu.
+
+Memilih \textit{runtime} karena itu bukan soal teknologi mana yang paling modern. Kriteria gugur
+lokasi data dan kriteria berbobot ditulis lebih dahulu, setiap opsi dinilai dengan data, dan
+\textit{vendor lock-in} dihitung, bukan ditakuti atau diabaikan. Pesan utama bab ini:
+\textit{runtime} yang tepat adalah yang sanggup dijalankan oleh tim yang ada, dengan biaya total
+yang tercatat, di lokasi yang diizinkan, dan dengan rencana keluar yang tertulis.
 
 \section{Latihan}
 
+Tiga latihan berikut menguji kemampuan menjelaskan, menilai, dan membandingkan pilihan
+\textit{runtime} dengan data. Hasil setiap mahasiswa boleh berbeda; yang dinilai adalah penalaran
+dan perbandingannya.
+
+\subsection*{Latihan 1: Serverless untuk Pengingat Jadwal Kontrol}
+
+Latihan ini membuktikan bahwa alasan memilih \textit{serverless} untuk layanan pengingat dapat
+dijelaskan kepada direktur keuangan dengan angka, termasuk bagian yang tidak menguntungkan.
+
 \begin{enumerate}
-  \item Jelaskan kepada direktur keuangan mengapa layanan pengingat jadwal kontrol pasien cocok dijalankan secara \textit{serverless}.
-  \item Kapan Kubernetes justru menjadi beban bagi organisasi? Berikan dua kondisi beserta alasannya.
-  \item Bandingkan risiko \textit{vendor lock-in} pada layanan \textit{serverless} dan pada \textit{managed} Kubernetes.
+  \item Buka lembar \texttt{Biaya Serverless} di
+        \berkas{sources/chapter08/matriks-keputusan-runtime.xlsx}.
+  \item Isi jumlah jadwal kontrol per bulan, jumlah pengingat per jadwal, durasi eksekusi, dan
+        memori fungsi. Pakai angka Medikara Health atau angka organisasi pilihan tim.
+  \item Periksa tarif terbaru di halaman harga penyedia yang dipilih, lalu isi tarif dan kurs.
+  \item Bandingkan opsi VM yang menyala terus dengan opsi \textit{serverless}, termasuk biaya pesan,
+        seperti contoh pada Tabel \ref{tab:ch08-lat1-contoh}.
+  \item Tulis penjelasan satu halaman untuk direktur keuangan berdasarkan Tabel
+        \ref{tab:ch08-lat1-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, contoh perbandingan biaya bulanan layanan pengingat Medikara Health}
+  \label{tab:ch08-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.3cm}
+      >{\raggedright\arraybackslash}p{3.3cm}}
+    \hline
+    \textbf{Komponen} & \textbf{VM yang menyala terus} & \textbf{\textit{Serverless}} \\ \hline
+    Jam berjalan per bulan & 720 & Sekitar 11,1 \\ \hline
+    Biaya komputasi per bulan & Rp650.000 & Rp3.014 tanpa kuota gratis; Rp0 di dalam kuota \\ \hline
+    Pemeliharaan server & \textit{Patch} sistem operasi setiap bulan & Tidak ada \\ \hline
+    Biaya pesan WhatsApp (80.000 pesan) & Rp28.000.000 & Rp28.000.000 \\ \hline
+    Total per bulan & Rp28.650.000 & Rp28.003.014 \\ \hline
+    Bila pengingat naik tiga kali lipat & VM perlu diperbesar secara manual & Menyesuaikan sendiri;
+      komputasi sekitar Rp9.000 tanpa kuota gratis \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, lembar isian perbandingan biaya layanan pengingat}
+  \label{tab:ch08-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.3cm}
+      >{\raggedright\arraybackslash}p{3.3cm}}
+    \hline
+    \textbf{Komponen} & \textbf{VM yang menyala terus} & \textbf{\textit{Serverless}} \\ \hline
+    Jam berjalan per bulan & \dots & \dots \\ \hline
+    Biaya komputasi per bulan & \dots & \dots \\ \hline
+    Pemeliharaan server & \dots & \dots \\ \hline
+    Biaya pesan & \dots & \dots \\ \hline
+    Total per bulan & \dots & \dots \\ \hline
+    Bila pengingat naik tiga kali lipat & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Komponen mana yang paling menentukan total biaya, dan apa artinya bagi argumen yang
+        disampaikan kepada direktur keuangan?
+  \item Pada jumlah eksekusi per bulan berapa biaya \textit{serverless} tanpa kuota gratis menyamai
+        biaya VM? Tunjukkan perhitungannya.
+  \item Risiko apa yang tidak tampak di tabel, dan bagaimana risiko itu disampaikan secara jujur?
+\end{enumerate}
+
+\subsection*{Latihan 2: Ketika Kubernetes Menjadi Beban}
+
+Latihan ini membuktikan bahwa Kubernetes bisa menjadi beban bagi organisasi, dan bahwa kondisinya
+dapat dikenali dari indikator yang terukur, bukan dari kesan.
+
+\begin{enumerate}
+  \item Baca kembali Tabel \ref{tab:ch08-biaya-runtime} dan contoh tentang irama pembaruan versi
+        di Seksi \ref{sec:ch08-managed-paas}.
+  \item Rumuskan dua kondisi yang membuat Kubernetes menjadi beban, masing-masing dengan indikator
+        yang dapat diukur.
+  \item Isi data untuk setiap indikator dari Medikara Health atau organisasi pilihan tim, seperti
+        contoh pada Tabel \ref{tab:ch08-lat2-contoh}.
+  \item Jelaskan mengapa setiap kondisi menjadi beban, lalu tulis hasilnya di Tabel
+        \ref{tab:ch08-lat2-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, contoh dua kondisi Kubernetes menjadi beban di Medikara Health}
+  \label{tab:ch08-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kondisi} & \textbf{Indikator} & \textbf{Data Medikara Health} & \textbf{Mengapa menjadi
+      beban} \\ \hline
+    Layanan sedikit, tim platform belum ada & Jumlah layanan; jumlah staf yang pernah
+      mengoperasikan Kubernetes di produksi & Sembilan layanan; 0 dari 52 staf TI & Tenaga kerja
+      platform Rp780 juta per tahun atau 46,9 persen biaya; operasi bergantung pada satu atau dua
+      orang \\ \hline
+    Tidak sanggup mengikuti irama pembaruan versi & Rilis minor per tahun; masa dukungan; jumlah
+      klaster & Sekitar tiga rilis per tahun; dukungan sekitar satu tahun; tiga klaster & Tarif
+      \textit{control plane} naik dari sekitar Rp3,6 juta menjadi Rp21,7 juta per bulan bila
+      terlambat; celah keamanan tidak lagi ditambal \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, lembar isian kondisi Kubernetes menjadi beban}
+  \label{tab:ch08-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kondisi} & \textbf{Indikator} & \textbf{Data organisasi} & \textbf{Mengapa menjadi
+      beban} \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada jumlah layanan dan jumlah \textit{platform engineer} berapa kondisi pertama tidak
+        lagi berlaku? Gunakan angka pada Tabel \ref{tab:ch08-biaya-runtime} sebagai titik awal.
+  \item Apakah PaaS bebas dari kedua kondisi itu? Jelaskan dengan membaca Gambar
+        \ref{fig:ch08-spektrum}.
+\end{enumerate}
+
+\subsection*{Latihan 3: Vendor Lock-in pada Serverless dan Managed Kubernetes}
+
+Latihan ini membuktikan bahwa risiko \textit{vendor lock-in} dapat dibandingkan secara terukur,
+yaitu dari sumber ketergantungan dan perkiraan upaya pindah penyedia.
+
+\begin{enumerate}
+  \item Daftar layanan khas penyedia yang dipakai atau direncanakan untuk satu layanan, sekali
+        dengan \textit{serverless} dan sekali dengan \textit{managed} Kubernetes.
+  \item Kelompokkan ketergantungan itu memakai sumber pada Tabel \ref{tab:ch08-sumber-lockin}.
+  \item Perkirakan upaya pindah penyedia dalam hari kerja untuk setiap opsi, seperti contoh pada
+        Tabel \ref{tab:ch08-lat3-contoh}.
+  \item Tulis perbandingan dan rencana keluar untuk opsi yang dipilih di Tabel
+        \ref{tab:ch08-lat3-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, contoh perbandingan \textit{vendor lock-in} di Medikara Health}
+  \label{tab:ch08-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Serverless}} & \textbf{\textit{Managed} Kubernetes} \\ \hline
+    Ukuran yang dipindahkan & 40 fungsi & Sembilan layanan, 60 berkas manifest \\ \hline
+    Bagian khas penyedia & 25 fungsi memakai pemicu khas penyedia & 12 berkas memuat pengaturan khas
+      penyedia \\ \hline
+    Upaya per bagian & Sekitar tiga hari kerja per fungsi & Sekitar setengah hari kerja per berkas \\ \hline
+    Pekerjaan tambahan & Pemetaan izin akses ke penyedia baru & Pemindahan \textit{registry} dan
+      pemetaan izin, sekitar 10 hari kerja \\ \hline
+    Perkiraan upaya pindah & 75 hari kerja & 16 hari kerja \\ \hline
+    Biaya transfer data keluar & Sama, ditentukan jumlah data & Sama, ditentukan jumlah data \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, lembar isian perbandingan \textit{vendor lock-in}}
+  \label{tab:ch08-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Serverless}} & \textbf{\textit{Managed} Kubernetes} \\ \hline
+    Ukuran yang dipindahkan & \dots & \dots \\ \hline
+    Bagian khas penyedia & \dots & \dots \\ \hline
+    Upaya per bagian & \dots & \dots \\ \hline
+    Pekerjaan tambahan & \dots & \dots \\ \hline
+    Perkiraan upaya pindah & \dots & \dots \\ \hline
+    Biaya transfer data keluar & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Mengapa upaya pindah \textit{serverless} jauh lebih besar walaupun jumlah datanya sama?
+  \item Apakah selisih upaya itu cukup untuk menolak \textit{serverless}? Kaitkan jawaban dengan
+        biaya operasi dan kecepatan membangun.
+  \item Bagaimana matriks lokasi data Bab 2 mempersempit pilihan penyedia dan mengubah besarnya
+        risiko \textit{lock-in} di organisasi pilihan tim?
 \end{enumerate}

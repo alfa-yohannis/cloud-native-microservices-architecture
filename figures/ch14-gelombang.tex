@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  batang/.style={draw, rounded corners=2pt, minimum height=0.7cm, anchor=west,
+    align=center, inner sep=2pt},
+  uraian/.style={anchor=west, align=left, text width=#1, font=\scriptsize},
+  gerbang/.style={draw, diamond, fill=orange!12, inner sep=1.2pt, minimum size=0.42cm}
+]
+  % Sumbu waktu: 42 bulan, April 2027 sampai September 2030, 0,3 cm per bulan.
+  \draw[thick, gray] (0,0) -- (12.6,0);
+  \foreach \x/\tahun in {0/2027, 2.7/2028, 6.3/2029, 9.9/2030} {
+    \draw[thick, gray] (\x,0) -- (\x,0.15);
+    \node[anchor=south west, font=\scriptsize\bfseries] at (\x,0.15) {\tahun};
+  }
+  \foreach \x in {11.7} {
+    \draw[gray] (\x,0) -- (\x,0.1);
+  }
+  \draw[thick, gray] (12.6,0) -- (12.6,0.15);
+
+  % Gerbang keputusan di antara gelombang.
+  \node[gerbang] at (1.8,0) {};
+  \node[gerbang] at (5.4,0) {};
+  \node[anchor=south, font=\tiny] at (1.8,0.22) {Gerbang 1};
+  \node[anchor=south, font=\tiny] at (5.4,0.22) {Gerbang 2};
+
+  % Gelombang 1: fondasi dan pindah cepat, enam bulan.
+  \node[batang, fill=blue!8, minimum width=1.8cm, text width=1.65cm] at (0,-0.8)
+    {\textbf{Gelombang 1}};
+  \node[uraian=8.6cm] at (2.0,-0.8)
+    {Fondasi: \textit{landing zone} dan tujuh \textit{guardrail}; Retire 6, Rehost 10,
+     Relocate 15 (termasuk Medikara+); tim platform 6 orang};
+
+  % Gelombang 2: irisan cloud-native pertama, dua belas bulan.
+  \node[batang, fill=orange!12, minimum width=3.6cm, text width=3.45cm] at (1.8,-2.0)
+    {\textbf{Gelombang 2}};
+  \node[uraian=5.2cm] at (5.6,-2.0)
+    {Janji temu dan identitas pasien (\textit{strangler fig}); ERP Replatform; SIMRS
+     Bekasi Rehost; layanan baru di PaaS};
+
+  % Gelombang 3: SIMRS terpadu, dua puluh empat bulan.
+  \node[batang, fill=green!10, minimum width=7.2cm, text width=7.05cm] at (5.4,-3.5)
+    {\textbf{Gelombang 3}\\SIMRS terpadu: Repurchase ke satu versi bergaya
+     \textit{modular monolith}, bertahap per rumah sakit};
+
+  % Prasyarat yang berjalan sepanjang peta jalan.
+  \node[draw, dashed, rounded corners, fill=praditagreen!15, minimum width=12.6cm,
+    minimum height=0.65cm, anchor=west, align=center, text width=12.3cm] at (0,-4.75)
+    {Prasyarat berjalan terus: \textit{guardrail} dan FinOps, otomasi rilis,\\
+     SLO dan \textit{observability}, uji pemulihan DR, pelatihan staf};
+\end{tikzpicture}

@@ -1,0 +1,39 @@
+% Dua belas faktor Twelve-Factor App dikelompokkan menjadi tiga kelompok,
+% masing-masing dengan satu pertanyaan bisnis yang mudah diingat.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  induk/.style={draw, rounded corners, align=center, minimum height=0.8cm,
+                text width=4.2cm, font=\scriptsize\bfseries},
+  kelompok/.style={draw, rounded corners, align=left, text width=3.1cm,
+                   minimum height=2.7cm, anchor=north, inner sep=4pt},
+  tanya/.style={align=center, text width=3.3cm, font=\tiny\itshape,
+                text=gray!70!black, anchor=north},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[induk, fill=praditagreen!15] (induk) at (0,1.6)
+    {Twelve-Factor App\\{\tiny\mdseries 12 faktor, 3 kelompok}};
+
+  \node[kelompok, fill=blue!8] (a) at (-3.9,0)
+    {\textbf{A. Kode, konfigurasi, dan \textit{backing service}}\\[3pt]
+     I \textit{Codebase}\\ II \textit{Dependencies}\\ III \textit{Config}\\
+     IV \textit{Backing services}};
+  \node[kelompok, fill=orange!12] (b) at (0,0)
+    {\textbf{B. \textit{Build}, proses, dan skala}\\[3pt]
+     V \textit{Build, release, run}\\ VI \textit{Processes}\\
+     VII \textit{Port binding}\\ VIII \textit{Concurrency}\\ IX \textit{Disposability}};
+  \node[kelompok, fill=blue!8] (c) at (3.9,0)
+    {\textbf{C. Lingkungan, \textit{log}, dan tugas administratif}\\[3pt]
+     X \textit{Dev/prod parity}\\ XI \textit{Logs}\\ XII \textit{Admin processes}};
+
+  \node[tanya] at ([yshift=-3pt]a.south)
+    {Dapatkah satu kode dipasang di banyak lokasi tanpa diubah?};
+  \node[tanya] at ([yshift=-3pt]b.south)
+    {Dapatkah kapasitas ditambah dan dikurangi dalam hitungan menit?};
+  \node[tanya] at ([yshift=-3pt]c.south)
+    {Dapatkah sistem dirawat, diaudit, dan dipulihkan dengan cepat?};
+
+  \draw[panah] (induk.south) -- ++(0,-0.3) -| (a.north);
+  \draw[panah] (induk.south) -- (b.north);
+  \draw[panah] (induk.south) -- ++(0,-0.3) -| (c.north);
+\end{tikzpicture}

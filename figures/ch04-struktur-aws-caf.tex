@@ -1,0 +1,69 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  persp/.style={draw, rounded corners, fill=blue!8, minimum width=2cm,
+    minimum height=0.6cm, align=center},
+  ranah/.style={draw, rounded corners, fill=orange!12, minimum width=2.2cm,
+    minimum height=0.8cm, align=center},
+  fase/.style={draw, rounded corners, fill=blue!8, minimum width=2.4cm,
+    minimum height=0.9cm, align=center}
+]
+  % Enam perspektif, dikelompokkan menjadi kapabilitas bisnis dan teknis.
+  \node[persp] (bus) at (0.9,2.5) {Business};
+  \node[persp] (peo) at (0.9,1.8) {People};
+  \node[persp] (gov) at (0.9,1.1) {Governance};
+  \node[persp] (pla) at (0.9,-0.4) {Platform};
+  \node[persp] (sec) at (0.9,-1.1) {Security};
+  \node[persp] (ops) at (0.9,-1.8) {Operations};
+  \node[draw, dashed, gray, rounded corners, inner sep=4pt,
+    fit=(bus)(gov)] (bisnis) {};
+  \node[draw, dashed, gray, rounded corners, inner sep=4pt,
+    fit=(pla)(ops)] (teknis) {};
+  \node[above=0pt of bisnis, gray!60!black] {{\tiny\mdseries kapabilitas bisnis}};
+  \node[above=0pt of teknis, gray!60!black] {{\tiny\mdseries kapabilitas teknis}};
+
+  % Capability dasar menjadi penghubung perspektif dan domain transformasi.
+  \node[draw, rounded corners, fill=praditagreen!15, minimum width=2.2cm,
+    minimum height=5.1cm, align=center, text width=1.9cm,
+    font=\scriptsize\bfseries] (cap) at (4.2,0.35)
+    {\textit{Capability}\\dasar\\[3pt]{\tiny\mdseries dimiliki atau dikelola
+     pemangku kepentingan tiap perspektif\par}};
+
+  % Empat domain transformasi.
+  \node[ranah] (tek) at (7.4,2.15) {Technology};
+  \node[ranah] (pro) at (7.4,0.85) {Process};
+  \node[ranah] (org) at (7.4,-0.45) {Organization};
+  \node[ranah] (prd) at (7.4,-1.75) {Product};
+  \node[above=2pt of tek, gray!60!black] {{\tiny\mdseries domain transformasi}};
+
+  % Hasil bisnis sebagai tujuan akhir.
+  \node[draw, rounded corners, fill=green!10, minimum width=2.2cm,
+    minimum height=2.2cm, align=center, text width=1.9cm,
+    font=\scriptsize\bfseries] (hasil) at (10.6,0.2)
+    {Hasil bisnis\\[3pt]{\tiny\mdseries risiko turun, pendapatan tumbuh, operasi lebih
+     efisien\par}};
+
+  \draw[panah] (bisnis.east) -- (bisnis.east -| cap.west);
+  \draw[panah] (teknis.east) -- (teknis.east -| cap.west);
+  \foreach \ranah in {tek, pro, org, prd} {
+    \draw[panah] (cap.east |- \ranah) -- (\ranah.west);
+    \draw[thick] (\ranah.east) -- ++(0.4,0);
+  }
+  \draw[thick] (8.9,2.15) -- (8.9,-1.75);
+  \draw[panah] (8.9,0.2) -- (hasil.west);
+
+  % Empat fase perjalanan transformasi, diulang per inisiatif.
+  \node[gray!60!black] at (5.95,-2.65)
+    {{\tiny\mdseries empat fase perjalanan transformasi}};
+  \node[fase] (env) at (1.3,-3.3) {Envision\\{\tiny\mdseries peluang dan hasil}};
+  \node[fase] (ali) at (4.4,-3.3) {Align\\{\tiny\mdseries celah kesiapan}};
+  \node[fase] (lau) at (7.5,-3.3) {Launch\\{\tiny\mdseries pilot bernilai}};
+  \node[fase, fill=green!10] (sca) at (10.6,-3.3)
+    {Scale\\{\tiny\mdseries perluasan bertahap}};
+  \draw[panah] (env) -- (ali);
+  \draw[panah] (ali) -- (lau);
+  \draw[panah] (lau) -- (sca);
+  \draw[panah, gray] (sca.south) -- ++(0,-0.35) -| (env.south);
+  \node[gray!60!black] at (5.95,-4.35)
+    {{\tiny\mdseries diulang untuk setiap inisiatif berikutnya}};
+\end{tikzpicture}

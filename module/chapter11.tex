@@ -1,4 +1,5 @@
 \chapter{Observability, SRE, dan SLO}
+\label{ch:ch11}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,54 +10,1089 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: dasbor server Medikara Health selalu hijau, tetapi pasien tetap mengeluh gagal membuat janji temu; ukuran keandalan perlu berangkat dari pengalaman pengguna, bukan dari kondisi mesin.
+Misalkan tahap pertama modernisasi Medikara Health sudah berjalan. Pemesanan janji temu dari
+aplikasi Medikara+ kini melewati pintu masuk Application Programming Interface (API) atau
+\textit{API gateway}, layanan janji temu, layanan jadwal dokter, adaptor ke SIMRS (Sistem
+Informasi Manajemen Rumah Sakit) tiap rumah sakit, dan layanan notifikasi. Setiap tim memasang
+dasbor sendiri. Sepanjang September 2026 semua dasbor itu hijau: pemakaian prosesor rata-rata 35
+persen, memori 52 persen, dan tidak satu pun server mati. Pada bulan yang sama, pusat layanan
+pelanggan menerima 1.140 keluhan pasien yang gagal membuat janji temu, terutama untuk poliklinik
+di rumah sakit Bandung. Sebagian pasien menekan tombol pesan berkali-kali, sehingga petugas
+pendaftaran menemukan sekitar 2.300 pemesanan ganda yang harus dibatalkan satu per satu. Direksi
+bertanya dengan wajar: bagaimana sistem yang ``sehat'' bisa membuat pasien kecewa?
+
+Jawabannya, dasbor itu mengukur kondisi mesin, bukan pengalaman pasien. Server yang menyala belum
+tentu melayani dengan benar, dan server yang santai belum tentu cepat. Satu komponen yang lambat
+cukup untuk menggagalkan perjalanan pasien, walaupun komponen lain tampak sehat. Karena itu,
+ukuran keandalan perlu berangkat dari pertanyaan pasien: apakah janji temu berhasil dibuat, dan
+berapa lama harus menunggu? Bab ini membahas cara membangun ukuran semacam itu, cara menetapkan
+targetnya, dan cara organisasi menyeimbangkan target itu dengan kebutuhan merilis fitur baru.
+
+\IfFileExists{../figures/ch11-diagram-konsep.png}{%
+  Gambar \ref{fig:ch11-dasbor-hijau} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch11-diagram-konsep.png}
+  \caption{Observabilitas menghubungkan perjalanan pengguna ke keputusan SRE}
+  \label{fig:ch11-dasbor-hijau}
+\end{figure}
+}{}
+
+Rujukan utama bab ini adalah buku \textit{Site Reliability Engineering} dari Google
+\cite{beyer2016}, pendampingnya \textit{The Site Reliability Workbook} \cite{c11-sre-workbook},
+buku \textit{Observability Engineering} karya Majors, Fong-Jones, dan Miranda
+\cite{c11-majors2022}, serta dokumentasi resmi OpenTelemetry \cite{opentelemetry,c11-otel-signals}.
+Bab ini bergerak dalam lima langkah: \textit{monitoring} dan \textit{observability}, tiga sinyal
+telemetri dan OpenTelemetry, SLI (\textit{Service Level Indicator}) dan SLO (\textit{Service Level
+Objective}), \textit{error budget}, lalu praktik SRE sehari-hari.
+Hasilnya adalah SLO layanan kritis dan rancangan \textit{observability} untuk tonggak capstone C3.
 
 \section{Monitoring dan Observability}
+\label{sec:ch11-observability}
 
-% TODO
-% Cakupan: monitoring untuk masalah yang sudah diketahui dan observability untuk menjawab pertanyaan baru; tantangan menelusuri gangguan di sistem terdistribusi; peran observability bagi manajemen dan auditor.
+\textit{Monitoring} adalah kegiatan mengumpulkan, mengolah, dan menampilkan ukuran yang sudah
+ditentukan sebelumnya, lalu membunyikan \textit{alert} ketika ukuran itu melewati ambang tertentu
+\cite{beyer2016}. \textit{Monitoring} menjawab pertanyaan yang sudah diketahui sejak awal: apakah
+server menyala, apakah disk hampir penuh, apakah jumlah kegagalan melonjak. \textit{Observability}
+adalah kemampuan memahami apa yang sedang terjadi di dalam sistem hanya dari data yang dikeluarkan
+sistem itu, termasuk untuk pertanyaan yang belum pernah terpikirkan, tanpa harus menambah kode baru
+lebih dahulu \cite{c11-majors2022}. \textit{Monitoring} cocok untuk masalah yang sudah dikenal.
+\textit{Observability} dibutuhkan untuk masalah yang baru pertama kali muncul.
+
+Analoginya seperti pemeriksaan tanda vital di ruang triase. Suhu, tekanan darah, dan nadi diukur
+cepat untuk setiap pasien. Pemeriksaan ini berguna untuk menangkap masalah yang sudah dikenal,
+misalnya demam atau tekanan darah tinggi. Ketika pasien datang dengan keluhan yang tidak biasa,
+dokter tidak cukup melihat tiga angka itu. Dokter menanyakan riwayat, membaca rekam medis, lalu
+meminta pemeriksaan laboratorium yang sesuai dengan dugaan baru. Tanda vital adalah
+\textit{monitoring}. Rekam medis yang lengkap dan dapat ditelusuri adalah \textit{observability}.
+
+Dua hal ini sering dianggap bersaing. Pembagiannya begini. \textit{Observability} tidak
+menggantikan \textit{monitoring}. Dasbor dan \textit{alert} tetap menjaga masalah yang berulang,
+sedangkan data rinci dipakai ketika dasbor tidak bisa menjelaskan keluhan. Tabel
+\ref{tab:ch11-monitoring-observability} merangkum perbedaannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbedaan \textit{monitoring} dan \textit{observability}}
+  \label{tab:ch11-monitoring-observability}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Monitoring}} & \textbf{\textit{Observability}} \\ \hline
+    Pertanyaan & Sudah ditentukan sebelumnya: apakah ukuran X melewati ambang? & Muncul saat
+      itu juga: mengapa pasien Bandung gagal, padahal pasien Bogor tidak? \\ \hline
+    Bentuk khas & Dasbor tetap dan \textit{alert} berambang & Penelusuran bebas atas telemetri
+      yang rinci, dipotong menurut rumah sakit, versi aplikasi, atau jenis poliklinik \\ \hline
+    Paling berguna untuk & Masalah yang berulang dan sudah dikenal & Masalah baru di sistem
+      dengan banyak komponen \\ \hline
+    Contoh di Medikara & Pemakaian prosesor layanan janji temu di atas 80 persen & Menemukan
+      bahwa kegagalan hanya terjadi pada pemesanan ke SIMRS Bandung setelah pukul 07.00 \\ \hline
+    Keterbatasan & Buta terhadap masalah yang belum pernah dibayangkan & Butuh telemetri yang
+      lebih banyak, sehingga biaya dan perlindungan datanya harus dikelola \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Menelusuri Gangguan di Sistem Terdistribusi}
+
+Pertanyaan kemudian muncul: mengapa kebutuhan ini baru terasa setelah sistem dipecah menjadi
+banyak layanan? Pada sistem monolitik, satu permintaan diproses di satu program, sehingga
+catatannya ada di satu tempat. Pada arsitektur \textit{microservices}, satu permintaan melintasi
+lima atau enam layanan, masing-masing dengan catatan, dasbor, dan tim sendiri. Newman menyebut
+pergeseran ini sebagai perpindahan dari \textit{monitoring} satu sistem menuju
+\textit{observability} atas banyak bagian yang saling bergantung \cite{newman2021}. Setiap tim bisa
+melaporkan layanannya sehat, sementara perjalanan pasien tetap gagal di sambungan antarlayanan.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Penelusuran 1.140 keluhan pada Pendahuluan butuh 11 hari. Catatan tersebar di lima
+        komponen milik tiga tim internal dan satu vendor. Tim mencocokkan catatan secara manual
+        berdasarkan jam kejadian, padahal jam server Bandung selisih sekitar 2 menit dari server
+        lain. Setelah setiap permintaan diberi nomor penelusuran yang sama di semua layanan,
+        penyebab yang sama ditemukan dalam satu sore.
+  \item Misalkan adaptor klaim melaporkan status ``terkirim'' untuk 312 berkas klaim rumah sakit
+        Depok, padahal BPJS Kesehatan menolak berkas itu karena format kode diagnosis. Dasbor
+        adaptor hijau: proses menyala dan antrean kosong. Bagian keuangan baru menemukannya saat
+        tutup buku, 19 hari kemudian, dengan klaim tertunda sekitar Rp1,7 miliar. Dasbor itu tidak
+        bisa menjawab ``berapa berkas yang benar-benar diterima BPJS Kesehatan?''.
+\end{enumerate}
+
+\subsection{Observability bagi Manajemen dan Auditor}
+
+\textit{Observability} bukan urusan tim teknis saja. Manajemen dan auditor memakainya untuk tiga
+keperluan. Pertama, bukti tingkat layanan. Direksi dan mitra, misalnya klinik mitra dan perusahaan
+pelanggan layanan kesehatan karyawan, membutuhkan angka yang dapat diperiksa, bukan sekadar
+pernyataan ``sistem stabil''. Kedua, rekonstruksi linimasa insiden. Undang-Undang Pelindungan Data
+Pribadi (UU PDP) mewajibkan pengendali data menyampaikan pemberitahuan tertulis paling lambat 3 kali
+24 jam bila terjadi kegagalan pelindungan data pribadi \cite{uu27-2022-pdp}. Tanpa catatan yang
+dapat ditelusuri, organisasi tidak dapat menjawab data apa yang terdampak, sejak kapan, dan lewat
+jalur mana. Ketiga, pemeriksaan kontrol akses. Temuan audit internal Medikara tentang kontrol akses
+yang lemah hanya bisa ditindaklanjuti bila setiap akses ke rekam medis tercatat beserta pelaku,
+waktu, dan alasannya.
+
+Ada satu peringatan: telemetri sendiri dapat menjadi jalur kebocoran, seperti insiden lewat
+vendor pada 2025. Catatan yang memuat nama pasien, nomor induk kependudukan, atau diagnosis
+dijaga seketat rekam medis. Cara paling aman adalah tidak mencatatnya sama sekali, cukup kode yang
+tidak dapat dikaitkan langsung dengan orangnya.
 
 \section{Log, Metrik, Trace, dan OpenTelemetry}
+\label{sec:ch11-telemetri}
 
-% TODO
-% Cakupan: tiga sinyal telemetri dan kegunaan masing-masing; OpenTelemetry sebagai standar terbuka instrumentasi di bawah CNCF; biaya penyimpanan telemetri dan cara mengendalikannya.
-% Pendalaman teknis: menginstrumentasi aplikasi contoh dengan OpenTelemetry dan menampilkan satu trace lintas dua layanan.
+Telemetri adalah data yang dikeluarkan sistem tentang dirinya selama berjalan. Dokumentasi
+OpenTelemetry membedakan tiga sinyal utama \cite{c11-otel-signals}. \textit{Log} adalah catatan
+satu kejadian, biasanya berupa baris teks atau rekaman terstruktur dengan cap waktu. Metrik adalah
+ukuran berupa angka yang ditangkap saat program berjalan, lalu diringkas per selang waktu, misalnya
+jumlah permintaan per detik atau persentase permintaan yang gagal. \textit{Trace} adalah jalur satu
+permintaan saat melewati aplikasi. Satu \textit{trace} tersusun dari beberapa \textit{span}. Setiap
+\textit{span} mewakili satu langkah kerja, lengkap dengan waktu mulai, durasi, dan induknya.
+Gagasan \textit{trace} lintas layanan dipopulerkan oleh Dapper, sistem penelusuran internal Google
+yang makalahnya terbit pada 2010 \cite{c11-sigelman2010}.
+
+Analoginya seperti pengiriman paket. Setiap gudang transit punya buku catatan sendiri tentang
+paket yang masuk dan keluar: itulah \textit{log}. Kantor pusat punya papan rekap berisi jumlah paket
+per hari dan persentase yang terlambat: itulah metrik. Pelanggan punya nomor resi yang dipindai di
+setiap titik transit: itulah \textit{trace}. Bila satu paket terlambat, papan rekap hanya
+menunjukkan bahwa keterlambatan naik. Buku gudang hanya menceritakan gudang itu sendiri. Nomor
+resi menunjukkan di gudang mana paket itu tertahan dan berapa lama.
+
+Ketiga sinyal saling melengkapi. Tabel \ref{tab:ch11-tiga-sinyal} merangkum pertanyaan yang
+dijawab setiap sinyal, contohnya pada pemesanan Medikara+, dan biaya penyimpanannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga sinyal telemetri dan kegunaannya}
+  \label{tab:ch11-tiga-sinyal}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.3cm}}
+    \hline
+    \textbf{Sinyal} & \textbf{Pertanyaan yang dijawab} & \textbf{Contoh di Medikara+} & \textbf{Biaya simpan} \\ \hline
+    Metrik & Seberapa sering, seberapa banyak, seberapa cepat, secara rata-rata atau per
+      persentil? & Persentase pemesanan gagal per rumah sakit setiap menit & Rendah, karena
+      sudah diringkas \\ \hline
+    \textit{Log} & Apa yang terjadi pada satu kejadian tertentu? & ``Adaptor SIMRS Bandung:
+      batas waktu 3 detik habis, percobaan ke-2'' & Tinggi, tumbuh seiring jumlah kejadian \\ \hline
+    \textit{Trace} & Ke mana satu permintaan pergi, dan di langkah mana waktunya habis? & Satu
+      pemesanan yang melintasi enam komponen dalam 9,8 detik & Tinggi, sehingga biasanya
+      diambil sampelnya \\ \hline
+  \end{tabularx}
+\end{table}
+
+Gambar \ref{fig:ch11-trace-janji-temu} memperlihatkan satu \textit{trace} pemesanan dari kasus
+Pendahuluan. Seluruh pemesanan butuh 9,8 detik. Layanan jadwal dokter hanya butuh 0,3 detik. Waktu
+terbanyak habis di adaptor SIMRS Bandung, yang menunggu 3 detik dua kali sebelum percobaan ketiga
+berhasil. Aplikasi di ponsel pasien hanya menunggu 8 detik, lalu menampilkan pesan gagal.
+Konfirmasi baru terkirim pada detik ke-9,5. Pasien yang melihat pesan gagal menekan tombol pesan
+lagi, sehingga terjadi pemesanan ganda. Dasbor prosesor tetap hijau, karena menunggu jawaban tidak
+memakai prosesor.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch11-trace-janji-temu.tex}
+  \caption{Satu \textit{trace} pemesanan janji temu ke rumah sakit Bandung: dua percobaan ke
+           adaptor SIMRS habis waktu, sehingga aplikasi menyerah sebelum konfirmasi tiba}
+  \label{fig:ch11-trace-janji-temu}
+\end{figure}
+
+Supaya \textit{span} dari layanan yang berbeda tersambung menjadi satu \textit{trace}, setiap
+layanan meneruskan nomor penelusuran ke layanan berikutnya. Standar Trace Context dari World Wide
+Web Consortium mengatur caranya. \textit{Header} \texttt{traceparent} membawa versi, nomor
+\textit{trace}, nomor \textit{span} induk, dan penanda apakah \textit{trace} ini diambil sebagai
+sampel \cite{c11-w3c-tracecontext}. Karena formatnya baku, layanan buatan tim yang berbeda,
+bahkan buatan vendor, tetap dapat menyambung \textit{trace} yang sama.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item \textit{Trace} pada Gambar \ref{fig:ch11-trace-janji-temu} menunjukkan sekitar 86 persen
+        waktu, yaitu 8,4 dari 9,8 detik, habis di adaptor SIMRS Bandung. Misalkan batas waktu
+        adaptor diturunkan menjadi 1 detik dengan satu kali percobaan ulang, dan jadwal dokter
+        Bandung disimpan sementara di layanan jadwal. Waktu pemesanan ke Bandung turun menjadi
+        sekitar 2 detik, jauh di bawah batas tunggu aplikasi.
+  \item Metrik persentase pemesanan gagal per rumah sakit pada September 2026 menunjukkan Bandung
+        4,1 persen, sedangkan empat rumah sakit lain di bawah 0,4 persen. Metrik memberi tahu
+        \textit{di mana} masalahnya. \textit{Trace} menjelaskan \textit{mengapa}. \textit{Log}
+        adaptor memberi rincian kesalahan untuk diperbaiki vendor SIMRS Bandung.
+\end{enumerate}
+
+\subsection{OpenTelemetry sebagai Standar Terbuka}
+
+OpenTelemetry adalah kerangka dan perangkat sumber terbuka untuk membuat, mengumpulkan, dan
+mengirim telemetri berupa \textit{trace}, metrik, dan \textit{log}. Proyek ini berada di bawah
+Cloud Native Computing Foundation (CNCF) dan sengaja dibuat netral terhadap vendor dan alat.
+OpenTelemetry bukan tempat penyimpanan atau penampil telemetri. Penyimpanan dan dasbor dipilih
+terpisah, baik produk sumber terbuka maupun komersial \cite{opentelemetry}. Komponennya meliputi
+spesifikasi, pustaka untuk berbagai bahasa pemrograman, instrumentasi otomatis untuk kerangka kerja
+yang populer, dan OpenTelemetry Collector. Collector adalah proses perantara yang menerima
+telemetri, mengolahnya, lalu meneruskannya ke satu atau beberapa tujuan.
+
+Analoginya seperti colokan listrik standar. Selama peralatan rumah memakai colokan yang sama,
+pemilik rumah bebas berganti penyedia listrik atau memindahkan peralatan ke rumah lain tanpa
+memotong kabelnya. Tanpa standar, setiap peralatan terikat pada satu jenis stopkontak, dan pindah
+rumah berarti membeli ulang peralatan.
+
+Gambar \ref{fig:ch11-alur-opentelemetry} memperlihatkan rancangan alur telemetri untuk Medikara.
+Setiap layanan memakai pustaka OpenTelemetry dan mengirim telemetri ke Collector. Collector
+menyamarkan data pasien, memilih sampel \textit{trace}, lalu meneruskan setiap sinyal ke
+penyimpanannya. Dasbor SLO dan \textit{alert} dibangun di atas ketiga penyimpanan itu.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch11-alur-opentelemetry.tex}
+  \caption{Rancangan alur telemetri Medikara Health dengan OpenTelemetry: layanan cukup
+           diinstrumentasi sekali, sedangkan penyimpanannya dapat diganti}
+  \label{fig:ch11-alur-opentelemetry}
+\end{figure}
+
+Keputusan memakai standar terbuka punya dua konsekuensi. Pertama, Medikara tidak terkunci pada
+satu vendor pemantauan. Hal ini penting karena ketergantungan pada vendor sudah menjadi risiko
+strategis bagi Medikara+ (Bab 6). Bila suatu hari penyimpanan telemetri diganti, kode layanan tidak
+perlu diubah. Cukup konfigurasi Collector. Kedua, Collector menjadi satu titik kendali untuk
+kepatuhan. Aturan penyamaran data pasien ditulis sekali di Collector, bukan diulang di setiap
+layanan dengan risiko terlewat.
+
+\subsection{Biaya Telemetri dan Cara Mengendalikannya}
+
+Telemetri tidak gratis. Volumenya tumbuh seiring jumlah layanan dan jumlah permintaan.
+\textit{Log} biasanya menjadi bagian terbesar, disusul \textit{trace}. Metrik relatif murah selama
+labelnya terkendali. Empat pengungkit dipakai untuk mengendalikan biaya. Pertama, tingkat
+\textit{log}: catatan untuk mencari kesalahan program (\textit{debug}) dimatikan di lingkungan
+produksi. Kedua, pengambilan sampel \textit{trace}: semua \textit{trace} yang gagal atau lambat
+disimpan, sedangkan \textit{trace} normal cukup diambil sebagian kecil. Ketiga, masa simpan
+bertingkat: data terbaru disimpan di tempat yang cepat dicari, data lama dipindah ke arsip murah
+untuk keperluan audit. Keempat, label metrik dibatasi: label seperti nomor rekam medis membuat
+jumlah deret data meledak.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Misalkan seluruh layanan baru menghasilkan sekitar 60 \textit{gigabyte} (GB) \textit{log}
+        per hari, dengan biaya masuk dan simpan 30 hari sekitar Rp7.500 per GB. Volumenya sekitar
+        1.800 GB per bulan, dengan biaya Rp13,5 juta. Setelah \textit{debug} dimatikan di
+        produksi, \textit{trace} normal diambil 10 persen, dan catatan lama dipindah ke arsip,
+        volumenya turun menjadi 22 GB per hari. Biayanya menjadi sekitar Rp4,95 juta per bulan.
+  \item Satu tim memasang nomor rekam medis sebagai label metrik latensi agar keluhan per pasien
+        mudah dicari. Jumlah deret data naik dari sekitar 300 menjadi lebih dari 400.000.
+        Biaya penyimpanan metrik melonjak, dan nomor rekam medis ikut tersebar ke sistem
+        pemantauan. Label itu dicabut. Penelusuran per pasien dipindah ke \textit{trace} yang
+        sudah disamarkan oleh Collector.
+\end{enumerate}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Satu Trace Lintas Dua Layanan}]
+  Listing \ref{lst:ch11-dua-layanan} memperlihatkan inti contoh instrumentasi dengan pustaka
+  OpenTelemetry untuk Python. Dua layanan, yaitu janji temu dan jadwal dokter, disimulasikan dalam
+  satu proses. Setiap layanan punya \texttt{TracerProvider} sendiri dengan nama layanan yang
+  berbeda. Yang dikirim antarlayanan hanya kamus \textit{header}, persis seperti \textit{header}
+  permintaan sungguhan. Fungsi \texttt{inject} menulis \texttt{traceparent} ke \textit{header}
+  keluar, dan fungsi \texttt{extract} membacanya di layanan penerima.
+
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10},
+  breaklines=true, showstringspaces=false, captionpos=b,
+  caption={Propagasi \textit{trace} antara dua layanan, tersedia di \berkas{sources/chapter11/contoh-opentelemetry/dua_layanan.py}},
+  label={lst:ch11-dua-layanan}]
+def layanan_jadwal_dokter(header_masuk, kode_poli):
+  """Menjawab cek kuota; extract menyambung trace dari traceparent."""
+  konteks_induk = extract(header_masuk)
+  with TRACER_JADWAL_DOKTER.start_as_current_span(
+    "cek kuota poli",
+    context=konteks_induk,
+    kind=trace.SpanKind.SERVER,
+  ) as span:
+    span.set_attribute("medikara.kode_poli", kode_poli)
+    time.sleep(LAMA_CEK_KUOTA_DETIK)
+    return True
+
+
+def layanan_janji_temu(kode_poli):
+  """Memesan slot; inject menulis traceparent ke header keluar."""
+  with TRACER_JANJI_TEMU.start_as_current_span(
+    "pesan janji temu", kind=trace.SpanKind.SERVER
+  ):
+    with TRACER_JANJI_TEMU.start_as_current_span(
+      "panggil jadwal dokter", kind=trace.SpanKind.CLIENT
+    ):
+      header_keluar = {}
+      inject(header_keluar)
+      print("Header yang dikirim:", header_keluar)
+      ada_kuota = layanan_jadwal_dokter(header_keluar, kode_poli)
+    time.sleep(LAMA_KUNCI_SLOT_DETIK)
+    return ada_kuota
+\end{lstlisting}
+
+  Skrip \texttt{dua\_layanan.py} mencetak isi \textit{header} dan tiga \textit{span}. Ketiganya
+  punya \texttt{trace\_id} yang sama, dan \texttt{parent\_id} dari ``cek kuota poli'' sama dengan
+  \texttt{span\_id} dari ``panggil jadwal dokter''. Bila baris \texttt{inject} dihapus, layanan
+  jadwal dokter memulai \texttt{trace\_id} baru, sehingga perjalanan pasien terputus menjadi dua
+  \textit{trace} yang tidak saling mengenal.
+\end{pendalaman}
 
 \section{SLI, SLO, dan SLA}
+\label{sec:ch11-sli-slo-sla}
 
-% TODO
-% Cakupan: perbedaan SLI, SLO, dan SLA; cara memilih SLI yang mencerminkan pengalaman pengguna; perhitungan waktu tidak tersedia yang diizinkan untuk berbagai target; alasan target 100 persen hampir selalu keliru.
-% Kasus Medikara: SLI untuk membuat janji temu, mengambil hasil laboratorium, dan mengirim klaim BPJS Kesehatan.
+SLI adalah ukuran kuantitatif yang didefinisikan dengan cermat untuk satu aspek layanan, misalnya
+latensi, tingkat kegagalan, atau ketersediaan. SLO adalah nilai target untuk SLI itu selama jendela
+waktu tertentu. SLA (\textit{Service Level Agreement}) adalah perjanjian dengan pengguna atau
+pelanggan yang memuat konsekuensi bila SLO di dalamnya meleset, misalnya potongan biaya
+\cite{beyer2016}.
+\textit{The Site Reliability Workbook} menganjurkan SLI ditulis sebagai rasio: jumlah peristiwa
+yang baik dibagi jumlah seluruh peristiwa \cite{c11-sre-workbook}. Dengan bentuk ini, setiap SLI
+bernilai 0 sampai 100 persen, dan semua SLI dapat dibaca dengan cara yang sama. Contohnya: ``99,5
+persen upaya pemesanan dalam 30 hari terakhir mendapat konfirmasi dalam 5 detik''.
+
+Analoginya seperti restoran cepat saji yang menjanjikan pesanan siap dalam 10 menit. Persentase
+pesanan yang benar-benar siap dalam 10 menit adalah SLI. Target dapur, misalnya 95 persen pesanan
+setiap minggu siap dalam 10 menit, adalah SLO. Spanduk di depan kasir yang berbunyi ``lebih dari 15
+menit, minuman gratis'' adalah SLA. Dapur menjaga SLO yang lebih ketat daripada SLA, supaya
+minuman gratis jarang dibagikan.
+
+Dua hal pada istilah ini sering tertukar: SLO dan SLA. Pembagiannya begini. SLO adalah target
+internal yang ditetapkan organisasi untuk mengambil keputusan teknis dan bisnis. SLA adalah janji
+kepada pihak luar yang mengandung konsekuensi, sehingga disusun bersama bagian hukum dan bisnis.
+SLA biasanya lebih longgar daripada SLO, agar organisasi punya ruang memperbaiki diri sebelum denda
+berlaku. Bila sebuah target tidak punya konsekuensi apa pun ketika meleset, target itu adalah SLO,
+walaupun di dokumen disebut SLA. Tabel \ref{tab:ch11-sli-slo-sla} merangkum ketiganya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{SLI, SLO, dan SLA dengan contoh dari layanan pemesanan Medikara+}
+  \label{tab:ch11-sli-slo-sla}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Istilah} & \textbf{Pertanyaan yang dijawab} & \textbf{Penetap} & \textbf{Contoh Medikara} \\ \hline
+    SLI & Seberapa baik layanan saat ini, diukur dari sisi pengguna? & Tim teknis bersama
+      pemilik layanan & Persentase upaya pemesanan yang terkonfirmasi dalam 5 detik \\ \hline
+    SLO & Seberapa baik layanan seharusnya dalam satu jendela waktu? & Pemilik layanan,
+      disetujui manajemen & 99,5 persen dalam 30 hari bergulir \\ \hline
+    SLA & Apa akibatnya bila janji kepada pihak luar meleset? & Bisnis dan bagian hukum &
+      Misalkan perusahaan mitra mendapat potongan biaya bila janji temu karyawannya di bawah 99
+      persen dalam sebulan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Memilih SLI dari Perjalanan Pengguna}
+
+Perjalanan pengguna kritis adalah urutan langkah yang dilalui pengguna untuk mencapai tujuan yang
+penting bagi dirinya dan bagi organisasi, misalnya membuat janji temu atau melihat hasil
+laboratorium. SLI dipilih dari perjalanan ini, bukan dari daftar komponen. Ukurannya diambil sedekat
+mungkin dengan pengguna. \textit{Workbook} mengelompokkan SLI menurut jenis layanannya
+\cite{c11-sre-workbook}. Layanan yang menjawab permintaan diukur dari ketersediaan, latensi, dan
+kualitas jawabannya. Alur pengolahan data diukur dari kesegaran, kebenaran, dan cakupan datanya.
+Layanan penyimpanan diukur dari daya tahan datanya. Tabel \ref{tab:ch11-jenis-sli} memberi contoh
+untuk Medikara.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Jenis SLI menurut jenis layanan, dengan contoh Medikara Health}
+  \label{tab:ch11-jenis-sli}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Jenis layanan} & \textbf{SLI} & \textbf{Contoh: peristiwa baik dibagi seluruh peristiwa} \\ \hline
+    Menjawab permintaan & Ketersediaan & Permintaan pemesanan yang dijawab tanpa kegagalan,
+      dibagi seluruh permintaan pemesanan yang sah \\ \hline
+    Menjawab permintaan & Latensi & Pemesanan yang terkonfirmasi dalam 5 detik, dibagi seluruh
+      pemesanan yang sah \\ \hline
+    Alur pengolahan data & Kesegaran & Hasil laboratorium yang tampil di Medikara+ dalam 30 menit
+      setelah divalidasi, dibagi seluruh hasil yang divalidasi \\ \hline
+    Alur pengolahan data & Kebenaran & Berkas klaim yang diterima BPJS Kesehatan tanpa
+      penolakan format, dibagi seluruh berkas klaim yang dikirim \\ \hline
+    Penyimpanan & Daya tahan & Dokumen rekam medis yang dapat dibaca kembali utuh, dibagi
+      seluruh dokumen yang disimpan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Titik pengukuran juga perlu dipilih. Catatan server mudah diambil, tetapi buta terhadap
+permintaan yang tidak pernah sampai ke server. Pengukuran di \textit{API gateway} sudah lebih
+dekat dengan pasien. Telemetri dari aplikasi di ponsel paling dekat dengan pengalaman pasien,
+tetapi ikut terpengaruh jaringan seluler pasien. Pemeriksaan sintetis, yaitu permintaan buatan yang
+dikirim berkala dari luar, menangkap gangguan pada jam sepi. Medikara memadukan dua titik ukur.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Selama September 2026 pemakaian prosesor layanan janji temu rata-rata hanya 35 persen.
+        SLI yang berangkat dari pengalaman pasien menunjukkan hal lain: hanya 98,7 persen
+        upaya pemesanan ke rumah sakit Bandung yang mendapat konfirmasi dalam 8 detik.
+  \item Halaman hasil laboratorium di Medikara+ dapat dibuka 99,97 persen dari waktu. Namun,
+        hanya 91 persen hasil yang tampil dalam 30 menit setelah divalidasi dokter, karena
+        sinkronisasi dari sistem laboratorium berjalan sekali setiap jam. Pasien tetap datang ke
+        loket untuk menanyakan hasil. SLI ketersediaan halaman tidak menangkap masalah ini,
+        sedangkan SLI kesegaran menangkapnya.
+\end{enumerate}
+
+\subsection{Menghitung Waktu Tidak Tersedia yang Diizinkan}
+
+Target SLO dapat dibaca sebagai waktu tidak tersedia yang masih diizinkan. Jendela 30 hari berisi
+43.200 menit, sedangkan satu tahun berisi 525.600 menit. Target 99,9 persen berarti 0,1 persen
+dari waktu itu boleh hilang: 43,2 menit per 30 hari. Tabel \ref{tab:ch11-waktu-tidak-tersedia}
+memperlihatkan perhitungan untuk beberapa target yang umum. Setiap tambahan satu angka sembilan
+memangkas waktu yang diizinkan menjadi sepersepuluhnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Waktu tidak tersedia yang diizinkan untuk beberapa target ketersediaan}
+  \label{tab:ch11-waktu-tidak-tersedia}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Target} & \textbf{\textit{Error budget}} & \textbf{Per 30 hari} & \textbf{Per tahun (365 hari)} \\ \hline
+    99 persen & 1 persen & 432 menit (7 jam 12 menit) & 87 jam 36 menit (sekitar 3,6 hari) \\ \hline
+    99,9 persen & 0,1 persen & 43,2 menit & 8 jam 45,6 menit \\ \hline
+    99,95 persen & 0,05 persen & 21,6 menit & 4 jam 22,8 menit \\ \hline
+    99,99 persen & 0,01 persen & 4,32 menit (sekitar 4 menit 19 detik) & 52,6 menit \\ \hline
+    99,999 persen & 0,001 persen & sekitar 26 detik & sekitar 5 menit 15 detik \\ \hline
+  \end{tabularx}
+\end{table}
+
+Perhitungan berbasis waktu mudah dipahami, tetapi kurang adil untuk layanan yang bebannya naik
+turun. Gangguan 10 menit pada pukul 07.00, saat pasien berebut kuota poliklinik, jauh lebih
+merugikan daripada gangguan 10 menit pada pukul 02.00. Karena itu, SLI berbasis permintaan lebih
+dianjurkan: yang dihitung adalah jumlah upaya yang gagal, bukan jumlah menit. Misalkan dalam 30
+hari ada sekitar 28.000 upaya pemesanan lewat Medikara+ (Bab 3). Target 99,5 persen berarti paling
+banyak 140 upaya boleh gagal.
+
+\subsection{Mengapa Target 100 Persen Hampir Selalu Keliru}
+
+Pertanyaan kemudian muncul: mengapa tidak menargetkan 100 persen saja, karena pasien jelas ingin
+layanan yang selalu berhasil? Buku SRE Google menyebut 100 persen sebagai target yang keliru untuk
+hampir semua layanan \cite{beyer2016}. Ada empat alasannya.
+
+Pertama, pasien tidak dapat membedakan. Ponsel, jaringan seluler, dan jaringan rumah pasien jauh
+kurang andal daripada 99,99 persen. Selisih antara 99,99 dan 100 persen hilang di antara gangguan
+yang berasal dari luar Medikara. Kedua, biaya naik jauh lebih cepat daripada manfaatnya. Setiap
+tambahan angka sembilan menuntut cadangan di lebih banyak lokasi, petugas jaga sepanjang waktu,
+dan pengujian yang lebih mahal, sementara manfaat bagi pasien makin kecil. Ketiga, ketergantungan
+membatasi. Layanan janji temu bergantung pada adaptor SIMRS yang hanya ditargetkan 99,5 persen.
+Tanpa rancangan yang tetap berjalan ketika adaptor gagal, misalnya antrean pemesanan, janji temu
+tidak mungkin lebih andal daripada adaptor itu. Keempat, target 100 persen berarti \textit{error
+budget} nol. Setiap perubahan membawa risiko, sehingga tidak ada perubahan yang boleh dirilis.
+Organisasi yang strateginya menuntut layanan baru justru membekukan dirinya sendiri.
+
+\begin{kasus}[title={Kasus Medikara Health: SLI untuk Tiga Perjalanan Pasien}]
+  Tim transformasi memilih tiga perjalanan yang paling sering dikeluhkan dan paling besar
+  dampaknya: membuat janji temu lewat Medikara+, mengambil hasil laboratorium, dan mengirim klaim
+  BPJS Kesehatan. Hasilnya ada di Tabel \ref{tab:ch11-sli-medikara}. Perwakilan pasien, kepala
+  pendaftaran, kepala laboratorium, dan kepala bagian klaim ikut menentukan arti ``layanan yang
+  baik''. Tim teknis menerjemahkannya menjadi rasio yang dapat diukur.
+
+  Perdebatan paling panjang terjadi pada target janji temu. Direktur pelayanan ingin 99,9 persen.
+  Perhitungan menunjukkan target itu menuntut layanan berjalan di dua zona \textit{cloud} dan
+  petugas jaga 24 jam, dengan biaya kira-kira dua kali lipat. Pasien yang gagal memesan masih dapat
+  mencoba lagi atau menelepon pusat layanan. Kesepakatannya 99,5 persen, ditinjau ulang setelah
+  tiga bulan data terkumpul.
+
+  Keputusan ini punya dua konsekuensi. Pertama, SLI janji temu diukur di \textit{API gateway} dan
+  dari telemetri aplikasi, bukan dari server layanan janji temu. Pemesanan yang tidak pernah sampai
+  ke server tetap terhitung gagal. Kedua, SLI klaim memakai jawaban BPJS Kesehatan sebagai bukti.
+  Status ``terkirim'' di adaptor tidak lagi dianggap berhasil.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{SLI dan SLO untuk tiga perjalanan pasien Medikara Health, jendela 30 hari bergulir}
+  \label{tab:ch11-sli-medikara}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.9cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{1.0cm} >{\raggedright\arraybackslash}p{2.1cm}}
+    \hline
+    \textbf{Perjalanan} & \textbf{SLI: peristiwa baik dibagi seluruh peristiwa} & \textbf{Titik ukur}
+      & \textbf{SLO} & \textbf{\textit{Error budget}} \\ \hline
+    Membuat janji temu & Upaya pemesanan yang terkonfirmasi dalam 5 detik, dibagi seluruh upaya
+      yang sah & \textit{API gateway} dan aplikasi & 99,5\% & 140 dari sekitar 28.000 upaya \\ \hline
+    Mengambil hasil laboratorium & Hasil yang tampil di Medikara+ dalam 30 menit setelah
+      divalidasi, dibagi seluruh hasil yang divalidasi & Cap waktu sistem laboratorium dan
+      aplikasi & 99,0\% & 620 dari sekitar 62.000 hasil \\ \hline
+    Mengirim klaim BPJS Kesehatan & Berkas yang diterima tanpa penolakan format dalam 2 hari kerja
+      setelah pasien pulang, dibagi seluruh berkas & Adaptor klaim dan jawaban BPJS Kesehatan &
+      98,0\% & 820 dari sekitar 41.000 berkas \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Error Budget dan Kebijakannya}
+\label{sec:ch11-error-budget}
 
-% TODO
-% Cakupan: error budget sebagai selisih antara 100 persen dan target SLO; kebijakan saat anggaran habis (misalnya menunda fitur baru); error budget sebagai alat negosiasi antara bisnis dan tim teknis.
+\textit{Error budget} adalah selisih antara 100 persen dan target SLO. Selisih itu adalah jumlah
+kegagalan yang boleh terjadi dalam satu jendela tanpa melanggar SLO \cite{beyer2016}. Untuk
+pemesanan Medikara+, SLO 99,5 persen dengan sekitar 28.000 upaya per 30 hari menghasilkan anggaran
+140 upaya gagal. Anggaran ini dipakai oleh insiden, rilis yang bermasalah, dan pemeliharaan yang
+mengganggu pasien. Selama anggaran masih tersisa, tim boleh merilis perubahan dan mengambil risiko
+yang terukur. Ketika anggaran menipis atau habis, prioritas berpindah ke keandalan.
+
+Analoginya seperti kuota data seluler bulanan. Pemilik paket 30 GB bebas menonton video selama
+kuotanya masih ada. Bila pada tanggal 12 kuota tinggal 3 GB, pemilik ponsel mengurangi menonton
+video dan memakai jaringan kantor. Kuota tidak dimaksudkan untuk disisakan. Kuota yang selalu
+bersisa banyak di akhir bulan berarti paketnya terlalu besar untuk kebutuhan. Hal yang sama
+berlaku untuk \textit{error budget}. Anggaran yang tidak pernah terpakai berarti tim terlalu
+berhati-hati, sehingga perubahan bisa dirilis lebih cepat, atau targetnya terlalu mudah dicapai.
+
+Kecepatan anggaran terpakai disebut laju pembakaran (\textit{burn rate}). Laju pembakaran
+membandingkan laju kegagalan yang teramati dengan laju yang tepat menghabiskan anggaran di akhir
+jendela \cite{c11-sre-workbook}. Laju pembakaran 1 berarti anggaran habis tepat di hari ke-30.
+Laju pembakaran 2 berarti anggaran habis di hari ke-15. Gambar \ref{fig:ch11-sisa-anggaran}
+memperlihatkan sisa anggaran pemesanan Medikara+ dalam satu jendela 30 hari.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch11-sisa-anggaran.tex}
+  \caption{Sisa \textit{error budget} pemesanan Medikara+ dalam satu jendela 30 hari: dua
+           kejadian memakan 58 persen anggaran, dan kebijakan berlaku setelah sisa di bawah
+           25 persen}
+  \label{fig:ch11-sisa-anggaran}
+\end{figure}
+
+Dua contoh dari Medikara Health, keduanya terlihat pada Gambar \ref{fig:ch11-sisa-anggaran}.
+Misalkan jendelanya November 2026, setelah adaptor SIMRS Bandung diperbaiki.
+\begin{enumerate}
+  \item Pada hari ke-9 tim merilis fitur pengingat jadwal yang ternyata mengganggu proses kunci
+        slot. Masalahnya baru disadari beberapa jam kemudian. Dalam setengah hari, 25 upaya gagal,
+        atau 18 persen anggaran. Setelah disadari, rilis dikembalikan ke versi sebelumnya dalam 15
+        menit.
+  \item Pada hari ke-17 basis data layanan janji temu penuh dan menolak penulisan selama sekitar 30
+        menit pada jam sibuk pagi. Hampir semua pemesanan pada selang itu gagal: 56 upaya, atau 40
+        persen anggaran. Sisa anggaran turun menjadi 22 persen, di bawah ambang 25 persen. Sejak
+        saat itu hanya perubahan yang memperbaiki keandalan yang boleh dirilis. Di akhir jendela
+        anggaran masih tersisa 14 persen, atau sekitar 20 upaya, sehingga SLO terpenuhi.
+\end{enumerate}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Menghitung Laju Pembakaran}]
+  Laju pembakaran dihitung dengan membagi proporsi kegagalan yang teramati dengan proporsi
+  kegagalan yang diizinkan:
+  \[
+    \text{laju pembakaran} = \frac{\text{upaya gagal} \,/\, \text{seluruh upaya}}{1 - \text{SLO}}
+  \]
+  Pada jam biasa, Medikara+ menerima rata-rata sekitar 39 upaya pemesanan, yaitu 28.000 upaya dibagi
+  720 jam. Misalkan 7,2 persen di antaranya gagal, atau sekitar 3 upaya. Dengan SLO 99,5 persen,
+  proporsi yang diizinkan 0,5 persen, sehingga laju pembakarannya 14,4. Satu jam dengan laju ini
+  memakan 14,4 dibagi 720, atau 2 persen anggaran. Bila laju ini berlanjut, anggaran 30 hari habis
+  dalam 720 dibagi 14,4, atau 50 jam. Skrip \berkas{sources/chapter11/hitung_error_budget.py}
+  menghitung angka ini untuk target dan volume yang berbeda.
+\end{pendalaman}
+
+\subsection{Kebijakan Error Budget}
+
+Kebijakan \textit{error budget} adalah dokumen yang disepakati sebelum ada masalah: apa yang
+dilakukan ketika anggaran menipis atau habis, dan siapa yang memutuskan. Contoh kebijakan di
+\textit{Workbook} memakai jendela empat minggu bergulir. Bila anggaran terlampaui, semua perubahan
+dan rilis dihentikan, kecuali perbaikan berprioritas tertinggi dan perbaikan keamanan, sampai
+layanan kembali memenuhi SLO. Insiden yang memakan lebih dari 20 persen anggaran dalam empat minggu
+wajib dianalisis dalam \textit{postmortem} dengan minimal satu tindak lanjut berprioritas
+tertinggi. Perselisihan dibawa ke pimpinan teknologi tertinggi \cite{c11-sre-workbook}. Medikara
+mengadaptasinya menjadi empat zona pada Tabel \ref{tab:ch11-kebijakan-error-budget}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Zona kebijakan \textit{error budget} Medikara Health, diadaptasi dari contoh kebijakan
+           di \textit{Workbook}}
+  \label{tab:ch11-kebijakan-error-budget}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.4cm}}
+    \hline
+    \textbf{Sisa anggaran} & \textbf{Status} & \textbf{Tindakan} & \textbf{Yang memutuskan} \\ \hline
+    Di atas 50 persen & Normal & Rilis seperti biasa, termasuk eksperimen yang terukur & Tim
+      pemilik layanan \\ \hline
+    25 sampai 50 persen & Waspada & Rilis berisiko besar ditinjau dulu; pengujian dan rilis
+      bertahap diperketat & Pemilik layanan dan pemimpin teknis \\ \hline
+    Di bawah 25 persen & Fokus keandalan & Hanya perubahan untuk keandalan, keamanan, atau
+      keselamatan pasien & Pemimpin teknis \\ \hline
+    Habis & Beku & Semua rilis fitur dihentikan sampai SLI kembali di atas SLO; perselisihan
+      dibawa ke direktur teknologi informasi (TI) & Direktur TI \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua aturan berlaku di semua zona. Pertama, insiden yang memakan lebih dari 20 persen anggaran
+wajib ditulis \textit{postmortem}-nya paling lambat lima hari kerja kemudian. Kedua, gangguan di
+luar kendali tim, misalnya gangguan nasional layanan BPJS Kesehatan, tetap dicatat tetapi tidak
+menghentikan rilis.
+
+\subsection{Error Budget sebagai Alat Negosiasi}
+
+Tim produk ingin fitur baru cepat dirilis. Tim operasi ingin sistem tidak diganggu. Tanpa ukuran
+bersama, perdebatan keduanya berakhir pada siapa yang paling keras suaranya. Buku SRE Google
+memperkenalkan \textit{error budget} untuk menyelesaikan tarik-menarik ini \cite{beyer2016}.
+Keputusan merilis tidak lagi bergantung pada pendapat, tetapi pada sisa anggaran yang dapat dilihat
+semua pihak. Keputusan ini punya dua konsekuensi. Pertama, tim produk ikut menjaga keandalan,
+karena rilis yang ceroboh menghabiskan anggaran untuk rilis berikutnya. Kedua, tim operasi tidak
+boleh menolak rilis selama anggaran masih tersedia, karena keandalan yang melebihi target tidak
+memberi manfaat tambahan bagi pasien.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Tim produk ingin merilis fitur pembayaran langsung di aplikasi pada hari ke-18 jendela
+        November. Sisa anggaran saat itu tinggal 22 persen. Rilis digeser ke awal jendela
+        Desember, dan waktu hampir dua minggu itu dipakai untuk memasang pemantauan kapasitas basis
+        data. Kedua tim menerima keputusan itu karena angkanya jelas.
+  \item Layanan hasil laboratorium menyisakan lebih dari 80 persen anggaran selama tiga bulan
+        berturut-turut. Tim menaikkan frekuensi rilis dari sebulan sekali menjadi seminggu sekali,
+        tanpa meminta izin tambahan, karena anggaran membuktikan risikonya masih terkendali.
+\end{enumerate}
 
 \section{Praktik SRE: Toil, Alerting, Insiden, dan Postmortem}
+\label{sec:ch11-praktik-sre}
 
-% TODO
-% Cakupan: SRE menurut buku Google SRE; toil dan batasnya; alerting yang bermakna berbasis SLO; penanganan insiden dan peran-perannya; postmortem tanpa menyalahkan; KPI dan pelaporan ke direksi disinggung singkat (dibahas rinci di IT40813).
-% Kasus Medikara: postmortem gangguan Medikara+ saat program vaksinasi.
+SRE adalah disiplin yang lahir di Google. Intinya adalah menerapkan cara kerja rekayasa perangkat
+lunak pada pekerjaan operasi. Treynor Sloss, pendirinya, menggambarkan SRE sebagai hasil ketika
+seorang insinyur perangkat lunak diminta merancang tim operasi \cite{beyer2016}. SLO dan
+\textit{error budget} menjadi kontrak bersama antara tim pengembang dan tim operasi. \textit{Workbook}
+menempatkan SRE sebagai salah satu cara konkret menjalankan prinsip DevOps
+\cite{c11-sre-workbook}. Seksi ini membahas empat praktik SRE sehari-hari: mengendalikan
+\textit{toil}, membuat \textit{alert} yang bermakna, menangani insiden, dan menulis
+\textit{postmortem}.
+
+\subsection{Toil dan Batasnya}
+
+\textit{Toil} adalah pekerjaan operasi yang manual, berulang, dapat diotomasi, bersifat taktis,
+tidak meninggalkan nilai jangka panjang, dan bertambah seiring pertumbuhan layanan
+\cite{beyer2016}. Tidak semua pekerjaan operasi adalah \textit{toil}. Rapat perencanaan dan
+merancang sistem baru bukan \textit{toil}. Menyalakan ulang server yang sama setiap pagi adalah
+\textit{toil}. Google menetapkan batas: pekerjaan operasi, termasuk \textit{toil}, dijaga di bawah
+50 persen waktu setiap insinyur SRE. Sisa waktunya dipakai untuk pekerjaan rekayasa yang mengurangi
+\textit{toil} berikutnya \cite{beyer2016}.
+
+Analoginya seperti petugas administrasi yang setiap pagi menyalin angka dari lima laporan rumah
+sakit ke satu lembar kerja. Pekerjaan itu perlu, tetapi tidak membuat laporan besok lebih mudah.
+Bila jumlah rumah sakit bertambah, waktu menyalinnya ikut bertambah. Satu minggu yang dipakai untuk
+membuat laporan otomatis membebaskan petugas itu dari pekerjaan yang sama selamanya.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Petugas TI di setiap rumah sakit menyalakan ulang adaptor SIMRS setiap pagi karena
+        pemakaian memorinya terus naik. Satu kali penyalaan ulang butuh sekitar 20 menit. Untuk 5
+        rumah sakit, totalnya 100 menit per hari, atau sekitar 50 jam per bulan. Pemeriksaan
+        kesehatan otomatis yang menyalakan ulang adaptor saat dibutuhkan (Bab 8) menghapus
+        pekerjaan ini, sambil kebocoran memorinya diperbaiki vendor.
+  \item Laporan ketersediaan bulanan untuk direksi disusun dari tangkapan layar dasbor oleh tiga
+        orang selama dua hari, atau enam hari kerja per bulan. Laporan SLO yang dibuat otomatis
+        dari penyimpanan metrik menggantikannya.
+\end{enumerate}
+
+\subsection{Alerting yang Bermakna}
+
+\textit{Alert} yang terlalu sering membuat petugas jaga berhenti memperhatikannya. Buku SRE Google
+memberi tiga syarat untuk \textit{alert} yang memanggil manusia: mendesak, dapat ditindaklanjuti,
+dan membutuhkan pertimbangan manusia \cite{beyer2016}. Buku yang sama menganjurkan
+\textit{alert} pada gejala yang dirasakan pengguna, bukan pada penyebab di dalam mesin. Untuk
+dasbor, buku itu menyebut empat sinyal emas (\textit{golden signals}): latensi, lalu lintas,
+kegagalan, dan saturasi. Pemakaian prosesor 85 persen adalah penyebab yang mungkin. Pasien gagal
+memesan adalah gejala.
+
+Analoginya seperti alarm asap di dapur. Alarm yang berbunyi setiap kali ada yang menggoreng ikan
+akhirnya dicabut baterainya oleh penghuni rumah. Saat kebakaran sungguhan terjadi, alarm itu diam.
+Alarm yang baik berbunyi saat ada bahaya bagi penghuni, bukan setiap ada asap.
+
+\textit{Alert} berbasis SLO memakai laju pembakaran. \textit{Workbook} menganjurkan \textit{alert}
+dengan dua jendela: jendela panjang memastikan anggaran yang terpakai cukup berarti, dan jendela
+pendek, sekitar seperdua belas jendela panjang, memastikan pembakaran masih berlangsung
+\cite{c11-sre-workbook}. Tabel \ref{tab:ch11-alert-burn-rate} memuat parameter yang dianjurkan
+untuk jendela SLO 30 hari. Medikara memakai parameter ini apa adanya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{\textit{Alert} laju pembakaran untuk jendela SLO 30 hari, menurut \textit{Workbook}}
+  \label{tab:ch11-alert-burn-rate}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Anggaran terpakai} & \textbf{Jendela panjang} & \textbf{Jendela pendek} &
+      \textbf{Laju pembakaran} & \textbf{Pemberitahuan} \\ \hline
+    2 persen & 1 jam & 5 menit & 14,4 & Memanggil petugas jaga saat itu juga \\ \hline
+    5 persen & 6 jam & 30 menit & 6 & Memanggil petugas jaga saat itu juga \\ \hline
+    10 persen & 3 hari & 6 jam & 1 & Tiket untuk dikerjakan pada jam kerja \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Sistem pemantauan lama mengirim sekitar 300 \textit{alert} per minggu, sebagian besar
+        tentang pemakaian prosesor dan disk. Setelah diganti dengan \textit{alert} laju
+        pembakaran untuk tiga perjalanan pada Tabel \ref{tab:ch11-sli-medikara}, petugas jaga
+        menerima rata-rata empat panggilan per bulan, dan semuanya membutuhkan tindakan.
+  \item Pada gangguan basis data hari ke-17 di Gambar \ref{fig:ch11-sisa-anggaran}, hampir semua
+        pemesanan gagal, sehingga \textit{alert} laju pembakaran 14,4 berbunyi sekitar lima menit
+        setelah gangguan mulai. Sebelumnya, keluhan pertama dari pusat layanan pelanggan biasanya
+        baru masuk sekitar 25 menit setelah gangguan mulai.
+\end{enumerate}
+
+\subsection{Penanganan Insiden}
+
+Insiden adalah kejadian yang mengganggu layanan dan membutuhkan tanggapan terkoordinasi. Buku SRE
+Google memisahkan empat peran selama insiden berlangsung \cite{beyer2016}. Komandan insiden
+memimpin dan memutuskan. Pelaksana operasi adalah satu-satunya pihak yang mengubah sistem.
+Penanggung jawab komunikasi mengabari pihak yang terdampak. Penanggung jawab perencanaan mencatat
+linimasa, menyiapkan pergantian sif, dan mengurus kebutuhan jangka lebih panjang. Prinsip lainnya:
+satu tempat komando yang diketahui semua orang, satu dokumen insiden yang terus diperbarui, dan
+serah terima yang tegas bila komandan berganti. Gambar \ref{fig:ch11-alur-insiden} memperlihatkan
+alur dan perannya. Urutannya penting: dampak bagi pasien dihentikan lebih dahulu, penyebab dicari
+belakangan.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch11-alur-insiden.tex}
+  \caption{Alur penanganan insiden dari deteksi sampai tindak lanjut, dengan empat peran yang
+           dipisahkan selama insiden berlangsung}
+  \label{fig:ch11-alur-insiden}
+\end{figure}
+
+Analoginya seperti kode biru di rumah sakit. Ketika kode biru diumumkan, satu orang memimpin,
+satu orang melakukan kompresi dada, satu orang menyiapkan obat, dan satu orang mencatat waktu
+setiap tindakan. Tidak semua orang mengerjakan hal yang sama. Tim yang tidak membagi peran justru
+saling menghalangi di samping tempat tidur pasien.
+
+\subsection{Postmortem tanpa Menyalahkan}
+
+\textit{Postmortem} adalah catatan tertulis tentang sebuah insiden: dampaknya, tindakan yang
+diambil, penyebab utama dan faktor pendukungnya, serta tindak lanjut untuk mencegah insiden serupa.
+\textit{Postmortem} tanpa menyalahkan berfokus pada sistem dan proses, bukan pada individu. Dasarnya
+adalah anggapan bahwa setiap orang bertindak dengan niat baik berdasarkan informasi yang dimilikinya
+saat itu \cite{beyer2016}. Bila orang dihukum karena melaporkan kesalahan, kesalahan berikutnya
+disembunyikan, dan organisasi kehilangan kesempatan belajar.
+
+Analoginya seperti penyelidikan kecelakaan penerbangan. Tujuan penyelidikan adalah mencegah
+kecelakaan serupa, bukan mencari pihak yang dihukum. Laporannya memuat urutan kejadian, faktor
+penyebab, dan rekomendasi bagi maskapai, pabrik pesawat, dan pengatur. Karena tujuannya jelas,
+saksi lebih terbuka menceritakan apa yang terjadi.
+
+\textit{Postmortem} Medikara memuat tujuh bagian: ringkasan, dampak bagi pasien dan anggaran yang
+terpakai, linimasa, penyebab utama dan faktor pendukung, hal yang berjalan baik, hal yang
+berjalan buruk, serta tindak lanjut dengan pemilik dan tenggat. Kasus berikut menerapkannya.
+
+\begin{kasus}[title={Kasus Medikara Health: Postmortem Gangguan Medikara+ saat Program Vaksinasi}]
+  Bab 5 mengisahkan lonjakan Medikara+ setelah notifikasi program vaksinasi influenza: pengguna
+  aktif bersamaan naik dari sekitar 1.200 menjadi 9.600 dalam 20 menit, waktu respons naik dari 1,5
+  menjadi 14 detik, dan 23 persen pemesanan gagal pada jam pertama. Tim transformasi menulis ulang
+  \textit{postmortem} kejadian itu dengan format baru. Linimasanya ada di Tabel
+  \ref{tab:ch11-linimasa-postmortem}.
+
+  Dampaknya dihitung ulang dengan SLO yang kini berlaku. Misalkan pada jam pertama ada sekitar
+  6.000 upaya pemesanan. Sebanyak 23 persen gagal, atau sekitar 1.380 upaya. Angka ini hampir sepuluh
+  kali anggaran 30 hari, yang hanya 140 upaya. Satu jam pada saat paling sibuk menghabiskan
+  anggaran sebulan. Inilah alasan SLI berbasis permintaan lebih jujur daripada SLI berbasis waktu:
+  jam yang paling penting bagi pasien diberi bobot paling besar.
+
+  \textit{Postmortem} tidak menyalahkan staf pemasaran yang mengirim notifikasi. Pertanyaannya
+  diganti: mengapa sistem mengizinkan satu notifikasi terkirim ke semua pengguna sekaligus tanpa
+  memberi tahu tim operasi? Lima faktor ditemukan. Kapasitas hanya bisa ditambah secara vertikal.
+  Sesi tersimpan di memori server. Waktu menyala mesin baru 11 menit. Notifikasi massal tidak
+  dikirim bertahap. \textit{Alert} hanya memantau prosesor dan tenggelam di antara puluhan
+  \textit{alert} rutin.
+
+  Tindak lanjutnya empat butir, masing-masing dengan pemilik dan tenggat. Notifikasi massal dikirim
+  bertahap per 10 menit, dipegang tim kanal digital. \textit{Alert} laju pembakaran untuk pemesanan
+  dipasang, dipegang tim platform. Sesi dipindah ke penyimpanan bersama agar kapasitas dapat
+  ditambah secara horizontal, dipegang tim layanan janji temu. Kalender kampanye dibagikan ke tim
+  operasi paling lambat tujuh hari sebelumnya, dipegang bagian pemasaran.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Linimasa \textit{postmortem} gangguan Medikara+ saat program vaksinasi}
+  \label{tab:ch11-linimasa-postmortem}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.4cm}}
+    \hline
+    \textbf{Pukul} & \textbf{Kejadian} & \textbf{Catatan} \\ \hline
+    09.00 & Notifikasi program vaksinasi terkirim ke seluruh pengguna sekaligus & Tim operasi
+      tidak diberi tahu \\ \hline
+    09.06 & \textit{Alert} prosesor berbunyi & Tenggelam di antara sekitar 40 \textit{alert}
+      rutin pagi itu \\ \hline
+    09.20 & Pengguna aktif sekitar 9.600; waktu respons 14 detik & Pemesanan mulai banyak gagal
+      \\ \hline
+    09.27 & Pusat layanan pelanggan melaporkan lonjakan keluhan & Deteksi pertama datang dari
+      manusia \\ \hline
+    09.35 & Vendor memutuskan mengganti mesin dengan ukuran dua kali lipat & Belum ada komandan
+      insiden yang ditunjuk \\ \hline
+    10.15 & Penggantian mesin selesai setelah sekitar 40 menit; semua sesi terputus & Pasien
+      yang sedang memesan harus masuk ulang \\ \hline
+    10.26 & Mesin baru siap setelah memuat jadwal dokter selama sekitar 11 menit & Waktu
+      respons mulai turun \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Pelaporan ke Direksi}
+
+Direksi tidak membutuhkan laju pembakaran, tetapi jawaban atas tiga pertanyaan: apakah perjalanan
+pasien terpenting berjalan baik, apakah risikonya naik, dan apa yang sedang diperbaiki. Laporan
+bulanan Medikara memuat persentase keberhasilan setiap perjalanan kritis dibanding targetnya, sisa
+\textit{error budget} dalam warna hijau, kuning, atau merah, status tindak lanjut insiden besar, dan
+tren tiga bulan. Ukuran kinerja pengiriman dari riset DORA (DevOps Research and Assessment)
+melengkapinya, karena melihat kecepatan dan stabilitas perubahan sekaligus \cite{dora2025}. KPI
+(\textit{Key Performance Indicator}) dan format laporan direksi dibahas rinci di IT40813.
 
 \section{Aktivitas: SLO Layanan Kritis dan Rancangan Observability}
+\label{sec:ch11-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menetapkan SLI, SLO, dan kebijakan error budget untuk dua sampai tiga perjalanan pengguna kritis, beserta sinyal telemetri yang dibutuhkan.
-% Peran dalam tim: anggota non-teknis menentukan arti layanan yang baik dari sisi pasien dan manajemen; anggota teknis menerjemahkannya menjadi SLI terukur, target SLO, dan kebutuhan telemetri; seluruh anggota menyepakati kebijakan error budget.
-% Langkah: (1) pilih dua sampai tiga perjalanan pengguna kritis; (2) rumuskan SLI untuk tiap perjalanan; (3) tetapkan target SLO dan hitung error budget; (4) daftar sinyal telemetri yang dibutuhkan; (5) tulis kebijakan error budget satu halaman.
-% Luaran dan tonggak capstone: C3, SLO layanan kritis dan rancangan observability.
-% Berkas sources yang direncanakan: sources/chapter11/templat-slo.xlsx, sources/chapter11/templat-kebijakan-error-budget.md, sources/chapter11/contoh-opentelemetry/ (opsional)
+\subsection*{Tujuan}
+
+Tim menetapkan SLI, SLO, dan kebijakan \textit{error budget} untuk dua sampai tiga perjalanan
+pengguna yang kritis, beserta sinyal telemetri yang dibutuhkan untuk mengukurnya. Tim memakai
+organisasi nyata yang sudah memberi izin, dengan data yang dianonimkan, atau kasus Medikara Health.
+
+\subsection*{Pembagian Peran}
+
+\begin{itemize}
+  \item Anggota non-teknis menentukan arti ``layanan yang baik'' dari sisi pengguna dan
+        manajemen. Contohnya: berapa lama pasien rela menunggu konfirmasi, dan kapan hasil
+        laboratorium dianggap terlambat.
+  \item Anggota teknis menerjemahkannya menjadi SLI yang terukur, target SLO, titik ukur, dan
+        kebutuhan telemetri.
+  \item Seluruh anggota menyepakati kebijakan \textit{error budget}, termasuk siapa yang memutuskan
+        ketika anggaran habis.
+\end{itemize}
+
+\subsection*{Langkah Kerja}
+
+\begin{enumerate}
+  \item Pilih dua sampai tiga perjalanan pengguna yang kritis. Tulis alasannya: seberapa sering
+        perjalanan itu dipakai, dan apa dampaknya bila gagal.
+  \item Rumuskan SLI untuk setiap perjalanan sebagai rasio peristiwa baik dibagi seluruh
+        peristiwa. Tentukan titik ukurnya.
+  \item Tetapkan target SLO dan jendela waktunya, lalu hitung \textit{error budget} dalam menit dan
+        dalam jumlah permintaan. Skrip \berkas{sources/chapter11/hitung_error_budget.py}
+        membantu perhitungan ini.
+  \item Daftar sinyal telemetri yang dibutuhkan: metrik untuk SLI, \textit{trace} untuk menelusuri
+        perjalanan, dan \textit{log} untuk rincian kesalahan. Tandai data pribadi yang tidak boleh
+        ikut tercatat.
+  \item Tulis kebijakan \textit{error budget} sepanjang satu halaman: zona, tindakan, pihak yang
+        memutuskan, dan syarat \textit{postmortem}.
+\end{enumerate}
+
+\subsection*{Luaran dan Kaitan dengan Capstone}
+
+Luarannya adalah dokumen SLO layanan kritis dan rancangan \textit{observability}, sebagai bagian
+tonggak C3 Kondisi Target. Dokumen ini berisi tabel SLI dan SLO yang mengikuti format Tabel
+\ref{tab:ch11-sli-medikara}, gambar alur telemetri yang mengikuti Gambar
+\ref{fig:ch11-alur-opentelemetry}, dan kebijakan \textit{error budget} satu halaman. Sasaran SLO
+ini dipakai lagi pada Bab 12 untuk menetapkan target pemulihan dan pada Bab 14 sebagai salah satu
+ukuran kemajuan peta jalan.
+
+\subsection*{Kriteria Penilaian}
+
+\begin{itemize}
+  \item SLI berangkat dari pengalaman pengguna (30 persen): rasio peristiwa baik dibagi seluruh
+        peristiwa, diukur sedekat mungkin dengan pengguna.
+  \item Target dan anggaran beralasan (25 persen): target dikaitkan dengan dampak bisnis dan biaya,
+        dan anggaran dihitung benar dalam menit serta jumlah permintaan.
+  \item Rancangan telemetri (25 persen): ketiga sinyal dipetakan ke kebutuhan, dan data pribadi
+        disamarkan atau tidak dicatat.
+  \item Kebijakan \textit{error budget} (20 persen): zona, tindakan, dan pengambil keputusan jelas
+        serta dapat dijalankan.
+\end{itemize}
+
+\subsection*{Berkas Pendukung}
+
+\begin{itemize}
+  \item \berkas{sources/chapter11/templat-slo.md}: templat tabel SLI, SLO, titik ukur, dan
+        kebutuhan telemetri.
+  \item \berkas{sources/chapter11/templat-kebijakan-error-budget.md}: templat kebijakan
+        \textit{error budget} satu halaman.
+  \item \berkas{sources/chapter11/hitung_error_budget.py}: kalkulator \textit{error budget} dan
+        laju pembakaran.
+  \item \berkas{sources/chapter11/contoh-opentelemetry/}: contoh \textit{trace} lintas dua
+        layanan untuk pendalaman teknis.
+\end{itemize}
+
+\subsection*{Pendalaman Teknis (Opsional)}
+
+Anggota teknis menjalankan contoh di \berkas{sources/chapter11/contoh-opentelemetry/} dan
+menunjukkan satu \textit{trace} lintas dua layanan dengan \texttt{trace\_id} yang sama.
+Instrumentasi dan uji beban hanya untuk sistem milik tim sendiri atau yang sudah berizin
+tertulis. Telemetri dari organisasi nyata tidak boleh memuat data pribadi pasien atau karyawan.
 
 \section{Ringkasan}
 
-% TODO
+Dasbor yang hijau belum menjamin pasien terlayani. \textit{Monitoring} menjawab pertanyaan yang
+sudah ditentukan sebelumnya, misalnya apakah pemakaian prosesor melewati ambang. \textit{Observability}
+memungkinkan tim menjawab pertanyaan baru, misalnya mengapa hanya pemesanan ke Bandung yang gagal.
+Kebutuhan ini makin terasa setelah sistem dipecah menjadi banyak layanan, karena satu permintaan
+melintasi komponen milik tim dan vendor yang berbeda. Manajemen dan auditor juga membutuhkannya
+untuk bukti tingkat layanan, rekonstruksi insiden sesuai UU PDP, dan pemeriksaan kontrol akses.
+
+Tiga sinyal telemetri saling melengkapi. Metrik murah dan cocok untuk dasbor serta \textit{alert}.
+\textit{Log} merekam rincian setiap kejadian. \textit{Trace} menunjukkan perjalanan satu permintaan
+dan langkah tempat waktunya habis, seperti nomor resi paket. OpenTelemetry menyediakan cara baku
+dan netral vendor untuk menghasilkan ketiganya, sedangkan Collector menjadi titik kendali untuk
+menyamarkan data pasien dan menekan biaya penyimpanan.
+
+SLI mengukur layanan dari sisi pengguna sebagai rasio peristiwa baik dibagi seluruh peristiwa. SLO
+menetapkan targetnya dalam satu jendela waktu. SLA menambahkan konsekuensi bagi pihak luar dan
+biasanya lebih longgar daripada SLO. Target 100 persen hampir selalu keliru, karena pasien tidak
+dapat merasakan bedanya, biayanya melonjak, ketergantungan membatasinya, dan tidak ada ruang lagi
+untuk perubahan.
+
+\textit{Error budget} mengubah target menjadi anggaran yang dapat dibelanjakan. Untuk pemesanan
+Medikara+, SLO 99,5 persen berarti 140 upaya gagal per 30 hari. Laju pembakaran menunjukkan
+seberapa cepat anggaran itu habis, dan menjadi dasar \textit{alert} yang hanya berbunyi ketika
+pasien benar-benar terdampak. Kebijakan yang disepakati sebelum ada masalah membuat keputusan
+merilis atau menahan perubahan berangkat dari angka, bukan dari suara paling keras.
+
+Praktik SRE menjaga keseimbangan itu sehari-hari: \textit{toil} dibatasi dan diotomasi, \textit{alert}
+dipasang pada gejala, insiden ditangani dengan peran yang terpisah, dan setiap insiden besar
+dipelajari lewat \textit{postmortem} tanpa menyalahkan. Pesan utama bab ini: keandalan diukur dari
+pengalaman pasien, ditargetkan secukupnya, dan dibelanjakan dengan sadar untuk membeli kecepatan
+perubahan.
 
 \section{Latihan}
 
+Ketiga latihan berikut memakai angka Medikara Health dari bab ini. Hasil setiap mahasiswa boleh
+berbeda. Yang dinilai adalah penalaran dan perbandingannya.
+
+\subsection*{Latihan 1: Waktu Tidak Tersedia dan Biayanya}
+
+Latihan ini membuktikan bahwa selisih target yang tampak kecil mengubah waktu toleransi dan biaya
+secara besar. Langkah kerjanya:
 \begin{enumerate}
-  \item Hitung waktu tidak tersedia yang diizinkan dalam satu bulan untuk SLO ketersediaan 99,5 persen dan 99,9 persen. Jelaskan dampak selisihnya bagi biaya.
-  \item Mengapa target SLO 100 persen hampir selalu merupakan keputusan yang buruk?
-  \item Usulkan satu SLI untuk layanan janji temu yang mencerminkan pengalaman pasien, bukan sekadar kondisi \textit{server}.
+  \item Hitung jumlah menit dalam jendela 30 hari.
+  \item Hitung \textit{error budget} dalam persen dan menit untuk target 99,5 dan 99,9 persen.
+  \item Hitung upaya pemesanan gagal yang diizinkan dari sekitar 28.000 upaya per 30 hari.
+  \item Tentukan rancangan minimal tiap target: jumlah zona, jam jaga petugas, dan cara merilis.
+  \item Perkirakan biaya bulanan tiap rancangan, lalu bandingkan dengan selisih menitnya.
+\end{enumerate}
+
+Tabel \ref{tab:ch11-lat1-contoh} memberi contoh untuk dua target lain. Tabel
+\ref{tab:ch11-lat1-hasil} adalah lembar isian.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, contoh terisi untuk target 99,0 dan 99,95 persen}
+  \label{tab:ch11-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.5cm}}
+    \hline
+    \textbf{Target} & \textbf{Anggaran} & \textbf{Menit per 30 hari} & \textbf{Upaya gagal} &
+      \textbf{Rancangan minimal} & \textbf{Biaya per bulan} \\ \hline
+    99,0\% & 1\% & 432 & 280 & Satu zona, dua replika, petugas jaga pada jam kerja, rilis kapan
+      saja & Misalkan Rp38 juta \\ \hline
+    99,95\% & 0,05\% & 21,6 & 14 & Dua zona, basis data tereplikasi, petugas jaga 24 jam, rilis
+      bertahap & Misalkan Rp96 juta \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, lembar isian untuk target 99,5 dan 99,9 persen}
+  \label{tab:ch11-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.5cm}}
+    \hline
+    \textbf{Target} & \textbf{Anggaran} & \textbf{Menit per 30 hari} & \textbf{Upaya gagal} &
+      \textbf{Rancangan minimal} & \textbf{Biaya per bulan} \\ \hline
+    99,5\% & \dots & \dots & \dots & \dots & \dots \\ \hline
+    99,9\% & \dots & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Berapa kali lipat selisih waktu tidak tersedia antara 99,5 dan 99,9 persen? Apakah pasien
+        akan merasakan selisih itu, mengingat pasien masih dapat memesan lewat telepon?
+  \item Berapa biaya tambahan per menit waktu tersedia yang ``dibeli'' dengan menaikkan target?
+  \item Dalam kondisi apa selisih biaya itu layak dibayar Medikara Health?
+\end{enumerate}
+
+\subsection*{Latihan 2: Mengapa Target 100 Persen Keliru}
+
+Latihan ini membuktikan bahwa keandalan sebuah perjalanan dibatasi oleh rantai ketergantungannya,
+sehingga target 100 persen tidak dapat dicapai dan tidak berguna. Langkah kerjanya:
+\begin{enumerate}
+  \item Daftar semua komponen yang dilalui perjalanan, mulai dari jaringan pasien.
+  \item Catat target ketersediaan setiap komponen.
+  \item Kalikan target itu berurutan untuk memperoleh ketersediaan gabungan.
+  \item Bandingkan hasil akhirnya dengan target 100 persen.
+  \item Hitung \textit{error budget} untuk target 100 persen dan akibatnya bagi rilis fitur baru.
+\end{enumerate}
+
+Tabel \ref{tab:ch11-lat2-contoh} memberi contoh untuk perjalanan mengambil hasil laboratorium,
+dengan target komponen berupa angka rekaan. Tabel \ref{tab:ch11-lat2-hasil} adalah lembar isian.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, contoh terisi untuk perjalanan mengambil hasil laboratorium}
+  \label{tab:ch11-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{3.4cm}}
+    \hline
+    \textbf{Komponen} & \textbf{Target ketersediaan} & \textbf{Gabungan sampai komponen ini} \\ \hline
+    Jaringan seluler pasien & 99,0\% & 99,00\% \\ \hline
+    \textit{API gateway} & 99,95\% & 98,95\% \\ \hline
+    Layanan hasil laboratorium & 99,9\% & 98,85\% \\ \hline
+    Sistem informasi laboratorium & 99,5\% & 98,36\% \\ \hline
+    Penyimpanan berkas hasil & 99,99\% & 98,35\% \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, lembar isian untuk perjalanan membuat janji temu}
+  \label{tab:ch11-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{3.4cm}}
+    \hline
+    \textbf{Komponen} & \textbf{Target ketersediaan} & \textbf{Gabungan sampai komponen ini} \\ \hline
+    Jaringan seluler pasien & \dots & \dots \\ \hline
+    \textit{API gateway} & \dots & \dots \\ \hline
+    Layanan janji temu & \dots & \dots \\ \hline
+    Layanan jadwal dokter & \dots & \dots \\ \hline
+    Adaptor SIMRS & \dots & \dots \\ \hline
+    Layanan notifikasi & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Komponen mana yang paling menurunkan angka gabungan, dan apa artinya bagi prioritas?
+  \item Jaringan seluler pasien berada di luar kendali Medikara. Bagaimana kenyataan ini
+        memengaruhi cara memilih target SLO yang masuk akal?
+  \item Bila direktur pelayanan tetap meminta 100 persen, berapa rilis fitur baru yang masih boleh
+        dilakukan dalam setahun menurut kebijakan pada Tabel \ref{tab:ch11-kebijakan-error-budget}?
+\end{enumerate}
+
+\subsection*{Latihan 3: SLI Janji Temu dari Sisi Pasien}
+
+Latihan ini membuktikan bahwa SLI yang baik diukur dari pengalaman pasien, bukan dari kondisi
+server. Langkah kerjanya:
+\begin{enumerate}
+  \item Tulis langkah-langkah perjalanan pasien saat membuat janji temu lewat Medikara+.
+  \item Tentukan peristiwa ``baik'' dari sisi pasien, misalnya konfirmasi dalam batas waktu tertentu.
+  \item Daftar tiga kandidat SLI, termasuk minimal satu yang hanya mengukur kondisi server.
+  \item Nilai tiap kandidat: rumus rasio, titik ukur, kedekatan dengan pasien, dan kelemahannya.
+  \item Pilih satu kandidat dan tulis rumusnya secara lengkap.
+\end{enumerate}
+
+Tabel \ref{tab:ch11-lat3-contoh} memberi contoh untuk perjalanan mengambil hasil laboratorium.
+Tabel \ref{tab:ch11-lat3-hasil} adalah lembar isian untuk perjalanan membuat janji temu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, contoh terisi untuk perjalanan mengambil hasil laboratorium}
+  \label{tab:ch11-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kandidat SLI} & \textbf{Titik ukur} & \textbf{Dekat dengan pasien} & \textbf{Kelemahan} \\ \hline
+    Pemakaian prosesor server hasil laboratorium di bawah 80 persen & Server & Rendah & Bukan
+      rasio peristiwa; server bisa santai saat hasil belum tersinkron \\ \hline
+    Permintaan halaman hasil yang dijawab tanpa kegagalan, dibagi seluruh permintaan halaman &
+      \textit{API gateway} & Sedang & Halaman terbuka, tetapi hasil terbaru bisa belum ada \\ \hline
+    Hasil yang tampil dalam 30 menit setelah divalidasi, dibagi seluruh hasil yang divalidasi &
+      Sistem laboratorium dan aplikasi & Tinggi & Butuh jam yang selaras di dua sistem \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, lembar isian untuk perjalanan membuat janji temu}
+  \label{tab:ch11-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kandidat SLI} & \textbf{Titik ukur} & \textbf{Dekat dengan pasien} & \textbf{Kelemahan} \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada kasus Pendahuluan, kandidat mana yang akan menangkap 1.140 keluhan pasien Bandung,
+        dan kandidat mana yang tetap hijau?
+  \item Bila SLI pilihan diukur dari aplikasi di ponsel, bagaimana tim memisahkan kegagalan
+        akibat jaringan pasien dari kegagalan akibat Medikara sendiri?
 \end{enumerate}

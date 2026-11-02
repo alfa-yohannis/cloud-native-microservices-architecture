@@ -1,0 +1,27 @@
+% Lima kualitas sistem yang saling tarik-menarik. Setiap sisi segi lima
+% menandai satu pasangan yang sering bertentangan, dengan contoh singkatnya.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  kualitas/.style={draw, rounded corners, align=center, minimum height=0.85cm,
+                   text width=2.1cm, fill=blue!8, font=\scriptsize\bfseries},
+  tarik/.style={{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}, thick, red!60!black,
+                dashed},
+  catatan/.style={font=\tiny, gray!40!black, align=center}
+]
+  \node[kualitas] (sedia) at (90:3.1) {Ketersediaan};
+  \node[kualitas] (biaya) at (18:3.1) {Biaya};
+  \node[kualitas] (skala) at (-54:3.1) {Skalabilitas};
+  \node[kualitas] (aman) at (-126:3.1) {Keamanan};
+  \node[kualitas] (ubah) at (162:3.1) {Kecepatan\\perubahan};
+
+  \node[draw, rounded corners, align=center, fill=praditagreen!15, text width=2.9cm,
+        minimum height=1.1cm, font=\scriptsize] at (0,0)
+    {\textbf{Keputusan arsitektur}\\[2pt]
+     {\tiny\mdseries memilih titik seimbang\\dan menuliskan alasannya}};
+
+  \draw[tarik] (sedia) -- node[catatan, above right=-1pt] {cadangan di dua lokasi\\menambah biaya} (biaya);
+  \draw[tarik] (biaya) -- node[catatan, right=2pt] {kapasitas cadangan\\tetap dibayar} (skala);
+  \draw[tarik] (skala) -- node[catatan, below=0.55cm] {lebih banyak komponen,\\lebih banyak celah} (aman);
+  \draw[tarik] (aman) -- node[catatan, left=2pt] {pemeriksaan tambahan\\memperlambat rilis} (ubah);
+  \draw[tarik] (ubah) -- node[catatan, above left=-1pt] {perubahan sering\\membuka peluang gangguan} (sedia);
+\end{tikzpicture}

@@ -1,0 +1,45 @@
+% Empat mata kuliah peminatan menyumbang ke satu cetak biru, disusun lewat
+% empat tonggak capstone. Dipakai di Bab 01 dan slide Pertemuan 01.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  kotak/.style={draw, rounded corners, align=center, minimum height=1.05cm,
+                text width=2.35cm},
+  tonggak/.style={draw, rounded corners, align=center, minimum height=0.95cm,
+                  text width=2.35cm, font=\scriptsize\bfseries},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[kotak, fill=blue!8] (ea) at (0,0)
+    {\textbf{IT40513}\\{\tiny\mdseries Enterprise Architecture\\\& Digital Blueprint}};
+  \node[kotak, fill=blue!8] (api) at (3,0)
+    {\textbf{IT40613}\\{\tiny\mdseries Digital Platform\\\& API Economy}};
+  \node[kotak, fill=orange!12] (cloud) at (6,0)
+    {\textbf{IT40713}\\{\tiny\mdseries Cloud-Native \&\\Microservices Architecture}};
+  \node[kotak, fill=blue!8] (grc) at (9,0)
+    {\textbf{IT40813}\\{\tiny\mdseries IT Governance,\\Risk \& Compliance}};
+
+  \node[draw, rounded corners, align=center, fill=praditagreen!15,
+        text width=6.2cm, minimum height=1cm] (cetak) at (4.5,-2.1)
+    {\textbf{Cetak Biru Transformasi Digital}\\
+     {\tiny\mdseries satu organisasi nyata atau Medikara Health}};
+
+  \foreach \asal in {ea, api, cloud, grc} {
+    \draw[panah] (\asal.south) -- (\asal.south |- cetak.north);
+  }
+
+  \node[tonggak, fill=blue!8] (c1) at (0,-4.4)
+    {C1 Konteks\\dan Strategi\\{\tiny\mdseries Pertemuan 1 sampai 3}};
+  \node[tonggak, fill=blue!8] (c2) at (3,-4.4)
+    {C2 Kondisi\\Saat Ini\\{\tiny\mdseries 4 sampai 7, menjelang UTS}};
+  \node[tonggak, fill=blue!8] (c3) at (6,-4.4)
+    {C3 Kondisi\\Target\\{\tiny\mdseries 8 sampai 11}};
+  \node[tonggak, fill=green!10] (c4) at (9,-4.4)
+    {C4 Peta Jalan\\dan Tata Kelola\\{\tiny\mdseries 12 sampai 14, menjelang UAS}};
+
+  \draw[panah] (c1) -- (c2);
+  \draw[panah] (c2) -- (c3);
+  \draw[panah] (c3) -- (c4);
+
+  \node[draw, dashed, gray, rounded corners, inner sep=5pt, fit=(c1) (c4)] (deret) {};
+  \draw[panah] (cetak.south) -- (cetak.south |- deret.north)
+    node[midway, right, font=\tiny, gray] {disusun bertahap lewat empat tonggak};
+\end{tikzpicture}

@@ -1,0 +1,31 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  fase/.style={draw, rounded corners, fill=blue!8, minimum width=3.4cm,
+    minimum height=1.25cm, align=center, text width=3.2cm},
+  pusat/.style={draw, circle, fill=praditagreen!15, minimum size=2.1cm,
+    align=center, font=\scriptsize\bfseries}
+]
+  \node[pusat] (nilai) at (0,0) {Nilai bisnis\\teknologi};
+
+  \node[fase] (inform) at (0,2.7)
+    {\textbf{Inform}\\{\tiny\mdseries Siapa memakai apa, dan berapa biayanya?}};
+  \node[fase, fill=orange!12] (optimize) at (3.9,-1.6)
+    {\textbf{Optimize}\\{\tiny\mdseries Di mana pemakaian dan tarif bisa lebih efisien?}};
+  \node[fase] (operate) at (-3.9,-1.6)
+    {\textbf{Operate}\\{\tiny\mdseries Bagaimana keputusan dijalankan dan dipantau terus?}};
+
+  % Siklus berjalan searah jarum jam dan diulang terus.
+  \draw[panah] (inform.east) to[bend left=30] (optimize.north);
+  \draw[panah] (optimize.south west) to[bend left=25] (operate.south east);
+  \draw[panah] (operate.north) to[bend left=30] (inform.west);
+
+  % Setiap fase melayani tujuan yang sama di tengah.
+  \draw[thick, gray] (inform.south) -- (nilai.north);
+  \draw[thick, gray] (optimize.west) -- (nilai.south east);
+  \draw[thick, gray] (operate.east) -- (nilai.south west);
+
+  \node[align=center, gray!60!black] at (0,-3.3)
+    {{\tiny\mdseries Tiap \textit{capability} bergerak bertahap: \textit{crawl},
+     \textit{walk}, \textit{run}}};
+\end{tikzpicture}

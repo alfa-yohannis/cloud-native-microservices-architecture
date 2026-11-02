@@ -1,0 +1,43 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  ukur/.style={{Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}, thick},
+  titik/.style={circle, draw, thick, minimum size=0.32cm, inner sep=0pt},
+  kotak/.style={draw, rounded corners, align=center, text width=4.4cm,
+    font=\tiny, inner sep=3pt}
+]
+  % Garis waktu.
+  \draw[panah] (-0.4,0) -- (10.9,0) node[right, font=\tiny] {waktu};
+
+  % Tiga titik penting.
+  \node[titik, fill=blue!8] (pulih) at (2.0,0) {};
+  \node[titik, fill=red!22] (bencana) at (5.0,0) {};
+  \node[titik, fill=green!10] (normal) at (9.8,0) {};
+  \node[align=center, anchor=north, font=\tiny] at (2.0,-0.3)
+    {titik pemulihan terakhir\\yang bersih\\\textbf{contoh: 14.15}};
+  \node[align=center, anchor=north, font=\tiny] at (5.0,-0.3)
+    {bencana terjadi\\\textbf{contoh: 14.20}};
+  \node[align=center, anchor=north, font=\tiny] at (9.8,-0.3)
+    {layanan kembali\\melayani\\\textbf{contoh: 15.05}};
+
+  % Ukuran RPO dan RTO.
+  \draw[ukur, praditagreen] (2.0,0.75) -- (5.0,0.75);
+  \draw[thin, gray] (2.0,0.2) -- (2.0,0.95);
+  \draw[thin, gray] (5.0,0.2) -- (5.0,0.95);
+  \draw[thin, gray] (9.8,0.2) -- (9.8,0.95);
+  \node[font=\scriptsize\bfseries, praditagreen, anchor=south] at (3.5,0.8)
+    {RPO: data yang hilang};
+  \draw[ukur, red!60!black] (5.0,0.75) -- (9.8,0.75);
+  \node[font=\scriptsize\bfseries, red!60!black, anchor=south] at (7.4,0.8)
+    {RTO: waktu layanan berhenti};
+  \node[font=\tiny, anchor=north] at (3.5,0.7) {contoh: 5 menit};
+  \node[font=\tiny, anchor=north] at (7.4,0.7) {contoh: 45 menit};
+
+  % Pertanyaan bisnis di balik kedua angka.
+  \node[kotak, fill=blue!8] at (2.9,-2.05)
+    {\textbf{Pertanyaan RPO:} berapa menit data terakhir boleh hilang?\\
+    Ditentukan oleh seberapa sering data dicadangkan atau direplikasi.};
+  \node[kotak, fill=orange!12] at (8.1,-2.05)
+    {\textbf{Pertanyaan RTO:} berapa lama layanan boleh berhenti?\\
+    Ditentukan oleh strategi pemulihan dan kesiapan lokasi kedua.};
+\end{tikzpicture}

@@ -1,0 +1,14 @@
+# Contoh catatan koneksi 30 hari antaraplikasi Medikara Health (angka rekaan). Dibaca oleh kelompok-pindah.py.
+sumber,tujuan,port,jumlah_koneksi_30_hari,boleh_dipisah
+SIMRS Jakarta,Jembatan BPJS,443,18240,ya
+Jembatan BPJS,BPJS Kesehatan,443,18190,tidak
+SIMRS Jakarta,Adaptor SATUSEHAT,443,9620,ya
+Adaptor SATUSEHAT,SATUSEHAT,443,9575,tidak
+Aplikasi apotek,SIMRS Jakarta,1433,30410,tidak
+Sistem laboratorium,SIMRS Jakarta,2575,12880,tidak
+Medikara+,SIMRS Jakarta,443,52300,ya
+SIMRS Jakarta,Folder bersama,445,30,tidak
+Folder bersama,ERP keuangan,445,30,tidak
+ERP keuangan,Direktori akun,389,7410,tidak
+Portal dokumen akreditasi,Direktori akun,389,960,tidak
+Aplikasi antrean lama Jakarta,SIMRS Jakarta,1433,0,tidak

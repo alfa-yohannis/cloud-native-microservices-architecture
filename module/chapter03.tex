@@ -1,4 +1,5 @@
 \chapter{Ekonomi Cloud, FinOps, dan Keberlanjutan}
+\label{ch:ch03}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,56 +10,1091 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: bagian keuangan Medikara Health terbiasa dengan anggaran server lima tahunan dan khawatir tagihan cloud bulanan tidak terkendali; bab ini menjelaskan cara memahami, memperkirakan, dan mengelola biaya cloud bersama-sama.
+Selama ini Direktorat Keuangan Medikara Health mengenal belanja server sebagai anggaran lima
+tahunan. Setiap rumah sakit mengajukan peremajaan server, direksi menyetujuinya, lalu nilai
+pembelian itu disusutkan dalam laporan keuangan selama lima tahun. Polanya mudah diramalkan: angka
+besar di awal, lalu hampir tidak ada kejutan sampai peremajaan berikutnya. Strategi "Satu Pasien,
+Satu Rekam Medis" mengubah pola itu karena sebagian sistem akan berpindah ke \textit{cloud}. Tagihan
+datang setiap bulan, besarnya mengikuti pemakaian, dan angkanya dapat berubah tanpa ada keputusan
+direksi yang baru. Bagian keuangan khawatir tagihan itu tidak terkendali. Tim teknologi informasi
+(TI) khawatir dianggap boros tanpa ada data yang bisa dipakai untuk membela diri.
+
+Kekhawatiran itu beralasan. Survei Flexera tahun 2026 mencatat bahwa responden memperkirakan 29
+persen belanja Infrastructure as a Service (IaaS) dan Platform as a Service (PaaS) mereka terbuang
+\cite{flexera2026}. Jalan keluarnya bukan menolak \textit{cloud}, melainkan cara baru mengelola
+biaya teknologi: keuangan, tim teknik, pemilik layanan, dan pimpinan membaca data yang sama, lalu
+mengambil keputusan bersama, seperti diperlihatkan Gambar \ref{fig:ch03-meja-biaya}. Bab ini
+menyusun cara itu dalam lima langkah: struktur biaya dan Total Cost of Ownership (TCO), model harga
+\textit{cloud}, FinOps, alokasi biaya dan biaya per unit, serta jejak karbon.
+
+Gambar \ref{fig:ch03-meja-biaya} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch03-diagram-konsep.png}
+  \caption{FinOps: dari data biaya ke keputusan berulang}
+  \label{fig:ch03-meja-biaya}
+\end{figure}
+
+Rujukan utama bab ini adalah buku \textit{Cloud FinOps} karya Storment dan Fuller
+\cite{storment2023}, FinOps Framework 2026 dari FinOps Foundation \cite{finops2026}, spesifikasi
+FinOps Open Cost and Usage Specification (FOCUS) versi 1.4 \cite{c03-focus}, serta ISO/IEC
+21031:2024 tentang Software Carbon Intensity (SCI) \cite{iso21031}. Hasil bab ini adalah model biaya
+awal dan sasaran nilai \textit{cloud} untuk tonggak capstone C1.
 
 \section{CapEx, OpEx, dan Total Cost of Ownership}
 
-% TODO
-% Cakupan: perbedaan CapEx dan OpEx serta dampaknya pada laporan keuangan; komponen TCO, termasuk biaya yang sering terlupa (lisensi, tenaga kerja, migrasi, egress); cara menyusun perbandingan TCO yang jujur; business case disinggung singkat (dibahas rinci di IT40513).
-% Kasus Medikara: perbandingan TCO kasar SIMRS satu rumah sakit di pusat data sendiri dan di cloud.
+Capital Expenditure (CapEx) adalah belanja untuk memperoleh aset yang manfaatnya lebih dari satu
+tahun, misalnya server, perangkat penyimpanan, dan perlengkapan ruang server. Nilainya dicatat
+sebagai aset di neraca, lalu dibebankan sedikit demi sedikit sebagai penyusutan selama umur
+manfaatnya. Operational Expenditure (OpEx) adalah belanja untuk menjalankan kegiatan pada periode
+berjalan, misalnya listrik, gaji, sewa, dan tagihan \textit{cloud}. Nilainya langsung menjadi beban
+di laporan laba rugi pada bulan terjadinya. \textit{Cloud} memindahkan sebagian besar belanja
+infrastruktur dari CapEx ke OpEx: organisasi tidak lagi membeli server, tetapi membayar pemakaian.
+
+Analoginya seperti memilih antara membeli mobil operasional dan memakai taksi daring. Mobil yang
+dibeli menghabiskan uang besar sekali di awal, dicatat sebagai aset, dan tetap disusutkan walaupun
+lebih sering diparkir. Taksi dibayar per perjalanan, tanpa aset, tanpa biaya parkir dan servis.
+Namun bila taksi dipakai sepanjang hari setiap hari, total ongkosnya bisa melampaui cicilan mobil.
+Pilihan yang tepat ditentukan oleh pola pemakaian, bukan oleh mana yang terdengar lebih modern.
+
+Tabel \ref{tab:ch03-capex-opex} merangkum perbedaan keduanya dari sisi yang biasa ditanyakan bagian
+keuangan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbandingan CapEx pada pusat data sendiri dan OpEx pada \textit{cloud}}
+  \label{tab:ch03-capex-opex}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{CapEx (pusat data sendiri)} & \textbf{OpEx (\textit{cloud})} \\ \hline
+    Contoh belanja & Server, penyimpanan, perangkat jaringan, ruang server & Tagihan komputasi,
+      penyimpanan, dan transfer data per bulan \\ \hline
+    Pencatatan & Aset di neraca, disusutkan selama umur manfaat & Beban di laba rugi pada bulan
+      pemakaian \\ \hline
+    Pola arus kas & Keluar besar di awal, lalu kecil dan stabil & Kecil di awal, naik turun
+      mengikuti pemakaian \\ \hline
+    Saat keputusan & Sekali, dalam siklus anggaran modal & Terus-menerus, setiap kali sumber daya
+      dibuat atau diubah \\ \hline
+    Risiko utama & Kapasitas menganggur karena dibeli untuk beban puncak & Tagihan membengkak karena
+      sumber daya lupa dimatikan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Perpindahan dari CapEx ke OpEx punya dua konsekuensi. Pertama, arus kas menjadi lebih ringan di
+awal, sehingga layanan baru dapat dimulai tanpa menunggu siklus anggaran modal tahun berikutnya.
+Kedua, biaya menjadi variabel. Anggaran tahunan yang dikunci di awal tahun tidak lagi cukup sebagai
+alat kendali, karena keputusan yang menambah biaya kini diambil setiap hari oleh tim teknik, bukan
+sekali setahun oleh direksi.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Peremajaan server SIMRS (Sistem Informasi Manajemen Rumah Sakit) di rumah sakit Bekasi
+        bernilai Rp2,4 miliar dan disusutkan selama lima tahun, sehingga laporan laba rugi
+        menanggung Rp480 juta per tahun. Server itu dibeli untuk beban puncak pagi hari, padahal
+        pemanfaatan prosesornya rata-rata hanya sekitar 25 persen.
+  \item Medikara+ dijalankan vendor di \textit{cloud}. Tagihannya Rp57 juta pada bulan biasa dan
+        naik menjadi Rp79,3 juta pada bulan kampanye vaksinasi. Tidak ada aset yang dibeli, tetapi
+        bagian keuangan harus menjelaskan selisih Rp22,3 juta kepada direksi.
+\end{enumerate}
+
+\subsection{Komponen TCO dan Biaya yang Sering Terlupa}
+
+TCO adalah seluruh biaya untuk memiliki dan menjalankan sebuah sistem selama masa tertentu, biasanya
+tiga sampai lima tahun. TCO tidak berhenti pada harga beli server atau tagihan bulanan
+\textit{cloud}. Di dalamnya ada lisensi, tenaga kerja, fasilitas, cadangan data, migrasi, dan
+pelatihan. Perbandingan yang hanya memakai harga server melawan tagihan \textit{cloud} hampir selalu
+menyesatkan, karena dua angka itu mewakili lingkup biaya yang berbeda.
+
+Gambaran yang mudah diingat adalah gunung es pada Gambar \ref{fig:ch03-gunung-es}. Harga server atau
+tagihan bulanan hanya puncak yang terlihat di atas air. Bagian terbesarnya ada di bawah permukaan,
+dan bagian itulah yang paling sering hilang dari perhitungan.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch03-gunung-es-tco.tex}
+  \caption{TCO sebagai gunung es: harga yang terlihat di penawaran hanya
+           sebagian kecil dari biaya selama masa pakai}
+  \label{fig:ch03-gunung-es}
+\end{figure}
+
+Salah satu biaya di bawah permukaan perlu dijelaskan khusus. Biaya transfer data keluar
+(\textit{egress}) adalah biaya yang dikenakan ketika data keluar dari jaringan penyedia, misalnya
+dikirim ke pengguna internet, ke pusat data sendiri, atau ke penyedia lain. Data yang masuk umumnya
+tidak dikenai biaya, sehingga biaya ini baru terasa setelah sistem berjalan, misalnya ketika
+aplikasi pasien mengirim berkas hasil pemeriksaan berukuran besar. Tabel \ref{tab:ch03-komponen-tco}
+mendaftar komponen TCO beserta alasan masing-masing sering terlupa.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Komponen TCO pada pusat data sendiri dan \textit{cloud}}
+  \label{tab:ch03-komponen-tco}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Komponen} & \textbf{Pusat data sendiri} & \textbf{\textit{Cloud}} & \textbf{Mengapa
+      sering terlupa} \\ \hline
+    Perangkat keras & Server, penyimpanan, jaringan & Tidak dibeli, masuk harga sumber daya & Jarang
+      terlupa \\ \hline
+    Fasilitas & Ruang, listrik, pendingin, keamanan fisik & Sudah termasuk harga & Dibayar bagian
+      umum, bukan anggaran TI \\ \hline
+    Lisensi & Sistem operasi, basis data, aplikasi & Tetap ada, dibawa sendiri atau disewa per jam &
+      Aturan lisensi per inti prosesor bisa berubah saat pindah \\ \hline
+    Tenaga kerja & Operasi, \textit{patch}, cadangan & Berkurang tetapi tidak nol, butuh
+      keterampilan baru & Gaji tercatat di anggaran sumber daya manusia \\ \hline
+    Migrasi & Tidak ada & Proyek pindah, pengujian, dua sistem berjalan paralel & Dianggap biaya
+      proyek terpisah \\ \hline
+    Transfer data keluar & Kecil, di dalam jaringan sendiri & Dibayar per gigabyte yang keluar &
+      Tidak terlihat bila tidak diisi di kalkulator \\ \hline
+    Cadangan dan Disaster Recovery (DR) & Pita cadangan, lokasi kedua & Penyimpanan dan salinan di
+      lokasi lain & Lingkupnya sering tidak setara di kedua sisi \\ \hline
+    Keluar dari penyedia & Tidak ada & Biaya memindahkan data bila kelak berganti penyedia & Baru
+      dipikirkan ketika kontrak hampir habis \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Menyusun Perbandingan TCO yang Jujur}
+
+Perbandingan TCO yang jujur memenuhi lima syarat. Pertama, masanya sama, misalnya lima tahun untuk
+kedua sisi. Kedua, lingkupnya sama: bila sisi \textit{cloud} sudah memasukkan DR, sisi pusat data
+sendiri juga harus memasukkannya. Ketiga, tingkat layanannya setara, termasuk ketersediaan dan
+frekuensi cadangan. Keempat, tenaga kerja ikut dihitung, termasuk pelatihan. Kelima, setiap asumsi
+ditulis dan diuji kepekaannya, misalnya apa yang terjadi bila pemakaian 30 persen lebih tinggi dari
+perkiraan.
+
+Dua hal pada TCO sering tertukar. Pembagiannya begini. TCO menjawab pertanyaan "berapa biaya
+seluruhnya". \textit{Business case} menjawab pertanyaan "apakah manfaatnya sepadan dengan biaya
+itu", sehingga memasukkan antrean yang lebih pendek, rilis fitur yang lebih cepat, dan risiko yang
+berkurang. TCO adalah salah satu bahan \textit{business case}, bukan penggantinya. Penyusunan
+\textit{business case} dan portofolio inisiatif dibahas rinci di IT40513.
+
+\begin{kasus}[title={Kasus Medikara Health: TCO Kasar SIMRS Rumah Sakit Bekasi}]
+  Misalkan tim transformasi menghitung TCO kasar SIMRS rumah sakit Bekasi untuk lima tahun. Tiga
+  opsi dibandingkan. Opsi pertama tetap di pusat data sendiri dengan peremajaan server. Opsi A
+  memindahkan SIMRS apa adanya (\textit{rehost}) dan membayar harga \textit{on-demand}. Opsi B juga
+  \textit{rehost}, tetapi ukuran sumber daya lebih dahulu disesuaikan dengan kebutuhan nyata
+  (\textit{rightsizing}), lalu beban dasarnya ditutup dengan komitmen pemakaian. Hasilnya ada di
+  Tabel \ref{tab:ch03-tco-simrs}.
+
+  Hasil ini punya dua konsekuensi. Pertama, opsi A justru Rp110 juta lebih mahal daripada bertahan.
+  Server yang di pusat data sendiri hanya terpakai 25 persen tetap dibayar penuh per jam di
+  \textit{cloud}, ditambah biaya migrasi dan transfer data. Kedua, opsi B lebih murah Rp1,15 miliar
+  atau sekitar 19,5 persen. Penghematan itu datang dari \textit{rightsizing} dan komitmen, bukan
+  dari perpindahan ke \textit{cloud} itu sendiri. Dengan sekitar 210.000 kunjungan pasien per tahun
+  di rumah sakit Bekasi, biaya infrastruktur SIMRS per kunjungan turun dari Rp5.619 menjadi Rp4.524.
+  Angka ini menjadi bahan metrik biaya per unit pada seksi \ref{sec:ch03-alokasi}.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{TCO kasar SIMRS rumah sakit Bekasi selama lima tahun, dalam juta
+           rupiah (angka rekaan)}
+  \label{tab:ch03-tco-simrs}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r}
+    \hline
+    \textbf{Komponen} & \textbf{Pusat data sendiri} & \textbf{Opsi A} & \textbf{Opsi B} \\ \hline
+    Perangkat keras server dan penyimpanan & 2.400 & 0 & 0 \\ \hline
+    Ruang server, listrik, pendingin & 450 & 0 & 0 \\ \hline
+    Sumber daya \textit{cloud} (komputasi dan penyimpanan) & 0 & 3.300 & 2.040 \\ \hline
+    Lisensi sistem operasi dan basis data & 750 & 750 & 750 \\ \hline
+    Tenaga kerja operasi infrastruktur & 1.800 & 900 & 900 \\ \hline
+    Cadangan dan DR & 300 & 200 & 200 \\ \hline
+    Koneksi jaringan dan transfer data keluar & 200 & 350 & 350 \\ \hline
+    Migrasi dan operasi paralel & 0 & 450 & 450 \\ \hline
+    Pelatihan & 0 & 60 & 60 \\ \hline
+    \textbf{Total lima tahun} & \textbf{5.900} & \textbf{6.010} & \textbf{4.750} \\ \hline
+    Biaya per kunjungan pasien (rupiah) & 5.619 & 5.724 & 4.524 \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Model Harga Cloud}
 
-% TODO
-% Cakupan: on-demand, komitmen pemakaian (reserved dan savings plan), dan kapasitas spot; risiko komitmen berlebih; pola beban yang cocok untuk tiap model harga.
-% Pendalaman teknis: memakai kalkulator harga penyedia untuk membandingkan tiga model harga pada satu workload.
+Penyedia \textit{cloud} menjual kapasitas yang sama dengan tiga cara bayar. Model \textit{on-demand}
+dibayar per detik atau per jam pemakaian tanpa komitmen apa pun. Model ini paling fleksibel dan
+paling mahal per unit. Model komitmen pemakaian meminta organisasi berjanji memakai sejumlah sumber
+daya, atau membelanjakan sejumlah uang per jam, selama satu atau tiga tahun. Sebagai imbalannya,
+harga per unit turun. Amazon Web Services (AWS) menyebut potongan Savings Plans dapat mencapai 72
+persen dibanding \textit{on-demand} \cite{c03-aws-savingsplans}, dan penyedia lain menawarkan model
+serupa dengan nama berbeda. Model ketiga adalah kapasitas \textit{spot}, yaitu kapasitas yang sedang
+menganggur di pusat data penyedia. Harganya dapat mencapai 90 persen di bawah \textit{on-demand}
+\cite{c03-aws-spot}, tetapi penyedia boleh menariknya kembali sewaktu-waktu dengan pemberitahuan dua
+menit \cite{c03-aws-spot-interupsi}. Angka 72 dan 90 persen adalah batas atas, bukan potongan yang
+pasti diperoleh setiap organisasi.
+
+Analoginya seperti parkir kendaraan kantor. Parkir harian dibayar per jam: mahal bila dipakai
+seharian, tetapi tidak ada kewajiban apa pun. Langganan parkir bulanan jauh lebih murah per hari,
+tetapi tetap dibayar walaupun kendaraannya tidak datang. Parkir di lahan kosong milik tetangga
+paling murah, tetapi kendaraan harus segera dipindah begitu pemiliknya membutuhkan lahan itu. Kantor
+yang cermat memakai ketiganya sekaligus, sesuai sifat kendaraan masing-masing.
+
+Kuncinya adalah membaca pola beban. Gambar \ref{fig:ch03-pola-beban} memperlihatkan kebutuhan
+kapasitas satu hari. Lantai beban yang selalu ada selama 24 jam cocok ditutup komitmen. Puncak siang
+yang naik turun lebih aman dibayar \textit{on-demand}. Pekerjaan malam yang boleh terhenti dan
+diulang cocok memakai \textit{spot}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch03-pola-beban-harga.tex}
+  \caption{Pola beban satu hari menentukan bagian yang ditutup komitmen,
+           \textit{on-demand}, dan \textit{spot}}
+  \label{fig:ch03-pola-beban}
+\end{figure}
+
+Tiga contoh dari Medikara Health:
+\begin{enumerate}
+  \item Basis data SIMRS dan rekam medis elektronik berjalan 24 jam dengan beban dasar yang stabil.
+        Beban dasar ini calon utama komitmen tiga tahun, setelah ukurannya disesuaikan.
+  \item Medikara+ melonjak sampai sekitar 60 persen setiap kali program vaksinasi diumumkan, lalu
+        kembali normal setelah kampanye selesai. Lonjakan seperti ini dibayar \textit{on-demand} dan
+        ditangani penskalaan otomatis.
+  \item Laboratorium rujukan menjalankan pengolahan data hasil pemeriksaan setiap malam selama
+        sekitar empat jam. Pekerjaan itu boleh diulang bila terhenti, sehingga cocok memakai
+        \textit{spot}.
+\end{enumerate}
+
+Tabel \ref{tab:ch03-model-harga} merangkum ketiga model beserta risikonya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga model harga \textit{cloud} dan pola beban yang cocok}
+  \label{tab:ch03-model-harga}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.9cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Model} & \textbf{Cara bayar} & \textbf{Cocok untuk} & \textbf{Risiko utama} \\ \hline
+    \textit{On-demand} & Per detik atau per jam, tanpa janji & Beban baru, puncak sementara, uji
+      coba & Paling mahal bila dibiarkan menyala terus \\ \hline
+    Komitmen pemakaian & Janji satu atau tiga tahun, harga per unit lebih rendah & Beban dasar yang
+      stabil dan sudah dioptimalkan & Membayar kapasitas yang tidak terpakai bila komitmen terlalu
+      besar \\ \hline
+    \textit{Spot} & Harga kapasitas menganggur, bisa ditarik kembali & Pekerjaan \textit{batch} yang
+      boleh terhenti dan diulang & Pekerjaan terputus, tidak cocok untuk layanan pasien langsung \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Risiko Komitmen Berlebih}
+
+Komitmen dibayar penuh, terpakai atau tidak. Karena itu ada titik impas yang mudah dihitung. Bila
+potongan komitmen dibanding \textit{on-demand} adalah $d$, komitmen baru menguntungkan ketika
+rata-rata pemanfaatannya melewati $1 - d$:
+\[
+  \text{pemanfaatan impas} = 1 - \text{potongan komitmen}.
+\]
+Dengan potongan 40 persen, titik impasnya 60 persen. Komitmen yang rata-rata hanya terpakai 50
+persen membuat organisasi membayar lebih mahal daripada tidak berkomitmen sama sekali.
+
+Misalkan Medikara Health membeli komitmen setara 100 unit kapasitas per jam. Harga
+\textit{on-demand} Rp1.000 per unit-jam dan harga komitmen Rp600 per unit-jam (angka rekaan).
+Sebulan berisi sekitar 730 jam, sehingga biaya komitmen tetap Rp43,8 juta per bulan. Bila pemakaian
+rata-rata 70 unit, biaya \textit{on-demand} untuk pemakaian yang sama adalah Rp51,1 juta, sehingga
+komitmen menghemat Rp7,3 juta. Bila pemakaian rata-rata hanya 50 unit, biaya \textit{on-demand}
+hanya Rp36,5 juta, sehingga komitmen justru merugikan Rp7,3 juta.
+
+Kesalahan yang paling sering terjadi adalah membeli komitmen sebelum \textit{rightsizing}. Ukuran
+yang terlalu besar ikut dikunci selama satu atau tiga tahun. Urutan yang aman adalah merapikan
+ukuran lebih dahulu, berkomitmen hanya pada lantai beban, menambah komitmen secara bertahap, lalu
+memantau pemanfaatannya setiap bulan.
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Kalkulator Harga untuk Tiga Model}]
+  Kalkulator harga resmi penyedia dipakai untuk membandingkan ketiga model pada satu
+  \textit{workload}, misalnya \textit{server} aplikasi Medikara+. Langkahnya sebagai berikut.
+  \begin{enumerate}
+    \item Pilih region Jakarta agar sesuai dengan kendala lokasi data dari Bab 2.
+    \item Masukkan ukuran mesin virtual hasil \textit{rightsizing}, bukan ukuran server lama.
+    \item Hitung tiga varian: \textit{on-demand} 730 jam per bulan, komitmen satu tahun tanpa bayar
+          di muka, dan komitmen tiga tahun.
+    \item Untuk \textit{spot}, catat harga rata-rata dan riwayat interupsi untuk jenis mesin
+          tersebut, lalu nilai apakah pekerjaannya tahan terhadap interupsi.
+    \item Tambahkan penyimpanan, cadangan, dan transfer data keluar, karena ketiganya sering
+          tertinggal di kalkulator.
+  \end{enumerate}
+  Simpan tautan atau ekspor hasil kalkulator sebagai bukti asumsi di
+  \berkas{sources/chapter03/templat-tco-sederhana.xlsx}. Kalkulator hanya dipakai untuk
+  memperkirakan biaya; tidak ada sumber daya berbayar yang perlu dijalankan.
+\end{pendalaman}
 
 \section{FinOps Framework 2026}
 
-% TODO
-% Cakupan: definisi FinOps dan enam prinsipnya; fase Inform, Optimize, dan Operate; persona inti dan persona pendukung; empat domain dan capability, termasuk Executive Strategy Alignment yang baru pada 2026; scope dan kategori teknologi (public cloud, SaaS, AI, pusat data).
-% Kasus Medikara: siapa di Medikara Health yang mengisi persona Finance, Engineering, Product, dan Leadership.
+FinOps Foundation mendefinisikan FinOps sebagai kerangka operasional dan praktik budaya yang
+memaksimalkan nilai bisnis teknologi. Caranya dengan mempercepat keputusan berbasis data dan
+menumbuhkan akuntabilitas keuangan lewat kolaborasi antara tim teknik, keuangan, dan bisnis
+\cite{finops2026}. Kata kuncinya adalah nilai, bukan penghematan. FinOps tidak bertujuan membuat
+tagihan sekecil mungkin. Tagihan yang naik karena layanan pasien bertambah adalah kabar baik. Yang
+dicegah adalah biaya yang tidak menghasilkan nilai dan biaya yang tidak diketahui pemiliknya
+\cite{storment2023}.
+
+Analoginya seperti keluarga besar yang tinggal di beberapa rumah tetapi berbagi satu meteran
+listrik. Selama tagihan hanya diterima bendahara keluarga, tidak ada yang merasa memiliki
+pemakaiannya, dan tagihan terus naik. Begitu setiap rumah punya meteran sendiri, masing-masing
+melihat pemakaiannya, bendahara melihat totalnya, dan rapat keluarga bulanan memutuskan siapa
+menghemat apa. Listriknya sama, cara mengelolanya yang berubah.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Tanpa FinOps, tagihan \textit{cloud} Juli diterima bagian keuangan sekitar 15 hari setelah
+        bulan berakhir. Tagihan itu naik 17 persen, dan tidak ada yang bisa menjelaskan penyebabnya
+        karena sumber daya tidak diberi label pemilik.
+  \item Dengan FinOps, setiap tim melihat biaya hariannya sendiri. Lonjakan biaya lingkungan
+        pengembangan Medikara+ terdeteksi pada hari ketiga, bukan pada akhir bulan, sehingga
+        pemborosannya berhenti pada beberapa juta rupiah.
+\end{enumerate}
+
+\subsection{Enam Prinsip}
+
+Kerangka ini bertumpu pada enam prinsip yang menjadi pegangan saat ada perbedaan pendapat
+\cite{finops2026}. Tabel \ref{tab:ch03-prinsip-finops} memuat keenamnya dengan nama aslinya,
+maknanya, dan contoh penerapannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Enam prinsip FinOps dan contoh penerapannya di Medikara Health}
+  \label{tab:ch03-prinsip-finops}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Prinsip} & \textbf{Makna} & \textbf{Contoh di Medikara} \\ \hline
+    \textit{Teams need to collaborate} & Keuangan, teknik, dan bisnis bekerja dengan data yang sama
+      & Rapat biaya bulanan dihadiri keuangan, tim infrastruktur, dan pemilik Medikara+ \\ \hline
+    \textit{Business value drives technology decisions} & Biaya dinilai terhadap nilai yang
+      dihasilkan & Biaya naik saat janji temu naik dianggap wajar \\ \hline
+    \textit{Everyone takes ownership for their technology usage} & Setiap tim bertanggung jawab atas
+      biaya sumber daya yang dibuatnya & Tim pengembang mematikan lingkungan uji di luar jam kerja
+      \\ \hline
+    \textit{FinOps data should be accessible, timely, and accurate} & Data biaya tersedia cepat dan
+      dapat dipercaya & \textit{Dashboard} biaya harian, bukan laporan bulanan yang terlambat \\
+      \hline
+    \textit{FinOps should be enabled centrally} & Ada fungsi pusat yang menyediakan data, aturan,
+      dan pembelian komitmen & Analis FinOps di direktorat TI mengelola komitmen untuk seluruh grup
+      \\ \hline
+    \textit{Take advantage of the variable cost model of the cloud} & Biaya yang bisa naik turun
+      dimanfaatkan, bukan dilawan & Kapasitas ditambah saat kampanye vaksinasi, lalu dikurangi lagi
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Fase Inform, Optimize, dan Operate}
+
+Praktik FinOps berjalan dalam tiga fase yang berulang, seperti diperlihatkan Gambar
+\ref{fig:ch03-siklus-finops}. Fase Inform membuat biaya terlihat dan dapat dialokasikan: siapa
+memakai apa, dan berapa biayanya. Fase Optimize mencari peluang efisiensi, baik dari sisi pemakaian
+(mematikan sumber daya menganggur, \textit{rightsizing}) maupun dari sisi tarif (komitmen dan
+potongan). Fase Operate menjalankan keputusan itu sebagai kebiasaan: kebijakan, otomasi, anggaran,
+dan pemantauan terus-menerus. Organisasi tidak menyelesaikan satu fase lalu berhenti. Setiap putaran
+memperbaiki data, membuka peluang baru, dan memperketat kebiasaan.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch03-siklus-finops.tex}
+  \caption{Tiga fase FinOps yang berulang dan bermuara pada nilai bisnis
+           teknologi}
+  \label{fig:ch03-siklus-finops}
+\end{figure}
+
+Kematangan setiap \textit{capability} dinilai bertahap dengan tiga tingkat: \textit{crawl},
+\textit{walk}, dan \textit{run} \cite{finops2026}. Tingkat \textit{crawl} berarti praktiknya baru
+ada dan masih manual. Tingkat \textit{run} berarti praktiknya sudah otomatis dan menjadi kebiasaan.
+Tingkat \textit{run} tidak wajib di semua \textit{capability}; kematangan cukup sepadan dengan besar
+belanja dan risikonya.
+
+\subsection{Persona, Domain, dan Capability}
+
+FinOps Framework memakai istilah \textit{persona} untuk peran yang terlibat. Persona inti berjumlah
+enam: FinOps Practitioner, Engineering, Finance, Product, Procurement, dan Leadership. Persona
+pendukung datang dari disiplin yang bersinggungan, yaitu pengelolaan aset TI, pengelolaan keuangan
+TI, pengelolaan layanan TI, keamanan, dan keberlanjutan \cite{finops2026}. Persona bukan jabatan.
+Satu orang di organisasi kecil bisa memegang dua persona, dan satu persona di organisasi besar bisa
+diisi satu tim.
+
+Pekerjaan FinOps dikelompokkan ke dalam empat domain. Setiap domain berisi beberapa
+\textit{capability}, yaitu kemampuan yang perlu dimiliki organisasi. Tabel
+\ref{tab:ch03-domain-finops} memuat keempat domain dan \textit{capability}-nya sesuai halaman resmi
+kerangka tersebut. Pembaruan 2026 menambahkan \textit{capability} Executive Strategy Alignment pada
+domain Manage the FinOps Practice \cite{finops2026}. Sesuai namanya, \textit{capability} ini
+menekankan keselarasan praktik FinOps dengan strategi dan prioritas pimpinan, sehingga keputusan
+biaya teknologi diukur terhadap sasaran organisasi, bukan hanya terhadap anggaran TI.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Empat domain FinOps Framework 2026 beserta \textit{capability}-nya}
+  \label{tab:ch03-domain-finops}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.2cm}}
+    \hline
+    \textbf{Domain} & \textbf{\textit{Capability}} & \textbf{Pertanyaan pokok} \\ \hline
+    Understand Usage \& Cost & Data Ingestion; Allocation; Reporting \& Analytics; Anomaly
+      Management & Berapa biayanya dan milik siapa? \\ \hline
+    Quantify Business Value & Planning \& Estimating; Forecasting; Budgeting; KPIs \& Benchmarking;
+      Unit Economics & Apakah biayanya sepadan dengan nilainya? \\ \hline
+    Optimize Usage \& Cost & Architecting \& Workload Placement; Usage Optimization; Rate
+      Optimization; Licensing \& SaaS; Sustainability & Di mana bisa lebih efisien? \\ \hline
+    Manage the FinOps Practice & Executive Strategy Alignment; FinOps Practice Operations;
+      Governance, Policy \& Risk; FinOps Education \& Enablement; Invoicing \& Chargeback; FinOps
+      Assessment; Automation, Tools \& Services; Intersecting Disciplines & Bagaimana praktik ini
+      dijalankan dan diatur? \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Scope dan Kategori Teknologi}
+
+FinOps tidak lagi terbatas pada \textit{public cloud}. Halaman kerangka 2026 menyebut kategori
+teknologi yang dapat dikelola dengan cara yang sama: Artificial Intelligence (AI), \textit{public
+cloud}, Software as a Service (SaaS), \textit{data platform}, \textit{private cloud}, lisensi, dan
+pusat data \cite{finops2026}. Kerangka ini juga memakai istilah \textit{scope}, yaitu batas
+penerapan praktik FinOps yang dipilih organisasi, misalnya per produk, per pusat biaya, atau per
+lingkungan. Pembaruan 2026 merapikan pemisahan antara kategori teknologi dan \textit{scope}
+tersebut.
+
+Pertanyaan kemudian muncul: mengapa organisasi yang baru mulai perlu memikirkan pusat data dan SaaS?
+Jawabannya, perbandingan TCO hanya adil bila biaya pusat data sendiri dibaca dengan bahasa yang sama
+dengan biaya \textit{cloud}. Bila hanya tagihan \textit{cloud} yang dikelola dengan disiplin FinOps,
+SIMRS di pusat data sendiri akan selalu tampak lebih murah.
+
+\begin{kasus}[title={Kasus Medikara Health: Siapa Mengisi Persona Inti}]
+  Medikara Health belum punya fungsi FinOps. Misalkan direksi membentuk komite biaya teknologi yang
+  bertemu setiap bulan, dan memetakan persona inti ke jabatan yang sudah ada seperti pada Tabel
+  \ref{tab:ch03-persona-medikara}. Persona FinOps Practitioner diisi satu analis baru di direktorat
+  TI, karena tidak ada jabatan lama yang tugasnya menjembatani data teknik dan data keuangan.
+
+  Pemetaan ini punya dua konsekuensi. Pertama, bagian pengadaan ikut sejak awal, karena komitmen
+  pemakaian tiga tahun adalah kontrak yang harus melewati prosedur pengadaan. Kedua, tim keamanan
+  informasi masuk sebagai persona pendukung. Pelajaran dari insiden kebocoran data lewat vendor pada
+  2025 menunjukkan bahwa keputusan memangkas biaya, misalnya menghapus salinan log, tidak boleh
+  mengorbankan jejak audit.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pemetaan persona inti FinOps ke jabatan di Medikara Health}
+  \label{tab:ch03-persona-medikara}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Persona} & \textbf{Pengisi di Medikara} & \textbf{Pertanyaan khasnya} \\ \hline
+    FinOps Practitioner & Analis FinOps baru di direktorat TI & Data biaya mana yang belum punya
+      pemilik? \\ \hline
+    Engineering & Tim infrastruktur pusat dan tim vendor Medikara+ & Ukuran sumber daya mana yang
+      berlebihan? \\ \hline
+    Finance & Bagian akuntansi manajemen dan anggaran & Berapa perkiraan tagihan triwulan depan? \\
+      \hline
+    Product & Pemilik produk Medikara+ dan kepala instalasi SIMRS tiap rumah sakit & Berapa biaya
+      per janji temu atau per kunjungan? \\ \hline
+    Procurement & Bagian pengadaan & Komitmen mana yang aman dikontrakkan? \\ \hline
+    Leadership & Direktur keuangan, direktur TI, dan direktur utama & Apakah belanja teknologi
+      mendukung strategi 2026 sampai 2030? \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Alokasi Biaya dan Unit Economics}
+\label{sec:ch03-alokasi}
 
-% TODO
-% Cakupan: tagging sebagai dasar alokasi; showback dan chargeback; spesifikasi FOCUS 1.4 untuk data tagihan lintas penyedia; unit economics dan cara memilih unit yang bermakna bagi direksi.
-% Kasus Medikara: biaya infrastruktur per kunjungan pasien dan per janji temu sebagai calon metrik.
-% Pendalaman teknis: mengolah contoh data tagihan berformat FOCUS dengan spreadsheet atau SQL.
+Biaya yang tidak punya pemilik tidak akan pernah dikelola. Seksi ini membahas cara membagi tagihan
+kepada pemiliknya, cara menyatukan tagihan dari banyak penyedia, dan cara menerjemahkan biaya
+menjadi angka yang bermakna bagi direksi. Gambar \ref{fig:ch03-alur-alokasi} memperlihatkan alurnya
+dari tagihan mentah sampai biaya per unit.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch03-alur-alokasi.tex}
+  \caption{Alur alokasi biaya: tagihan dinormalisasi, dialokasikan lewat
+           \textit{tag}, diperlihatkan atau dibebankan, lalu dibaca sebagai
+           biaya per unit}
+  \label{fig:ch03-alur-alokasi}
+\end{figure}
+
+\subsection{Tagging sebagai Dasar Alokasi}
+
+\textit{Tag} adalah label berbentuk pasangan kunci dan nilai yang ditempelkan pada setiap sumber
+daya \textit{cloud}, misalnya \texttt{layanan=medikara-plus} atau \texttt{lingkungan=produksi}.
+Label itu ikut tercatat di data tagihan, sehingga biaya dapat dikelompokkan menurut layanan,
+lingkungan, fasilitas, atau pusat biaya. Aturan \textit{tagging} menetapkan kunci yang wajib, nilai
+yang diizinkan, dan siapa yang memeriksa kepatuhannya. Sumber daya tanpa \textit{tag} menghasilkan
+biaya tanpa pemilik.
+
+Analoginya seperti titipan barang di kantor ekspedisi. Paket yang diberi label nama dan alamat
+sampai ke penerimanya. Paket tanpa label menumpuk di gudang, memakan tempat, dan tidak ada yang
+merasa bertanggung jawab. Semakin lama dibiarkan, semakin sulit menelusuri siapa pengirimnya.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Medikara Health menetapkan lima kunci wajib: \texttt{layanan}, \texttt{lingkungan},
+        \texttt{fasilitas}, \texttt{pusat-biaya}, dan \texttt{pemilik}. Sasarannya, paling sedikit
+        95 persen biaya bulanan sudah memiliki \textit{tag} dalam enam bulan.
+  \item Pada tagihan Agustus 2026, biaya tanpa \textit{tag} sebesar Rp5 juta dari total Rp76,2 juta,
+        atau sekitar 6,6 persen. Sebagian besar berasal dari \textit{snapshot} disk lama tahun 2025
+        yang tidak pernah dihapus.
+\end{enumerate}
+
+Sebagian biaya memang dipakai bersama, misalnya jaringan inti, layanan keamanan, dan platform
+pemantauan. Biaya bersama seperti ini dibagi dengan salah satu dari tiga cara: proporsional terhadap
+pemakaian langsung tiap layanan, rata ke setiap layanan, atau dengan persentase tetap yang
+disepakati \cite{storment2023}. Cara pembagian tidak harus sempurna. Yang penting, caranya
+disepakati, ditulis, dan dipakai konsisten setiap bulan.
+
+\subsection{Showback dan Chargeback}
+
+Dua hal pada alokasi sering tertukar. Pembagiannya begini. \textit{Showback} memperlihatkan biaya
+kepada unit pemakai tanpa memindahkannya ke anggaran unit tersebut. \textit{Chargeback} benar-benar
+membebankan biaya ke anggaran unit pemakai, sehingga muncul di laporan keuangan unit itu. Tabel
+\ref{tab:ch03-showback-chargeback} membandingkan keduanya. Penagihan internal semacam ini termasuk
+\textit{capability} Invoicing \& Chargeback dalam FinOps Framework \cite{finops2026}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbandingan \textit{showback} dan \textit{chargeback}}
+  \label{tab:ch03-showback-chargeback}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Showback}} & \textbf{\textit{Chargeback}} \\ \hline
+    Yang terjadi & Biaya diperlihatkan lewat laporan atau \textit{dashboard} & Biaya dipindahkan ke
+      anggaran unit pemakai \\ \hline
+    Syarat data & Alokasi cukup akurat untuk dibaca & Alokasi akurat, rinci, dan disepakati, karena
+      menyangkut anggaran \\ \hline
+    Dampak perilaku & Kesadaran biaya tumbuh tanpa konflik anggaran & Unit terdorong berhemat,
+      tetapi bisa memicu perdebatan angka \\ \hline
+    Cocok untuk & Tahap awal, saat \textit{tagging} belum rapi & Tahap matang, saat unit punya
+      kendali atas pemakaiannya \\ \hline
+    Contoh Medikara & Laporan biaya bulanan per rumah sakit & Biaya Medikara+ dibebankan ke anggaran
+      unit layanan digital \\ \hline
+  \end{tabularx}
+\end{table}
+
+Medikara Health sebaiknya memulai dengan \textit{showback}. Alasannya, \textit{tag} belum rapi dan
+rumah sakit hasil akuisisi masih punya cara anggaran yang berbeda. \textit{Chargeback} yang
+dipaksakan di atas data yang belum dipercaya hanya akan memindahkan rapat dari "cara berhemat"
+menjadi "angka siapa yang benar".
+
+\subsection{Spesifikasi FOCUS}
+
+Setiap penyedia \textit{cloud} dan SaaS menerbitkan data tagihan dengan nama kolom, satuan, dan cara
+mencatat potongan yang berbeda. Organisasi yang memakai dua penyedia harus menerjemahkan keduanya
+sebelum dapat menjumlahkannya. FOCUS adalah spesifikasi terbuka untuk data tagihan yang menetapkan
+satu skema kolom bersama, sehingga tagihan dari banyak sumber dapat dibaca dengan cara yang sama
+\cite{c03-focus}. Versi 1.4 terbit pada 2026, dan contoh dalam spesifikasinya mencakup SaaS serta
+pembelian lewat \textit{marketplace}, bukan hanya \textit{cloud} publik.
+
+Tabel \ref{tab:ch03-kolom-focus} memuat kolom FOCUS yang paling sering dipakai untuk alokasi. Empat
+kolom biaya perlu dibedakan dengan cermat, karena masing-masing menjawab pertanyaan yang berbeda.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kolom FOCUS yang sering dipakai untuk alokasi biaya}
+  \label{tab:ch03-kolom-focus}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kolom} & \textbf{Isi dan kegunaannya} \\ \hline
+    \texttt{BillingPeriodStart} & Awal periode faktur, dipakai untuk mengelompokkan per bulan \\
+      \hline
+    \texttt{ChargeCategory} & Jenis baris: pemakaian (\texttt{Usage}), pembelian
+      (\texttt{Purchase}), pajak, kredit, atau penyesuaian \\ \hline
+    \texttt{ServiceCategory}, \texttt{ServiceName} & Golongan layanan (komputasi, penyimpanan, basis
+      data) dan nama layanannya \\ \hline
+    \texttt{RegionId}, \texttt{SubAccountId} & Lokasi sumber daya dan akun tempatnya berada; berguna
+      untuk memeriksa kepatuhan lokasi data \\ \hline
+    \texttt{PricingCategory} & Model harga: \texttt{Standard}, \texttt{Dynamic} (misalnya
+      \textit{spot}), \texttt{Committed}, atau \texttt{Other} \\ \hline
+    \texttt{ListCost} & Biaya menurut harga katalog, sebelum potongan apa pun \\ \hline
+    \texttt{ContractedCost} & Biaya menurut harga yang sudah dinegosiasikan dalam kontrak \\ \hline
+    \texttt{EffectiveCost} & Biaya setelah seluruh potongan, dengan pembelian komitmen disebar ke
+      pemakaian yang ditutupnya \\ \hline
+    \texttt{BilledCost} & Biaya yang benar-benar tertera di faktur periode itu \\ \hline
+    \texttt{Tags} & Pasangan kunci dan nilai \textit{tag}, dasar alokasi \\ \hline
+  \end{tabularx}
+\end{table}
+
+Perbedaan \texttt{BilledCost} dan \texttt{EffectiveCost} paling sering menimbulkan salah baca.
+Misalkan Medikara Health membayar komitmen Rp34 juta per bulan. Di faktur, angka itu muncul sebagai
+satu baris pembelian yang tidak punya \textit{tag} layanan, sedangkan pemakaian yang ditutup
+komitmen tampil dengan \texttt{BilledCost} nol. Bila alokasi memakai \texttt{BilledCost}, Medikara+
+tampak hemat dan seluruh Rp34 juta jatuh ke kelompok tanpa pemilik. Bila memakai
+\texttt{EffectiveCost}, biaya komitmen itu tersebar ke layanan yang benar-benar memakainya. Keuangan
+memakai \texttt{BilledCost} untuk mencocokkan faktur, sedangkan alokasi dan biaya per unit memakai
+\texttt{EffectiveCost}.
+
+\subsection{Unit Economics}
+
+\textit{Unit economics} adalah cara membaca biaya teknologi sebagai biaya per satuan nilai bisnis,
+misalnya biaya per kunjungan pasien atau per janji temu. Total tagihan menjawab "berapa yang
+dibelanjakan". Biaya per unit menjawab "seberapa efisien belanja itu menghasilkan layanan".
+Pertanyaan kedua inilah yang bermakna bagi direksi, karena layanan yang tumbuh wajar menaikkan total
+tagihan, tetapi tidak wajar bila menaikkan biaya per unitnya \cite{storment2023}.
+
+Analoginya seperti warung makan yang menghitung biaya bahan per porsi. Pemilik warung tidak panik
+ketika belanja pasar naik pada bulan Ramadan, karena porsi yang terjual juga naik. Yang membuatnya
+waspada adalah biaya bahan per porsi yang naik, karena itu tanda ada bahan terbuang atau harga
+pemasok berubah.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Pada Agustus 2026, biaya \textit{cloud} Medikara+ Rp57 juta untuk sekitar 28.000 janji temu,
+        atau Rp2.036 per janji temu.
+  \item Pada Oktober 2026, bulan kampanye vaksinasi influenza, biayanya naik 39 persen menjadi
+        Rp79,3 juta. Janji temu juga naik menjadi 45.000, sehingga biaya per janji temu justru turun
+        13 persen menjadi Rp1.762. Tagihan naik, tetapi efisiensinya membaik.
+\end{enumerate}
+
+Memilih unit tidak sembarangan. Unit yang baik memenuhi empat syarat. Pertama, dipahami direksi
+tanpa penjelasan teknis. Kedua, datanya tersedia rutin, paling tidak setiap bulan. Ketiga, ikut
+bergerak bersama pemicu biaya, sehingga perubahan unit mencerminkan perubahan beban. Keempat, sulit
+dimanipulasi, misalnya tidak bisa diperbaiki hanya dengan memecah satu transaksi menjadi dua. Tabel
+\ref{tab:ch03-unit-metrik} memuat calon unit untuk beberapa layanan Medikara Health, termasuk
+integrasi dengan Badan Penyelenggara Jaminan Sosial (BPJS) Kesehatan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Calon metrik biaya per unit untuk layanan Medikara Health}
+  \label{tab:ch03-unit-metrik}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Layanan} & \textbf{Unit} & \textbf{Sumber data penyebut} & \textbf{Catatan} \\ \hline
+    SIMRS & Kunjungan pasien & Data pendaftaran SIMRS & Mudah dipahami, tetapi rawat inap dan rawat
+      jalan bebannya berbeda \\ \hline
+    Medikara+ & Janji temu terkonfirmasi & Basis data Medikara+ & Janji yang dibatalkan sebaiknya
+      tidak dihitung \\ \hline
+    Laboratorium rujukan & Hasil pemeriksaan terbit & Sistem informasi laboratorium & Mengikuti
+      beban pengolahan dengan baik \\ \hline
+    Integrasi BPJS Kesehatan & Klaim terkirim & Log integrasi & Klaim yang dikirim ulang perlu
+      dipisahkan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{kasus}[title={Kasus Medikara Health: Biaya per Kunjungan dan per Janji Temu}]
+  Komite biaya teknologi memilih dua metrik untuk dilaporkan ke direksi setiap triwulan. Metrik
+  pertama adalah biaya infrastruktur SIMRS per kunjungan pasien. Untuk rumah sakit Bekasi, nilai
+  awalnya Rp5.619 dan opsi B pada Tabel \ref{tab:ch03-tco-simrs} memperkirakan Rp4.524. Metrik kedua
+  adalah biaya \textit{cloud} Medikara+ per janji temu terkonfirmasi, dengan nilai awal Rp2.036.
+
+  Dari kedua metrik itu dirumuskan sasaran nilai: biaya infrastruktur per kunjungan pasien turun 15
+  persen dalam dua tahun, menjadi paling tinggi Rp4.776 untuk rumah sakit Bekasi. Sasaran ini
+  sengaja lebih rendah daripada perkiraan opsi B (sekitar 19,5 persen), karena perkiraan TCO masih
+  kasar dan migrasi jarang berjalan persis sesuai rencana. Sasaran itu didampingi syarat:
+  ketersediaan SIMRS tidak boleh turun di bawah tingkat sekarang. Tanpa syarat ini, cara termudah
+  menurunkan biaya per kunjungan adalah memangkas cadangan dan DR.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Mengolah Tagihan FOCUS}]
+  Berkas \berkas{sources/chapter03/contoh-tagihan-focus.csv} berisi tagihan rekaan Medikara Health
+  bulan Agustus 2026 dengan sebagian kolom FOCUS. Listing \ref{lst:ch03-olah-focus} mengelompokkan
+  \texttt{EffectiveCost} menurut \textit{tag} layanan dan lingkungan.
+
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10},
+  breaklines=true, showstringspaces=false, captionpos=b,
+  caption={Pengelompokan biaya per \textit{tag}, tersedia di \berkas{sources/chapter03/olah-tagihan-focus.py}},
+  label={lst:ch03-olah-focus}]
+def kelompokkan_biaya(jalur_berkas):
+  """Menjumlahkan biaya per pasangan (layanan, lingkungan)."""
+  total = defaultdict(float)
+  with open(jalur_berkas, newline="", encoding="utf-8") as berkas:
+    for baris in csv.DictReader(baris_data(berkas)):
+      tag = baca_tag(baris["Tags"])
+      layanan = tag.get("layanan", TANPA_TAG)
+      lingkungan = tag.get("lingkungan", TANPA_TAG)
+      total[(layanan, lingkungan)] += float(baris[KOLOM_BIAYA])
+  return total
+\end{lstlisting}
+
+  Fungsi \texttt{cetak\_biaya\_per\_unit} di berkas yang sama lalu membagi total tiap layanan dengan
+  jumlah unitnya. Skrip dijalankan dengan \texttt{python olah-tagihan-focus.py
+  contoh-tagihan-focus.csv}. Hasilnya: Medikara+ Rp57 juta (Rp47 juta produksi dan Rp10 juta
+  pengembangan), atau Rp2.036 per janji temu; laboratorium rujukan Rp150 per hasil pemeriksaan; dan
+  biaya tanpa \textit{tag} Rp5 juta. Lingkungan pengembangan sengaja ikut dihitung dalam biaya per
+  unit, karena keberadaannya hanya untuk melayani layanan tersebut. Pengelompokan yang sama dapat
+  ditulis sebagai \textit{query} \texttt{GROUP BY} pada nilai \textit{tag}, bila data tagihan sudah
+  dimuat ke gudang data.
+\end{pendalaman}
 
 \section{Keberlanjutan dan Jejak Karbon}
 
-% TODO
-% Cakupan: sumber emisi dari workload digital; pilar keberlanjutan pada kerangka Well-Architected; SCI menurut ISO/IEC 21031:2024; pengaruh pilihan region, pemanfaatan sumber daya, dan jadwal kerja terhadap emisi; keterkaitan biaya dan karbon.
+Setiap \textit{workload} digital menghasilkan emisi dari dua sumber. Sumber pertama adalah emisi
+operasional, yaitu listrik yang dipakai server, penyimpanan, jaringan, dan pendingin. Besarnya
+bergantung pada jumlah listrik yang dipakai dan pada cara listrik itu dibangkitkan di lokasi pusat
+data. Sumber kedua adalah emisi yang melekat pada perangkat keras (\textit{embodied emissions}),
+yaitu emisi dari pembuatan, pengiriman, dan pembuangan perangkat.
+
+Kerangka Well-Architected dari AWS dan Google Cloud memasukkan keberlanjutan sebagai salah satu
+pilarnya \cite{awswaf,googlewaf}. Pilar keberlanjutan AWS membagi tanggung jawab dengan cara yang
+mirip pembagian tanggung jawab keamanan pada Bab 2. Penyedia bertanggung jawab atas keberlanjutan
+pusat datanya, misalnya efisiensi gedung dan sumber energinya. Pelanggan bertanggung jawab atas
+keberlanjutan \textit{workload}-nya sendiri, yaitu seberapa efisien sumber daya dirancang dan
+dipakai \cite{c03-aws-sustainability}. Pindah ke \textit{cloud} tidak otomatis membuat
+\textit{workload} hijau; server yang menganggur di \textit{cloud} tetap membuang energi.
+
+Analoginya seperti konsumsi bahan bakar armada ambulans. Total liter per bulan wajar naik bila
+jumlah perjalanan naik. Ukuran yang menunjukkan efisiensi adalah liter per 100 kilometer, atau liter
+per pasien yang diantar. Armada yang total bahan bakarnya naik bisa saja makin efisien, dan
+sebaliknya.
+
+\subsection{Software Carbon Intensity}
+
+Software Carbon Intensity (SCI) adalah ukuran laju emisi karbon perangkat lunak per satuan fungsi.
+Spesifikasinya dikembangkan Green Software Foundation dan diterbitkan sebagai standar ISO/IEC
+21031:2024 \cite{iso21031,c03-gsf-sci}. Rumusnya:
+\[
+  \mathrm{SCI} = \frac{(E \times I) + M}{R}
+\]
+Huruf $E$ adalah energi yang dipakai perangkat lunak (kWh). Huruf $I$ adalah intensitas karbon
+listrik di lokasi tersebut (gram setara karbon dioksida per kWh). Huruf $M$ adalah porsi emisi
+melekat perangkat keras yang dipakai. Huruf $R$ adalah satuan fungsi, misalnya per janji temu atau
+per kunjungan pasien. Satuan fungsi inilah yang membuat SCI sejalan dengan \textit{unit economics}:
+biaya per janji temu dan karbon per janji temu dibaca berdampingan. Spesifikasi ini menekankan
+pengurangan emisi yang nyata, sehingga pembelian kompensasi karbon (\textit{offset}) tidak dipakai
+untuk menurunkan skor SCI \cite{c03-gsf-sci}.
+
+Dua hal pada jejak karbon sering tertukar. Pembagiannya begini. Total emisi adalah jumlah seluruh
+emisi dalam satu periode, dan wajar naik ketika layanan tumbuh. SCI adalah intensitas, yaitu emisi
+per satuan fungsi. Laporan keberlanjutan perusahaan biasanya memakai total, sedangkan keputusan
+arsitektur lebih tepat dinilai dengan intensitas.
+
+\subsection{Region, Pemanfaatan, dan Jadwal Kerja}
+
+Tiga tuas memengaruhi emisi \textit{workload}. Tuas pertama adalah pilihan region, karena intensitas
+karbon listrik berbeda antarlokasi. Tuas kedua adalah pemanfaatan sumber daya: satu server yang
+terpakai 60 persen lebih efisien daripada tiga server yang masing-masing terpakai 20 persen. Tuas
+ketiga adalah jadwal kerja: lingkungan uji dapat dimatikan di luar jam kerja, dan pekerjaan yang
+tidak mendesak dapat digeser ke waktu atau lokasi dengan listrik yang lebih bersih. Tabel
+\ref{tab:ch03-tuas-karbon} memperlihatkan dampak setiap tuas pada biaya dan karbon, beserta
+batasannya bagi Medikara Health.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga tuas keberlanjutan beserta dampaknya pada biaya dan karbon}
+  \label{tab:ch03-tuas-karbon}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Tuas} & \textbf{Dampak biaya} & \textbf{Dampak karbon} & \textbf{Batasan di Medikara} \\
+      \hline
+    Pilihan region & Bisa naik atau turun, bergantung harga region & Turun bila listrik region lebih
+      bersih & Rekam medis harus tetap di Indonesia (Bab 2), sehingga pilihan region terbatas \\
+      \hline
+    Pemanfaatan sumber daya & Turun karena kapasitas menganggur berkurang & Turun karena energi dan
+      perangkat terpakai lebih efisien & \textit{Rightsizing} harus memberi ruang untuk puncak
+      layanan pasien \\ \hline
+    Jadwal kerja & Turun karena jam menyala berkurang & Turun, terutama untuk lingkungan uji dan
+      pekerjaan \textit{batch} & Layanan pasien 24 jam tidak dapat dijadwalkan ulang \\ \hline
+  \end{tabularx}
+\end{table}
+
+Biaya dan karbon umumnya bergerak searah: mematikan sumber daya menganggur dan \textit{rightsizing}
+menurunkan keduanya. Namun keduanya tidak selalu sejalan, dan pertentangan itu perlu ditulis
+eksplisit. Komitmen tiga tahun yang besar dapat mendorong tim membiarkan sumber daya tetap menyala
+karena "sudah dibayar". Region yang lebih murah belum tentu memakai listrik yang lebih bersih.
+Strategi DR yang menyiapkan salinan aktif di lokasi kedua menambah biaya sekaligus emisi, tetapi
+diperlukan demi keselamatan pasien. Keputusannya tetap menimbang ketiga sisi: biaya, karbon, dan
+risiko layanan.
+
+\begin{kasus}[title={Kasus Medikara Health: SCI per Janji Temu Medikara+}]
+  Misalkan tim memperkirakan SCI Medikara+ untuk satu bulan biasa dengan sekitar 28.000 janji temu.
+  Energi diperkirakan dari data alat jejak karbon penyedia, dan intensitas karbon listrik memakai
+  angka asumsi 0,70 kilogram setara karbon dioksida per kWh. Angka intensitas ini rekaan untuk
+  latihan; nilai yang berlaku diambil dari data penyedia atau faktor emisi resmi. Tabel
+  \ref{tab:ch03-sci-medikara} memperlihatkan perhitungan sebelum dan sesudah dua perbaikan:
+  lingkungan pengembangan dimatikan di luar jam kerja dan mesin produksi di-\textit{rightsizing}.
+
+  Hasilnya, SCI turun dari sekitar 58,2 gram menjadi 44,8 gram per janji temu, atau sekitar 23
+  persen. Perbaikan yang sama juga menurunkan biaya lingkungan pengembangan, sehingga satu keputusan
+  menggerakkan dua metrik sekaligus. Region tidak diubah karena rekam medis dan data pasien harus
+  tetap berada di Indonesia.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perhitungan SCI Medikara+ per janji temu untuk satu bulan
+           (angka rekaan)}
+  \label{tab:ch03-sci-medikara}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r}
+    \hline
+    \textbf{Komponen} & \textbf{Sebelum} & \textbf{Sesudah} \\ \hline
+    $E$: energi per bulan (kWh) & 1.900 & 1.450 \\ \hline
+    $I$: intensitas karbon listrik (kg per kWh, asumsi) & 0,70 & 0,70 \\ \hline
+    $E \times I$: emisi operasional (kg) & 1.330 & 1.015 \\ \hline
+    $M$: porsi emisi melekat perangkat keras (kg) & 300 & 240 \\ \hline
+    $R$: janji temu per bulan & 28.000 & 28.000 \\ \hline
+    \textbf{SCI (gram per janji temu)} & \textbf{58,2} & \textbf{44,8} \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Aktivitas: Model Biaya Awal dan Sasaran Nilai Cloud}
 
-% TODO
-% Tujuan aktivitas: menghasilkan perkiraan TCO kasar untuk satu workload, satu metrik biaya per unit, dan satu sasaran nilai cloud yang terukur.
-% Peran dalam tim: anggota berlatar akuntansi atau keuangan memimpin struktur biaya dan asumsi; anggota teknis memperkirakan biaya sumber daya dengan kalkulator harga; anggota lain memeriksa kewajaran asumsi.
-% Langkah: (1) pilih satu workload dari matriks Bab 2; (2) susun biaya kondisi sekarang; (3) perkirakan satu atau dua opsi cloud; (4) tetapkan metrik biaya per unit; (5) rumuskan sasaran nilai, misalnya biaya infrastruktur per kunjungan pasien turun 15 persen dalam dua tahun.
-% Luaran dan tonggak capstone: C1, model biaya awal dan sasaran nilai cloud.
-% Berkas sources yang direncanakan: sources/chapter03/templat-tco-sederhana.xlsx, sources/chapter03/contoh-tagihan-focus.csv, sources/chapter03/lembar-sasaran-nilai.md
+\textbf{Tujuan.} Tim menghasilkan tiga hal untuk satu \textit{workload}: perkiraan TCO kasar, satu
+metrik biaya per unit, dan satu sasaran nilai \textit{cloud} yang terukur. Ketiganya menjadi bagian
+tonggak capstone C1 (Konteks dan Strategi).
+
+\textbf{Pembagian peran.}
+\begin{itemize}
+  \item Anggota berlatar akuntansi atau keuangan memimpin struktur biaya, asumsi, dan perhitungan
+        biaya per unit.
+  \item Anggota berlatar teknis memperkirakan biaya sumber daya dengan kalkulator harga penyedia dan
+        menilai pola bebannya.
+  \item Anggota lain, misalnya yang berlatar manajemen, hukum, atau kesehatan, memeriksa kewajaran
+        asumsi, kendala regulasi, dan makna metrik bagi direksi.
+\end{itemize}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Pilih satu \textit{workload} dari matriks kendala penempatan Bab 2. Utamakan
+        \textit{workload} yang datanya dapat diperoleh dan pemiliknya dapat ditanya.
+  \item Susun biaya kondisi sekarang selama lima tahun dengan
+        \berkas{sources/chapter03/templat-tco-sederhana.xlsx}. Setiap angka diberi asumsi dan sumber
+        di kolom terakhir.
+  \item Perkirakan satu atau dua opsi \textit{cloud}, misalnya \textit{rehost} apa adanya dan
+        \textit{rehost} dengan \textit{rightsizing} serta komitmen. Gunakan Gambar
+        \ref{fig:ch03-gunung-es} sebagai daftar periksa biaya yang sering terlupa.
+  \item Tetapkan satu metrik biaya per unit dengan empat syarat unit yang baik, lalu hitung nilai
+        awalnya.
+  \item Rumuskan sasaran nilai yang memuat angka, arah, dan batas waktu, misalnya "biaya
+        infrastruktur per kunjungan pasien turun 15 persen dalam dua tahun", lengkap dengan satu
+        metrik pendamping. Tulis di \berkas{sources/chapter03/lembar-sasaran-nilai.md}.
+\end{enumerate}
+
+\textbf{Luaran.} Templat TCO yang terisi, lembar sasaran nilai, dan ringkasan satu halaman yang
+menjelaskan opsi yang direkomendasikan beserta asumsi terbesarnya. Luaran ini masuk ke C1 sebagai
+model biaya awal dan sasaran nilai \textit{cloud}, dan akan dipakai lagi saat menilai strategi
+migrasi 7R pada Bab 4.
+
+\textbf{Kriteria penilaian.} Tabel \ref{tab:ch03-kriteria-aktivitas} memuat kriteria singkat yang
+dipakai saat tinjauan Sabtu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 03}
+  \label{tab:ch03-kriteria-aktivitas}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{Bukti yang dicari} \\ \hline
+    Kelengkapan dan kejujuran TCO & 30 persen & Komponen yang sering terlupa ikut dihitung, lingkup
+      kedua sisi setara \\ \hline
+    Asumsi yang dapat diperiksa & 20 persen & Setiap angka punya sumber atau alasan tertulis \\
+      \hline
+    Kualitas metrik biaya per unit & 25 persen & Unit bermakna bagi direksi dan datanya tersedia
+      rutin \\ \hline
+    Sasaran nilai yang terukur & 25 persen & Ada angka, arah, batas waktu, dan metrik pendamping \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Etika.} Data organisasi nyata hanya dipakai seizin organisasi dan dianonimkan. Angka biaya
+cukup dalam bentuk pembulatan. Data pribadi pasien atau karyawan tidak boleh dicantumkan.
+
+\textbf{Pendalaman teknis (opsional).} Anggota berlatar teknis menjalankan
+\berkas{sources/chapter03/olah-tagihan-focus.py} seperti pada kotak pendalaman seksi
+\ref{sec:ch03-alokasi}, atau pada ekspor tagihan FOCUS organisasi pilihan bila diizinkan.
 
 \section{Ringkasan}
 
-% TODO
+Perpindahan ke \textit{cloud} mengubah belanja infrastruktur dari CapEx yang diputuskan sekali dalam
+siklus anggaran menjadi OpEx yang bergerak setiap hari mengikuti pemakaian. Perubahan ini
+meringankan arus kas di awal, tetapi memindahkan keputusan biaya dari ruang direksi ke tangan tim
+teknik. TCO yang jujur membandingkan kedua sisi dengan masa, lingkup, dan tingkat layanan yang sama,
+serta memasukkan biaya di bawah permukaan: lisensi, tenaga kerja, migrasi, transfer data keluar, dan
+pelatihan. Kasus SIMRS rumah sakit Bekasi menunjukkan bahwa memindahkan sistem apa adanya bisa lebih
+mahal, sedangkan penghematan datang dari \textit{rightsizing} dan komitmen.
+
+Model harga \textit{on-demand}, komitmen pemakaian, dan \textit{spot} dipakai bersamaan sesuai pola
+beban. Komitmen punya titik impas, yaitu satu dikurangi potongannya, dan membeli komitmen sebelum
+\textit{rightsizing} adalah kesalahan yang paling mahal. FinOps Framework 2026 menjadikan
+pengelolaan biaya teknologi sebagai kerja bersama, bukan tugas bagian keuangan saja. Enam prinsipnya
+menekankan kolaborasi, nilai bisnis, kepemilikan, dan data yang tepat waktu. Tiga fasenya, Inform,
+Optimize, dan Operate, berulang terus dengan kematangan yang naik bertahap. Persona inti, empat
+domain, dan \textit{capability}-nya memberi bahasa bersama, termasuk \textit{capability} Executive
+Strategy Alignment yang menautkan biaya teknologi dengan strategi pimpinan.
+
+Alokasi dimulai dari \textit{tag} yang disiplin, dilanjutkan dengan \textit{showback} sebelum
+\textit{chargeback}. FOCUS menyatukan tagihan dari banyak penyedia ke satu skema, dan perbedaan
+\texttt{BilledCost} dengan \texttt{EffectiveCost} menentukan apakah biaya komitmen jatuh ke pemilik
+yang benar. Biaya per unit, misalnya per kunjungan pasien atau per janji temu, menerjemahkan tagihan
+menjadi efisiensi yang dapat dinilai direksi. SCI menerapkan cara pandang yang sama pada karbon,
+sehingga biaya dan emisi per janji temu dapat dibaca berdampingan.
+
+Pesan utama bab ini sederhana: tagihan \textit{cloud} yang naik belum tentu buruk, dan tagihan yang
+turun belum tentu baik. Yang menentukan adalah biaya dan emisi per satuan nilai layanan, siapa
+pemiliknya, dan seberapa cepat organisasi mengetahuinya. Model biaya awal dan sasaran nilai yang
+disusun pada Aktivitas bab ini menjadi patokan bagi setiap keputusan arsitektur pada bab-bab
+berikutnya.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Tagihan Naik, Pengguna Tetap}
+
+Latihan ini membuktikan bahwa kenaikan tagihan \textit{cloud} dapat dijelaskan dari data tagihan itu
+sendiri. Pertanyaannya: mengapa tagihan \textit{cloud} sebuah organisasi bisa naik walaupun jumlah
+penggunanya tetap? Berikan tiga penyebab yang mungkin.
+
 \begin{enumerate}
-  \item Jelaskan mengapa tagihan \textit{cloud} sebuah organisasi bisa naik walaupun jumlah penggunanya tetap. Berikan tiga penyebab yang mungkin.
-  \item Pilih satu layanan Medikara Health dan usulkan metrik biaya per unit yang bermakna bagi direksi. Jelaskan alasan pemilihannya.
-  \item Kapan model harga berbasis komitmen lebih menguntungkan daripada \textit{on-demand}, dan kapan justru merugikan?
+  \item Ambil tagihan dua bulan berurutan untuk satu layanan, dari organisasi pilihan (seizin
+        organisasi) atau dari contoh Tabel \ref{tab:ch03-lat1-contoh}.
+  \item Pastikan jumlah pengguna atau transaksi kedua bulan relatif sama.
+  \item Hitung selisih per komponen biaya, lalu urutkan dari yang terbesar.
+  \item Untuk tiga selisih terbesar, tulis dugaan penyebab dan cara memeriksanya.
+  \item Isi Tabel \ref{tab:ch03-lat1-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 1: tagihan Medikara+ Juni dan Juli 2026, sekitar
+           28.000 janji temu per bulan, dalam juta rupiah}
+  \label{tab:ch03-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} r r r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Komponen} & \textbf{Juni} & \textbf{Juli} & \textbf{Selisih} & \textbf{Dugaan penyebab}
+      \\ \hline
+    Komputasi produksi & 27,5 & 27,5 & 0,0 & Tidak berubah \\ \hline
+    Basis data produksi & 12,0 & 12,0 & 0,0 & Tidak berubah \\ \hline
+    Lingkungan pengembangan & 3,4 & 10,0 & 6,6 & Dibiarkan menyala 24 jam setelah uji fitur baru \\
+      \hline
+    Penyimpanan & 2,4 & 3,2 & 0,8 & Log dan cadangan tanpa batas masa simpan \\ \hline
+    Transfer data keluar & 3,3 & 4,3 & 1,0 & Fitur unduh hasil pemeriksaan berukuran besar \\ \hline
+    \textbf{Total} & \textbf{48,6} & \textbf{57,0} & \textbf{8,4} & Naik 17 persen; per janji temu
+      dari Rp1.736 menjadi Rp2.036 \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 1}
+  \label{tab:ch03-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} r r r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Komponen} & \textbf{Bulan 1} & \textbf{Bulan 2} & \textbf{Selisih} & \textbf{Dugaan
+      penyebab} \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textbf{Total} & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, berapa persen kenaikan total yang berasal dari lingkungan pengembangan? Apa
+        artinya bagi prioritas perbaikan?
+  \item Dari tiga penyebab yang ditemukan, mana yang akan terdeteksi lebih cepat bila Medikara
+        Health sudah memakai \textit{dashboard} biaya harian dan \textit{tag} \texttt{lingkungan}?
+\end{enumerate}
+
+\subsection*{Latihan 2: Metrik Biaya per Unit bagi Direksi}
+
+Latihan ini membuktikan bahwa pilihan unit menentukan apakah metrik biaya bermakna bagi direksi.
+Pilih satu layanan Medikara Health dan usulkan metrik biaya per unit yang bermakna bagi direksi.
+Jelaskan alasan pemilihannya.
+
+\begin{enumerate}
+  \item Pilih satu layanan, misalnya laboratorium rujukan, Medikara+, atau integrasi BPJS Kesehatan.
+  \item Tuliskan tiga calon unit, termasuk satu unit teknis sebagai pembanding.
+  \item Hitung nilai contoh setiap calon dengan biaya bulanan layanan.
+  \item Nilai setiap calon dengan empat syarat unit yang baik: dipahami direksi, data tersedia
+        rutin, mengikuti pemicu biaya, dan sulit dimanipulasi.
+  \item Pilih satu unit dan tulis alasannya dalam satu paragraf.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 2: calon unit untuk laboratorium rujukan, biaya
+           Agustus 2026 Rp7,8 juta (angka rekaan)}
+  \label{tab:ch03-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.3cm} r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Calon unit} & \textbf{Penyebut} & \textbf{Nilai} & \textbf{Penilaian empat syarat} \\
+      \hline
+    Per hasil pemeriksaan & 52.000 hasil & Rp150 & Dipahami, tersedia, mengikuti beban; sulit
+      dimanipulasi. Terpilih \\ \hline
+    Per pasien laboratorium & 21.000 pasien & Rp371 & Dipahami, tetapi satu pasien bisa punya satu
+      atau sepuluh pemeriksaan \\ \hline
+    Per jam komputasi \textit{batch} & 1.240 jam & Rp6.290 & Tersedia, tetapi teknis dan tidak
+      bermakna bagi direksi \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 2}
+  \label{tab:ch03-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.3cm} r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Calon unit} & \textbf{Penyebut} & \textbf{Nilai} & \textbf{Penilaian empat syarat} \\
+      \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Bila jumlah pemeriksaan per pasien naik karena paket pemeriksaan baru, apa yang terjadi pada
+        biaya per pasien dan biaya per hasil pemeriksaan? Metrik mana yang menyesatkan?
+  \item Metrik pendamping apa yang perlu dipasang agar biaya per unit tidak diturunkan dengan
+        mengorbankan mutu layanan?
+\end{enumerate}
+
+\subsection*{Latihan 3: Kapan Komitmen Menguntungkan}
+
+Latihan ini membuktikan bahwa keuntungan komitmen ditentukan oleh pemanfaatannya. Pertanyaannya:
+kapan model harga berbasis komitmen lebih menguntungkan daripada \textit{on-demand}, dan kapan
+justru merugikan?
+
+\begin{enumerate}
+  \item Tetapkan harga \textit{on-demand}, potongan komitmen, dan besar komitmen. Contoh memakai
+        Rp1.000 per unit-jam, potongan 40 persen, dan komitmen 100 unit selama 730 jam per bulan.
+  \item Hitung titik impas pemanfaatan dengan rumus satu dikurangi potongan.
+  \item Hitung biaya bulanan untuk empat tingkat pemakaian rata-rata, baik dengan \textit{on-demand}
+        maupun dengan komitmen.
+  \item Tandai tingkat pemakaian yang membuat komitmen merugi.
+  \item Isi Tabel \ref{tab:ch03-lat3-hasil} dengan angka dari penyedia atau dari kalkulator harga.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 3: biaya bulanan komitmen 100 unit dengan potongan
+           40 persen, dalam juta rupiah (angka rekaan)}
+  \label{tab:ch03-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r >{\raggedright\arraybackslash}p{2.6cm}}
+    \hline
+    \textbf{Pemakaian rata-rata} & \textbf{\textit{On-demand}} & \textbf{Komitmen} &
+      \textbf{Selisih} & \textbf{Lebih untung} \\ \hline
+    50 unit (50 persen) & 36,5 & 43,8 & $-$7,3 & \textit{On-demand} \\ \hline
+    60 unit (60 persen) & 43,8 & 43,8 & 0,0 & Impas \\ \hline
+    70 unit (70 persen) & 51,1 & 43,8 & 7,3 & Komitmen \\ \hline
+    90 unit (90 persen) & 65,7 & 43,8 & 21,9 & Komitmen \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 3}
+  \label{tab:ch03-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r >{\raggedright\arraybackslash}p{2.6cm}}
+    \hline
+    \textbf{Pemakaian rata-rata} & \textbf{\textit{On-demand}} & \textbf{Komitmen} &
+      \textbf{Selisih} & \textbf{Lebih untung} \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item SIMRS versi lama di salah satu rumah sakit direncanakan diganti dalam 14 bulan. Apakah
+        komitmen tiga tahun masuk akal untuk server-nya, walaupun pemanfaatannya 90 persen? Jelaskan
+        dengan membaca tabel.
+  \item Pemakaian Medikara+ berkisar 45 unit di malam hari dan 90 unit di siang hari. Berapa besar
+        komitmen yang aman, dan bagian mana yang sebaiknya tetap \textit{on-demand}?
+  \item Bagaimana titik impas berubah bila potongan komitmen hanya 25 persen?
 \end{enumerate}

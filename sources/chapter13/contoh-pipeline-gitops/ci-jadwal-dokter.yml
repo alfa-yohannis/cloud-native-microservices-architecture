@@ -1,0 +1,42 @@
+# Kegunaan: contoh pipeline CI Bab 13 untuk layanan jadwal dokter Bab 08.
+# Pakai: taruh di .github/workflows/ pada repositori milik sendiri yang
+# berisi app.py dan Dockerfile dari sources/chapter08/contoh-container.
+name: ci-jadwal-dokter
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  # Ganti dengan nama organisasi sendiri, huruf kecil semua.
+  IMAGE: ghcr.io/contoh-medikara/jadwal-dokter
+
+jobs:
+  uji-dan-bangun:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      # Kesalahan sintaks ditolak dalam hitungan detik, sebelum build.
+      - name: Periksa sintaks
+        run: python3 -m py_compile app.py
+      # Tag memakai hash commit agar setiap image dapat ditelusuri.
+      - name: Bangun image
+        run: docker build -t "$IMAGE:${{ github.sha }}" .
+      # Uji asap: container harus menjawab /sehat sebelum boleh dikirim.
+      - name: Uji asap
+        run: |
+          docker run -d -p 8080:8080 --name uji "$IMAGE:${{ github.sha }}"
+          curl --fail --retry 5 --retry-connrefused \
+            http://localhost:8080/sehat
+      # Image hanya dikirim dari cabang main, tidak dari pull request.
+      - name: Kirim image
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:${{ github.sha }}"

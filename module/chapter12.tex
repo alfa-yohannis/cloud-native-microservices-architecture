@@ -1,67 +1,1174 @@
 \chapter{Resiliensi dan Disaster Recovery}
+\label{ch:ch12}
+
+\lstdefinestyle{ch12python}{language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape, stringstyle=\color{red},
+  showstringspaces=false, breaklines=true, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10}, tabsize=2, captionpos=b}
+
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
-  \item Mengidentifikasi mode kegagalan dalam sistem terdistribusi dan pola resiliensi untuk menanganinya.
+  \item Mengidentifikasi mode kegagalan dalam sistem terdistribusi dan pola resiliensi untuk
+        menanganinya.
   \item Menetapkan RTO dan RPO berdasarkan dampak bisnis.
   \item Memilih strategi DR yang seimbang antara biaya dan risiko.
 \end{itemize}
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: insiden PDNS 2 Surabaya pada 2024 melumpuhkan layanan ratusan instansi dan memperlihatkan bahwa cadangan yang tidak teruji sama dengan tidak punya cadangan; rumah sakit tidak boleh berhenti melayani hanya karena satu pusat data bermasalah.
+Pada 20 Juni 2024 Pusat Data Nasional Sementara 2 (PDNS 2) di Surabaya lumpuh. Dalam rapat kerja
+dengan Komisi I Dewan Perwakilan Rakyat (DPR), Menteri Komunikasi dan Informatika menjelaskan bahwa
+gangguan pertama terdeteksi pada 17 Juni 2024 berupa upaya menonaktifkan fitur keamanan Windows
+Defender. Aktivitas berbahaya \textit{ransomware} Brain Cipher mulai berjalan pada 20 Juni, dan
+penyerang meminta tebusan 8 juta dolar Amerika Serikat, sekitar Rp131 miliar \cite{c12-antara2024}.
+Menurut pengelola pusat data, 282 instansi pengguna (\textit{tenant}) terdampak, dan layanan
+keimigrasian termasuk tiga layanan pertama yang berangsur pulih \cite{c12-cnn2024}. Dalam rapat
+dengan Komisi I DPR pada 27 Juni 2024, Kepala Badan Siber dan Sandi Negara (BSSN) menyebut hanya 2
+persen data di PDNS Surabaya yang memiliki cadangan \cite{c12-cnbc2024}.
+
+Peristiwa itu meninggalkan satu pelajaran yang mudah diucapkan dan sulit dijalankan: cadangan yang
+tidak lengkap atau tidak pernah diuji sama dengan tidak punya cadangan. Bagi rumah sakit,
+taruhannya lebih besar dari layanan administrasi. Instalasi Gawat Darurat (IGD) tetap menerima
+pasien pukul tiga dini hari, apa pun yang terjadi pada pusat data. Bab 1 menyisakan satu pertanyaan
+untuk Medikara Health: bagaimana rekam medis dipulihkan bila satu pusat data padam? Bab ini
+menjawabnya lewat dua konsep. Resiliensi adalah kemampuan sistem tetap melayani, mungkin dengan
+fungsi terbatas, ketika sebagian komponennya gagal. \textit{Disaster Recovery} (DR) adalah rencana,
+arsitektur, dan latihan untuk memulihkan layanan setelah kejadian besar yang tidak dapat ditahan
+oleh resiliensi biasa.
+
+\IfFileExists{../figures/ch12-diagram-konsep.png}{%
+Gambar \ref{fig:ch12-ilustrasi} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch12-diagram-konsep.png}
+  \caption{Ketahanan request dan pemulihan data saling melengkapi}
+  \label{fig:ch12-ilustrasi}
+\end{figure}
+}{}
+
+Bab ini disusun dalam enam langkah: mode kegagalan dalam sistem terdistribusi, pola resiliensi,
+penerapan \textit{multi-AZ} dan \textit{multi-region}, \textit{Recovery Time Objective} (RTO) dan
+\textit{Recovery Point Objective} (RPO) beserta strategi DR, pertahanan cadangan terhadap
+\textit{ransomware}, serta \textit{chaos engineering} dan \textit{game day}. Rujukan utamanya adalah
+\textit{whitepaper} DR dari Amazon Web Services (AWS) \cite{c12-aws-dr2021}, pilar keandalan AWS
+Well-Architected \cite{c12-aws-reliability}, panduan DR Azure Well-Architected \cite{c12-azure-dr},
+buku Nygard tentang perangkat lunak yang siap produksi \cite{c12-nygard2018}, buku
+\textit{Site Reliability Engineering} (SRE) Google \cite{beyer2016}, pedoman perencanaan kontinjensi
+National Institute of Standards and Technology (NIST) \cite{c12-nist800-34}, dan kajian Basiri dkk.
+tentang \textit{chaos engineering} \cite{c12-basiri2016}. Hasil bab ini adalah rencana resiliensi
+dan DR beserta jadwal uji pemulihan, yang menjadi bagian tonggak capstone C4 Peta Jalan dan Tata
+Kelola.
 
 \section{Mode Kegagalan dalam Sistem Terdistribusi}
+\label{sec:ch12-mode-kegagalan}
 
-% TODO
-% Cakupan: kegagalan parsial, latensi tinggi, dan kegagalan berantai; titik kegagalan tunggal; kegagalan yang berasal dari penyedia atau pihak ketiga (risiko pihak ketiga dibahas rinci di IT40813).
-% Kasus Medikara: gangguan layanan BPJS Kesehatan yang merambat ke antrean pendaftaran.
+Pada monolit, kegagalan biasanya total dan mudah dikenali: aplikasi berhenti, semua orang tahu.
+Setelah sistem dipecah menjadi beberapa layanan yang berbicara lewat jaringan (Bab 7 dan Bab 9),
+kegagalan lebih sering bersifat sebagian. Satu layanan lambat, satu panggilan gagal, satu mitra
+tidak menjawab, sementara bagian lain masih berjalan. Karena itu pertanyaan pertama dalam merancang
+resiliensi bukan ``bagaimana mencegah semua kegagalan'', melainkan ``kegagalan seperti apa yang
+akan terjadi, dan bagaimana sistem bersikap ketika itu terjadi''.
+
+\subsection{Kegagalan Parsial dan Latensi Tinggi}
+
+Kegagalan parsial adalah keadaan ketika sebagian komponen gagal sementara komponen lain tetap
+berjalan. Bentuknya beragam: sebagian permintaan ditolak, satu dari tiga salinan layanan mati, atau
+satu fungsi tidak dapat dipakai. Bentuk yang paling licin adalah latensi tinggi: layanan tidak mati,
+tetapi menjawab jauh lebih lambat dari biasanya. Nygard menggolongkan respons yang lambat sebagai
+salah satu pola penyebab ketidakstabilan, karena respons lambat menahan sumber daya pemanggil lebih
+lama daripada penolakan yang cepat \cite{c12-nygard2018}. Pemanggil tidak segera tahu bahwa ada
+masalah. Ia menunggu, dan selama menunggu ia memegang koneksi, memori, dan antrean kerja.
+
+Analoginya seperti menelepon kantor lain untuk menanyakan satu data. Telepon yang tidak diangkat
+segera membuat petugas mencari jalan lain. Telepon yang diangkat lalu dijawab ``mohon tunggu
+sebentar'' selama setengah jam justru lebih merugikan. Petugas memegang gagang telepon, tidak dapat
+melayani tamu lain, dan antrean di depan mejanya terus memanjang.
+
+Beban akibat latensi dapat dihitung dengan aturan sederhana: jumlah permintaan yang sedang menunggu
+kira-kira sama dengan laju permintaan dikali lama menunggu. Dua contoh perhitungannya:
+\begin{enumerate}
+  \item Layanan yang menerima 2 permintaan per detik dan menjawab dalam 0,8 detik hanya memegang
+        sekitar 2 permintaan pada satu waktu. Bila jawaban melambat menjadi 30 detik, jumlah itu
+        naik menjadi sekitar 60 permintaan, tiga puluh kali lipat, padahal jumlah pasien tidak
+        bertambah.
+  \item Bila layanan itu hanya punya kolam 50 koneksi, kolam penuh setelah sekitar 25 detik
+        ($50 \div 2$). Sesudah itu permintaan baru tidak tertahan oleh layanan tujuan, melainkan
+        oleh kolam koneksi milik sendiri.
+\end{enumerate}
+
+\subsection{Kegagalan Berantai dan Titik Kegagalan Tunggal}
+
+Kegagalan berantai (\textit{cascading failure}) terjadi ketika kegagalan satu bagian membuat bagian
+lain ikut gagal, lalu bagian berikutnya, dan seterusnya. Buku SRE Google menjelaskan bahwa kegagalan
+berantai tumbuh lewat umpan balik positif. Bagian yang kelebihan beban menjadi lambat atau gagal,
+sehingga beban berpindah ke bagian lain yang kemudian ikut kelebihan beban \cite{beyer2016}. Gambar
+\ref{fig:ch12-kegagalan-berantai} memperlihatkan rambatan semacam itu pada alur pendaftaran pasien:
+gangguan bermula di layanan pihak ketiga, tetapi yang merasakan akibatnya adalah pasien di loket.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch12-kegagalan-berantai.tex}
+  \caption{Kegagalan berantai: layanan pihak ketiga yang melambat menghabiskan kolam koneksi, lalu
+           merambat sampai ke antrean loket pendaftaran}
+  \label{fig:ch12-kegagalan-berantai}
+\end{figure}
+
+Titik kegagalan tunggal (\textit{single point of failure}) adalah komponen yang, bila gagal,
+menghentikan seluruh layanan. Titik ini sering tersembunyi di tempat yang tidak tergambar pada
+diagram arsitektur: satu basis data identitas yang dipakai semua aplikasi, satu sertifikat yang
+kedaluwarsa, satu sambungan jaringan ke kantor pusat, satu akun administrator, atau satu orang yang
+hafal prosedur pemulihan.
+
+Analoginya seperti supermarket dengan satu kasir yang mesinnya macet. Antrean di kasir merambat ke
+lorong belanja, troli menghalangi rak, dan pembeli yang hanya ingin mengambil satu barang ikut
+terjebak. Masalahnya ada di satu titik, tetapi seluruh toko terasa lumpuh.
+
+Dua contoh kasus nyata:
+\begin{enumerate}
+  \item Pada 7 Desember 2021 \textit{region} US-EAST-1 milik AWS terganggu. Laporan pascainsiden
+        AWS mencatat bahwa aktivitas otomatis untuk menambah kapasitas satu layanan memicu
+        perilaku tak terduga dari banyak klien di jaringan internal, sehingga terjadi lonjakan
+        koneksi yang membanjiri perangkat jaringan. Keterlambatan menaikkan latensi dan
+        \textit{error}, yang memicu lebih banyak percobaan koneksi dan pengulangan. Kemacetan itu
+        bahkan mengganggu data pemantauan yang dibutuhkan tim operasi untuk menemukan penyebabnya
+        \cite{c12-aws-event2021}.
+  \item Pada Juli 2024 pembaruan perangkat lunak keamanan dari CrowdStrike membuat banyak komputer
+        Windows di seluruh dunia gagal menyala. Microsoft memperkirakan pembaruan itu mengenai
+        8,5 juta perangkat Windows, kurang dari satu persen dari seluruh mesin Windows
+        \cite{c12-weston2024}. Persentasenya kecil, tetapi satu vendor yang sama dipakai banyak
+        organisasi sekaligus, sehingga dampaknya terasa di berbagai sektor pada hari yang sama.
+\end{enumerate}
+
+\subsection{Kegagalan dari Penyedia dan Pihak Ketiga}
+
+Contoh kedua di atas menunjukkan jenis kegagalan yang paling sulit dikendalikan: kegagalan yang
+berasal dari penyedia atau pihak ketiga. Medikara Health bergantung pada layanan Badan
+Penyelenggara Jaminan Sosial (BPJS) Kesehatan, SATUSEHAT, penyedia \textit{cloud}, vendor aplikasi
+Medikara+, dan penyedia jaringan. Organisasi tidak dapat memperbaiki sistem milik pihak lain. Yang
+dapat dikendalikan hanya dampaknya di sisi sendiri: berapa lama menunggu, apa yang dilakukan ketika
+pihak lain tidak menjawab, dan fungsi apa yang tetap berjalan. Penilaian risiko pihak ketiga dari
+sisi kontrak dan tata kelola dibahas rinci di IT40813.
+
+Tabel \ref{tab:ch12-mode-kegagalan} merangkum enam mode kegagalan beserta contoh di Medikara dan pola
+penanganan yang dibahas di seksi berikutnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Enam mode kegagalan, contoh di Medikara Health, dan pola penanganannya}
+  \label{tab:ch12-mode-kegagalan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.5cm}}
+    \hline
+    \textbf{Mode kegagalan} & \textbf{Ciri yang terlihat} & \textbf{Contoh di Medikara} &
+      \textbf{Pola penanganan} \\ \hline
+    Kegagalan total satu komponen & Komponen berhenti menjawab sama sekali & Server aplikasi
+      farmasi RS Depok mati & Salinan ganda, pindah otomatis \\ \hline
+    Latensi tinggi & Komponen menjawab, tetapi jauh lebih lambat & Cek kepesertaan melambat dari
+      0,8 menjadi 30 detik & \textit{Timeout}, \textit{circuit breaker} \\ \hline
+    Kegagalan parsial & Sebagian permintaan gagal, sebagian berhasil & Satu dari lima kiriman
+      data ke SATUSEHAT ditolak & \textit{Retry} dengan \textit{backoff} \\ \hline
+    Kegagalan berantai & Gangguan satu bagian merambat ke bagian lain & Antrean loket memanjang
+      karena layanan pihak ketiga lambat & \textit{Bulkhead}, batas \textit{retry} \\ \hline
+    Titik kegagalan tunggal & Satu komponen menghentikan semuanya & Satu basis data identitas
+      untuk seluruh aplikasi klinis & Redundansi, \textit{multi-AZ} \\ \hline
+    Kegagalan pihak ketiga & Penyebab di luar kendali organisasi & Gangguan layanan BPJS
+      Kesehatan, pembaruan vendor yang rusak & \textit{Graceful degradation}, rencana cadangan
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{kasus}[title={Kasus Medikara Health: Gangguan BPJS Kesehatan Merambat ke Loket}]
+  Misalkan pada Senin pagi, pukul 08.10, layanan kepesertaan BPJS Kesehatan melambat. Jawaban yang
+  biasanya datang dalam 0,8 detik kini butuh sekitar 30 detik. Di sisi Medikara, satu layanan
+  integrasi melayani pengecekan kepesertaan dari pendaftaran, farmasi, dan klaim. Pada jam sibuk
+  pukul 08.00 sampai 10.00 layanan itu menerima sekitar 2 permintaan per detik dan memakai satu
+  kolam berisi 50 koneksi untuk semua tujuan, termasuk pengiriman data ke SATUSEHAT.
+
+  Dalam 25 detik kolam koneksi penuh. Aplikasi pendaftaran mengulang setiap permintaan yang gagal
+  tiga kali, dan petugas loket menekan tombol ``ulangi'' karena layar tidak bergerak. Pengiriman
+  data ke SATUSEHAT ikut tertahan karena memakai kolam yang sama. Pasien umum yang tidak memakai BPJS
+  Kesehatan juga ikut menunggu, karena layanan pendaftaran menunggu jawaban layanan integrasi
+  sebelum melanjutkan ke langkah berikutnya. Misalkan pada pukul 09.30 waktu tunggu di loket RS
+  Jakarta naik dari rata-rata 15 menit menjadi 70 menit.
+
+  Kejadian ini punya dua konsekuensi. Pertama, penyebabnya ada di luar Medikara, tetapi kerugiannya
+  ditanggung Medikara: pasien yang kesal tidak membedakan sistem milik siapa yang lambat. Kedua,
+  pasien umum yang sama sekali tidak berhubungan dengan BPJS Kesehatan ikut menunggu. Itu tanda
+  bahwa sistem tidak punya batas waktu, tidak punya sekat antarketergantungan, dan tidak punya jalur
+  cadangan. Ketiga kekurangan itu dijawab oleh pola pada seksi berikutnya.
+\end{kasus}
 
 \section{Pola Resiliensi}
+\label{sec:ch12-pola}
 
-% TODO
-% Cakupan: timeout, retry dengan backoff, circuit breaker, bulkhead, dan graceful degradation; contoh perilaku yang terasa oleh pengguna untuk tiap pola; risiko retry yang memperparah beban.
-% Pendalaman teknis: mensimulasikan kegagalan satu layanan dan mengamati perilaku circuit breaker dengan pustaka resiliensi.
+Nygard menyebut sekumpulan pola yang menjaga sistem tetap stabil ketika bagian lain gagal sebagai
+pola stabilitas \cite{c12-nygard2018}. Bab ini membahas lima di antaranya yang paling sering
+dibutuhkan: \textit{timeout}, \textit{retry} dengan \textit{backoff}, \textit{circuit breaker},
+\textit{bulkhead}, dan \textit{graceful degradation}. Setiap pola menjawab satu mode kegagalan.
+Setiap pola juga mengubah apa yang dirasakan pengguna, sehingga pemilik bisnis perlu ikut memutuskan
+perilaku yang dikehendaki.
+
+\subsection{Timeout}
+
+\textit{Timeout} adalah batas waktu menunggu jawaban. Setelah batas itu lewat, pemanggil berhenti
+menunggu, melepas sumber dayanya, dan menjalankan rencana lain. Pola ini mengubah latensi tinggi
+yang tidak terlihat menjadi kegagalan cepat yang dapat ditangani. Batasnya ditetapkan dari data,
+bukan tebakan. Brooker menjelaskan cara yang dipakai di Amazon: tim menetapkan tingkat
+\textit{timeout} keliru yang masih dapat diterima, misalnya 0,1 persen, lalu memakai persentil
+latensi layanan tujuan yang sesuai, dalam contoh itu persentil ke-99,9, sebagai batas waktunya
+\cite{c12-brooker2019}.
+
+Analoginya seperti menunggu tamu yang sudah berjanji bertemu. Petugas menunggu 15 menit, lalu
+mencatat bahwa tamu tidak datang dan beralih ke agenda berikutnya. Tanpa batas itu, satu tamu yang
+terlambat dapat menghabiskan seluruh hari kerjanya.
+
+Pada kasus BPJS Kesehatan di atas, batas waktu 3 detik membuat jumlah permintaan yang menunggu
+paling banyak sekitar $2 \times 3 = 6$, jauh di bawah kapasitas kolam 50 koneksi. Pendaftaran pasien
+umum tidak lagi ikut tertahan.
+
+\subsection{Retry dengan Backoff dan Jitter}
+
+\textit{Retry} adalah mengulang permintaan yang gagal, dengan harapan kegagalannya hanya sementara.
+\textit{Backoff} adalah jeda yang makin panjang di antara pengulangan, misalnya 1 detik, 2 detik,
+lalu 4 detik. \textit{Jitter} adalah unsur acak yang ditambahkan pada jeda, supaya klien yang gagal
+bersamaan tidak mengulang bersamaan pula \cite{c12-brooker2019}. Brooker menyebut \textit{retry}
+itu ``egois'': klien yang mengulang meminta server menghabiskan lebih banyak waktu demi peluang
+berhasilnya sendiri. Bila kegagalan jarang, itu tidak masalah. Bila kegagalan disebabkan kelebihan
+beban, pengulangan justru menambah beban \cite{c12-brooker2019}. Bila disetel dengan benar,
+pengguna tidak menyadari apa pun: permintaannya berhasil setelah jeda singkat.
+
+Risiko terbesarnya muncul ketika pengulangan dipasang di banyak lapis. Buku SRE Google memberi
+contoh: bila tiga lapis masing-masing mengulang tiga kali, atau empat percobaan, satu tindakan
+pengguna dapat menghasilkan $4^3 = 64$ percobaan ke basis data yang sedang kelebihan beban. Buku
+itu menyarankan pengulangan dibatasi per permintaan, misalnya lewat anggaran pengulangan sebanyak 60
+kali per menit per proses, dan hanya dilakukan di lapis yang memang membutuhkannya \cite{beyer2016}.
+Satu syarat lagi berlaku: hanya operasi yang aman diulang yang boleh diulang. Mengulang pembuatan
+tagihan tanpa penanda unik dapat menghasilkan tagihan ganda.
+
+Analoginya seperti menelepon ulang kantor yang saluran teleponnya sibuk. Satu orang yang menelepon
+ulang setelah beberapa menit itu wajar. Seratus orang yang menelepon ulang setiap lima detik membuat
+saluran tidak pernah lega.
+
+\subsection{Circuit Breaker}
+
+\textit{Circuit breaker} (pemutus sirkuit) menghentikan panggilan ke layanan yang sudah terbukti
+gagal, supaya pemanggil tidak terus menunggu dan layanan tujuan diberi waktu untuk pulih.
+Dokumentasi Azure Architecture Center menjelaskan tiga keadaannya \cite{c12-azure-circuit}. Pada
+keadaan tertutup, permintaan diteruskan dan kegagalan terbaru dihitung. Bila jumlah kegagalan
+melewati ambang, pemutus berpindah ke keadaan terbuka: permintaan langsung ditolak selama jangka
+waktu tertentu. Setelah jangka itu habis, pemutus masuk ke keadaan setengah terbuka dan mengizinkan
+sejumlah kecil permintaan uji. Bila uji berhasil, pemutus kembali tertutup. Bila gagal, pemutus
+kembali terbuka. Keadaan setengah terbuka mencegah layanan yang baru pulih langsung dibanjiri
+permintaan \cite{c12-azure-circuit}. Gambar \ref{fig:ch12-circuit-breaker} memperlihatkan ketiga
+keadaan itu dengan angka yang dipakai di bab ini.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch12-circuit-breaker.tex}
+  \caption{Tiga keadaan \textit{circuit breaker} dan perilaku yang terasa oleh petugas loket}
+  \label{fig:ch12-circuit-breaker}
+\end{figure}
+
+Analoginya seperti sakelar pemutus arus di rumah. Ketika terjadi hubungan pendek, sakelar
+turun dan memutus listrik sebelum kabel terbakar. Penghuni tidak menaikkan sakelar berulang-ulang
+setiap detik. Ia menunggu, memeriksa, lalu mencoba sekali. Bila sakelar turun lagi, masalahnya
+belum selesai.
+
+Dua hal pada pola ini sering tertukar. Pembagiannya begini. \textit{Retry} dipakai untuk kegagalan
+sementara yang diperkirakan segera hilang. \textit{Circuit breaker} dipakai untuk kegagalan yang
+lebih lama, ketika mengulang hanya membuang sumber daya. Keduanya dapat digabung: pengulangan
+dijalankan lewat pemutus, dan logika pengulangan berhenti mengulang ketika pemutus menyatakan
+kegagalan itu tidak sementara \cite{c12-azure-circuit}.
+
+\subsection{Bulkhead}
+
+\textit{Bulkhead} adalah sekat sumber daya. Kolam koneksi, \textit{thread}, atau salinan layanan
+dipisah per ketergantungan atau per kelompok pengguna, supaya kegagalan pada satu ketergantungan
+tidak menghabiskan sumber daya untuk ketergantungan lain. Nama pola ini diambil dari sekat pada
+lambung kapal. Bila lambung bocor, hanya bagian yang rusak yang terisi air, sehingga kapal tidak
+tenggelam \cite{c12-azure-bulkhead}.
+
+Analoginya seperti loket rumah sakit yang dipisah untuk pasien BPJS Kesehatan, pasien umum, dan
+pengambilan obat. Bila verifikasi di loket BPJS Kesehatan macet, pasien umum tetap dilayani di
+loketnya sendiri.
+
+Pada kasus di atas, kolam 50 koneksi dapat dibagi menjadi 30 koneksi untuk BPJS Kesehatan, 10
+koneksi untuk SATUSEHAT, dan 10 koneksi untuk tujuan lain. Gangguan di BPJS Kesehatan paling banyak
+menghabiskan 30 koneksi, sementara pengiriman ke SATUSEHAT tetap berjalan.
+
+\subsection{Graceful Degradation}
+
+\textit{Graceful degradation} adalah kemampuan tetap menjalankan fungsi inti dengan mutu yang
+diturunkan ketika fungsi pendukung gagal. Sistem tidak memilih antara ``jalan penuh'' dan ``mati
+total''. Ia punya beberapa tingkat layanan yang sudah disepakati sebelumnya. Penentuan tingkat itu
+adalah keputusan bisnis, bukan keputusan teknis semata, karena menyangkut risiko yang mau diterima.
+
+Analoginya seperti rumah makan saat listrik padam. Lampu darurat menyala, menu dibatasi pada
+masakan yang tidak membutuhkan oven, dan pembayaran hanya tunai. Tamu tetap dilayani, walaupun
+pilihannya berkurang.
+
+Dua contoh di Medikara Health:
+\begin{enumerate}
+  \item Saat pemutus ke layanan kepesertaan terbuka, pasien tetap didaftarkan dan kepesertaannya
+        ditandai ``periksa ulang''. Misalkan sekitar 240 pasien terdaftar dengan tanda itu selama
+        satu jam gangguan. Petugas klaim memeriksanya ulang setelah layanan pulih, sehingga
+        pekerjaannya bergeser, bukan hilang.
+  \item Bila layanan pemeriksaan interaksi obat tidak tersedia, apotek tidak boleh menyerahkan
+        obat seolah-olah pemeriksaan sudah lulus. Tingkat layanan yang diturunkan di sini adalah
+        pemeriksaan manual oleh apoteker. Fungsi yang menyangkut keselamatan pasien tidak boleh
+        dilewati, hanya boleh dikerjakan dengan cara lain.
+\end{enumerate}
+
+Setiap pola juga punya risiko bila salah disetel. \textit{Timeout} yang terlalu pendek membatalkan
+permintaan yang masih akan berhasil. Ambang \textit{circuit breaker} yang terlalu rendah membuat
+pemutus sering terbuka padahal tujuan sehat. Sekat \textit{bulkhead} yang terlalu kecil membuat
+antrean di satu fungsi walaupun sumber daya lain menganggur. Karena itu angka setiap pola diambil
+dari data latensi dan beban, lalu diuji seperti dijelaskan pada seksi \ref{sec:ch12-chaos}.
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Mensimulasikan Circuit Breaker}]
+  Di lingkungan produksi, \textit{circuit breaker} biasanya diambil dari pustaka resiliensi yang
+  sudah matang, misalnya Resilience4j untuk Java atau Polly untuk .NET, atau dari
+  \textit{service mesh} seperti dibahas di Bab 9. Untuk memahami perilakunya, skrip
+  \berkas{sources/chapter12/simulasi-circuit-breaker.py} meniru cara kerja pustaka tersebut
+  dengan pustaka standar Python saja. Layanan pendaftaran memeriksa kepesertaan satu kali per
+  detik selama 120 detik simulasi, dan layanan tujuan dibuat gangguan pada detik 20 sampai 79.
+  Listing \ref{lst:ch12-pemutus} memperlihatkan tiga metode inti pemutusnya; metode
+  \texttt{pindah} hanya mengganti keadaan dan mencatat riwayatnya.
+
+\begin{lstlisting}[style=ch12python, gobble=4, columns=fullflexible, caption={Tiga metode inti kelas \texttt{PemutusSirkuit},
+  tersedia di \berkas{sources/chapter12/simulasi-circuit-breaker.py}}, label={lst:ch12-pemutus}]
+    def boleh_memanggil(self, detik):
+        """Menjawab apakah panggilan boleh diteruskan ke layanan tujuan.
+
+        Setelah lama_terbuka habis, satu panggilan uji diizinkan lewat.
+        """
+        if self.keadaan != TERBUKA:
+            return True
+        if detik - self.dibuka_pada >= self.lama_terbuka:
+            self.pindah(detik, SETENGAH_TERBUKA)
+            return True
+        return False
+
+    def catat_berhasil(self, detik):
+        """Satu keberhasilan menutup sirkuit dan mengosongkan hitungan."""
+        self.gagal_beruntun = 0
+        self.pindah(detik, TERTUTUP)
+
+    def catat_gagal(self, detik):
+        """Kegagalan menambah hitungan dan dapat membuka sirkuit.
+
+        Pada keadaan setengah terbuka, satu kegagalan langsung membuka
+        kembali sirkuit, karena tujuan terbukti belum pulih.
+        """
+        self.gagal_beruntun += 1
+        if (self.keadaan == SETENGAH_TERBUKA
+                or self.gagal_beruntun >= self.ambang_gagal):
+            self.dibuka_pada = detik
+            self.pindah(detik, TERBUKA)
+\end{lstlisting}
+
+  Skrip dijalankan dengan \texttt{python simulasi-circuit-breaker.py}. Tanpa pemutus, 60 panggilan
+  gagal setelah menunggu batas waktu 3 detik, dan total waktu tunggu mencapai 228 detik. Dengan
+  pemutus berambang 5 kegagalan beruntun dan jangka terbuka 30 detik, pemutus terbuka pada detik
+  24, uji pada detik 54 gagal sehingga pemutus terbuka kembali, lalu uji pada detik 84 berhasil dan
+  pemutus tertutup. Hanya 6 panggilan gagal setelah menunggu, 58 permintaan dialihkan ke jalur
+  cadangan, dan total waktu tunggu turun menjadi 62,8 detik. Hasil itu juga menunjukkan harga
+  pemutus: layanan tujuan sudah sehat sejak detik 80, tetapi empat permintaan pada detik 80 sampai
+  83 tetap dialihkan karena pemutus masih menunggu jangka terbukanya habis. Ubah konstanta
+  \texttt{AMBANG\_GAGAL\_BERUNTUN} dan \texttt{LAMA\_TERBUKA\_DETIK}, lalu amati pertukaran antara
+  waktu tunggu dan jumlah permintaan yang dialihkan.
+\end{pendalaman}
 
 \section{Multi-AZ dan Multi-Region}
+\label{sec:ch12-multi-az}
 
-% TODO
-% Cakupan: perlindungan yang diberikan multi-AZ dan multi-region; biaya dan kerumitan replikasi data; kendala lokasi data di Indonesia terhadap pilihan region cadangan (kaitan dengan Bab 2).
+Pola resiliensi menangani kegagalan komponen. Pertanyaan berikutnya lebih besar: bagaimana bila yang
+gagal adalah satu pusat data, atau seluruh \textit{region}? Bab 2 sudah menjelaskan bahwa satu
+\textit{region} berisi beberapa \textit{availability zone} (AZ), dan setiap AZ punya pasokan
+listrik, pendingin, dan jaringan sendiri. Susunan itu memberi dua tingkat perlindungan.
+
+\textit{Multi-AZ} berarti menjalankan salinan aplikasi dan data di dua atau tiga AZ dalam satu
+\textit{region}. Karena jarak antar-AZ dekat dan jaringannya berlatensi rendah, data dapat
+direplikasi secara sinkron, sehingga satu pusat data yang padam hampir tidak menghilangkan data.
+\textit{Multi-region} berarti menyiapkan salinan di \textit{region} lain yang berjauhan. Rancangan
+ini melindungi dari bencana yang mengenai seluruh \textit{region}, tetapi replikasinya biasanya
+asinkron karena jaraknya jauh, sehingga data terakhir yang belum terkirim dapat hilang
+\cite{c12-aws-dr2021}. Pilar keandalan AWS menetapkan hasil yang dikehendaki berupa beban kerja
+produksi yang tersebar di beberapa AZ atau \textit{region}. Pilar yang sama mencatat dua kekeliruan
+umum: beban kerja produksi yang hanya berada di satu AZ, dan rancangan \textit{multi-region} yang
+dipakai padahal \textit{multi-AZ} sudah memenuhi kebutuhan bisnis \cite{c12-aws-rel10}.
+
+Analoginya seperti perlindungan dokumen di sebuah kantor. Genset di ruang bawah tanah melindungi
+dari listrik padam, tetapi tidak dari banjir yang merendam gedung. Kantor cabang di kota lain
+melindungi dari banjir. Namun dokumen harus dikirim ke cabang setiap hari, dan selalu ada dokumen
+hari ini yang belum sampai ketika banjir datang.
+
+Gambar \ref{fig:ch12-cakupan} menyusun tingkat perlindungan itu untuk Medikara, termasuk lokasi yang
+tidak boleh dipakai untuk rekam medis.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch12-cakupan-perlindungan.tex}
+  \caption{Cakupan perlindungan \textit{multi-AZ}, lokasi kedua, dan cadangan terpisah, beserta
+           kendala lokasi data untuk rekam medis elektronik}
+  \label{fig:ch12-cakupan}
+\end{figure}
+
+\subsection{Biaya dan Kerumitan Replikasi Data}
+
+Dua hal pada replikasi sering tertukar. Pembagiannya begini. Replikasi sinkron menganggap satu
+penulisan selesai setelah lokasi utama dan lokasi kedua sama-sama menyimpannya. Tidak ada data yang
+hilang, tetapi setiap penulisan menunggu perjalanan pulang-pergi ke lokasi kedua, sehingga cara ini
+hanya wajar bila lokasinya dekat. Replikasi asinkron menganggap penulisan selesai di lokasi utama,
+lalu salinannya menyusul. Penulisan tetap cepat, tetapi data yang belum terkirim hilang saat
+bencana. Selisih waktu itulah yang kemudian menjadi RPO.
+
+Selain itu, setiap lokasi tambahan membawa empat jenis biaya. Pertama, infrastruktur ganda: server,
+penyimpanan, dan lisensi di lokasi kedua. Kedua, biaya transfer data antarlokasi yang umumnya
+dihitung per gigabyte. Ketiga, biaya menjaga kesamaan: konfigurasi dan versi aplikasi di dua lokasi
+mudah menyimpang, dan pilar keandalan AWS mencatat penyimpangan data dan konfigurasi sebagai
+kekeliruan umum \cite{c12-aws-rel10}. Keempat, biaya latihan: lokasi kedua yang tidak pernah dipakai
+sungguhan belum terbukti dapat dipakai.
+
+\subsection{Kendala Lokasi Data di Indonesia}
+
+Bab 2 menyimpulkan bahwa rekam medis elektronik Medikara ditempatkan di Indonesia sesuai PP 28/2024
+Pasal 966 \cite{pp28-2024-kesehatan}, dan Peraturan Menteri Kesehatan (Permenkes) 24/2022 mewajibkan cadangan data disimpan di tempat
+berbeda \cite{permenkes24-2022}. Per Oktober 2026, setiap penyedia \textit{cloud} global yang
+tercantum di Bab 2 hanya punya satu \textit{region} di Indonesia. Akibatnya, \textit{multi-region}
+dengan satu penyedia berarti \textit{region} kedua berada di luar negeri, dan pilihan itu tertutup
+untuk rekam medis.
+
+Kendala ini punya dua konsekuensi. Pertama, perlindungan dari gangguan seluruh \textit{region}
+harus dicari dengan cara lain: lokasi kedua milik penyedia lain di Indonesia, pusat data penyedia
+lokal, atau ruang server milik sendiri di kota lain. Cybersecurity and Infrastructure Security Agency
+(CISA), badan keamanan siber Amerika Serikat, juga menyarankan organisasi mempertimbangkan cadangan
+di penyedia lain, untuk berjaga-jaga bila semua akun di satu penyedia terdampak sekaligus
+\cite{c12-cisa2023}. Kedua, rancangan multi-penyedia menambah kerumitan: dua cara kerja, dua
+kontrak, dan dua jenis keterampilan. Kerumitan itu harus dibandingkan dengan dampak bisnis, bukan
+diterima atau ditolak begitu saja.
+
+Ukuran data mempertajam kendala itu. Bab 2 memperkirakan rekam medis Medikara mencapai sekitar 15
+terabyte. Memindahkan 15 terabyte lewat sambungan 1 gigabit per detik yang terpakai penuh
+membutuhkan $15 \times 8 \times 10^{12} \div 10^9 = 120.000$ detik, sekitar 33 jam, jauh di atas
+target pemulihan dalam hitungan jam. Data sebesar itu harus sudah berada di lokasi kedua sebelum
+bencana, bukan dikirim setelah bencana.
+
+Tabel \ref{tab:ch12-cakupan} membandingkan lima rancangan dari sisi yang dilindungi dan yang tidak.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lima rancangan lokasi dan cakupan perlindungannya}
+  \label{tab:ch12-cakupan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Rancangan} & \textbf{Melindungi dari} & \textbf{Tidak melindungi dari} &
+      \textbf{Catatan bagi Medikara} \\ \hline
+    Satu AZ dengan cadangan harian & Data hilang karena perangkat rusak & AZ padam: layanan
+      berhenti sampai dibangun ulang & Murah, pemulihan dalam hitungan jam atau hari \\ \hline
+    \textit{Multi-AZ} & Satu pusat data padam & Gangguan seluruh \textit{region}; data terhapus
+      atau terenkripsi ikut tersalin & Biaya produksi naik; replikasi sinkron layak \\ \hline
+    \textit{Multi-region}, satu penyedia & Gangguan seluruh \textit{region} & Akun yang disusupi,
+      karena akun dan kredensial sering sama & \textit{Region} kedua di luar negeri; tidak untuk
+      rekam medis \\ \hline
+    Lokasi kedua di Indonesia, penyedia lain & Gangguan \textit{region} atau seluruh penyedia &
+      Kerusakan data yang ikut tersalin & Dua cara kerja, dua kontrak, keterampilan ganda \\
+      \hline
+    Cadangan terpisah yang tidak dapat diubah & \textit{Ransomware}, salah hapus, akun disusupi
+      & Waktu henti panjang bila hanya ini yang ada & Wajib diuji pulih secara berkala \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{RTO, RPO, dan Strategi Disaster Recovery}
+\label{sec:ch12-rto-rpo}
 
-% TODO
-% Cakupan: RTO dan RPO sebagai keputusan bisnis; analisis dampak bisnis sederhana; strategi backup and restore, pilot light, warm standby, dan multi-site active-active beserta perkiraan biayanya; kelangsungan bisnis dan ISO 22301 disinggung singkat (dibahas rinci di IT40813).
-% Kasus Medikara: RTO dan RPO untuk rekam medis elektronik, Medikara+, dan ERP keuangan.
+Setelah pilihan lokasi jelas, pertanyaan kemudian muncul: seberapa cepat layanan harus pulih, dan
+berapa banyak data yang boleh hilang? Dua angka itu menentukan strategi DR dan biayanya. Keduanya
+adalah keputusan bisnis yang dihitung dari dampak, bukan sifat bawaan teknologi yang kebetulan
+sedang dipakai.
+
+\subsection{RTO dan RPO sebagai Keputusan Bisnis}
+
+\textit{Whitepaper} DR AWS mendefinisikan RTO sebagai jeda paling lama yang dapat diterima antara
+terhentinya layanan dan pulihnya layanan. RPO adalah rentang waktu paling lama yang dapat diterima
+sejak titik pemulihan data terakhir, sehingga RPO menentukan berapa banyak data yang boleh hilang
+\cite{c12-aws-dr2021}. Pedoman NIST menambahkan satu batas lagi, yaitu waktu henti maksimum yang
+dapat ditoleransi (\textit{maximum tolerable downtime}): lama gangguan total yang masih dapat
+diterima pemilik proses bisnis, dengan memperhitungkan semua dampaknya. RTO harus lebih pendek dari
+batas itu, karena setelah sistem pulih masih ada waktu untuk memproses ulang pekerjaan yang
+tertunda. RPO tidak termasuk dalam batas waktu henti, tetapi menggambarkan berapa banyak kehilangan
+data yang dapat ditoleransi \cite{c12-nist800-34}. Gambar \ref{fig:ch12-rto-rpo} meletakkan kedua
+angka itu pada satu garis waktu.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch12-rto-rpo.tex}
+  \caption{RPO diukur mundur dari bencana ke titik pemulihan terakhir; RTO diukur maju dari bencana
+           sampai layanan kembali melayani}
+  \label{fig:ch12-rto-rpo}
+\end{figure}
+
+Analoginya seperti mengetik laporan ketika listrik padam. RPO adalah seberapa sering laporan
+disimpan: bila terakhir disimpan sepuluh menit lalu, pekerjaan sepuluh menit itu hilang. RTO adalah
+berapa lama sampai bisa mengetik lagi: mencari laptop lain, membuka berkas, lalu melanjutkan.
+
+Dua hal pada keduanya sering tertukar. Pembagiannya begini. RPO melihat ke belakang dari saat
+bencana, sedangkan RTO melihat ke depan. Hal kedua yang sering tertukar adalah RTO dan
+\textit{Service Level Objective} (SLO) ketersediaan dari Bab 11. SLO mengukur ketersediaan sehari-hari
+dalam satu periode, sedangkan RTO adalah target pemulihan dari satu kejadian besar. SLO 99,9 persen
+per bulan hanya mengizinkan sekitar 43 menit tidak tersedia ($30 \times 24 \times 60 \times 0{,}001
+= 43{,}2$). Satu kejadian besar dengan RTO 4 jam menghabiskan lebih dari lima kali jatah satu bulan.
+Keduanya harus dibaca bersama.
+
+\textit{Whitepaper} yang sama memberi satu batas yang penting bagi direksi: bila biaya strategi
+pemulihan lebih tinggi daripada biaya kegagalan atau kehilangan yang ingin dicegah, strategi itu
+tidak perlu diterapkan, kecuali ada pendorong lain seperti kewajiban regulasi \cite{c12-aws-dr2021}.
+
+\subsection{Analisis Dampak Bisnis Sederhana}
+
+Pedoman NIST menyusun analisis dampak bisnis dalam tiga langkah: menentukan proses bisnis dan
+tingkat kekritisan pemulihannya, mengenali sumber daya yang dibutuhkan, dan menentukan urutan
+prioritas pemulihan \cite{c12-nist800-34}. Untuk keperluan capstone, langkah itu disederhanakan
+menjadi lima pertanyaan yang dapat dijawab bersama pemilik bisnis:
+\begin{enumerate}
+  \item Apa yang terjadi bila layanan berhenti 1 jam, 4 jam, dan 24 jam?
+  \item Berapa kerugian finansial per jam, termasuk pendapatan yang tertunda, lembur, dan entri
+        ulang?
+  \item Apakah ada dampak pada keselamatan pasien, dan seberapa besar?
+  \item Kewajiban regulasi atau kontrak apa yang terlanggar?
+  \item Berapa waktu henti maksimum yang masih dapat ditoleransi?
+\end{enumerate}
+Jawaban pertanyaan kelima membatasi RTO. Jawaban tentang pekerjaan yang harus dimasukkan ulang
+membatasi RPO. Pada tahap ini anggota non-teknis memimpin, karena merekalah yang paling tahu arti
+satu jam henti bagi IGD atau bagian keuangan.
+
+\subsection{Empat Strategi Disaster Recovery}
+
+\textit{Whitepaper} DR AWS mengelompokkan strategi DR menjadi empat pendekatan, dari yang murah dan
+sederhana sampai yang paling rumit \cite{c12-aws-dr2021}. Gambar \ref{fig:ch12-strategi-dr}
+memperlihatkan isi lokasi kedua untuk tiap strategi dan perkiraan angkanya.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch12-strategi-dr.tex}
+  \caption{Empat strategi DR: makin ke kanan, lokasi kedua makin siap, RTO dan RPO makin pendek,
+           dan biayanya makin tinggi}
+  \label{fig:ch12-strategi-dr}
+\end{figure}
+
+\textit{Backup and restore} hanya menyimpan cadangan data di lokasi kedua; infrastruktur dibangun
+setelah bencana dinyatakan. \textit{Pilot light} mereplikasi data secara terus-menerus dan
+menyiapkan inti infrastruktur, tetapi server aplikasinya dimatikan sampai dibutuhkan.
+\textit{Warm standby} menjalankan salinan yang lebih kecil tetapi berfungsi penuh, lalu
+memperbesarnya saat bencana. \textit{Multi-site active-active} menjalankan beban kerja di beberapa
+lokasi yang semuanya melayani pengguna. Menurut \textit{whitepaper} yang sama, pendekatan terakhir
+paling rumit dan paling mahal, tetapi dapat menekan waktu pemulihan sampai mendekati nol. Namun
+kerusakan data tetap mungkin membutuhkan cadangan, karena kerusakan itu ikut tersalin ke semua
+lokasi \cite{c12-aws-dr2021}. Panduan Azure Well-Architected juga meminta rencana DR yang
+terstruktur, teruji, terdokumentasi, dan selaras dengan target pemulihan \cite{c12-azure-dr}.
+
+Analoginya seperti usaha katering yang menyiapkan dapur cadangan. Cara pertama menyimpan resep dan
+bahan beku di gudang lain. Cara kedua menyewa dapur yang kompornya terpasang tetapi tidak dinyalakan,
+dan bahan segar dikirim ke sana setiap hari. Cara ketiga menyalakan dapur cadangan dengan satu juru
+masak. Cara keempat menjalankan dua dapur yang sama-sama memasak setiap hari.
+
+Tabel \ref{tab:ch12-strategi} merangkum keempatnya. Angka RTO, RPO, dan rasio biaya pada tabel adalah
+perkiraan kasar yang dipakai bab ini untuk diskusi dan perhitungan latihan, bukan janji penyedia.
+Angka nyata bergantung pada ukuran data, otomasi, dan latihan tim.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Empat strategi DR dengan perkiraan kasar yang dipakai di bab ini}
+  \label{tab:ch12-strategi}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Strategi} & \textbf{Yang ada di lokasi kedua} & \textbf{RTO kasar} &
+      \textbf{RPO kasar} & \textbf{Biaya DR kasar} & \textbf{Cocok untuk} \\ \hline
+    \textit{Backup and restore} & Cadangan data saja & Sekitar 12 jam & Sejak cadangan terakhir,
+      misalnya 1 jam & Sekitar 8\% biaya produksi & Layanan yang boleh menunggu sehari \\ \hline
+    \textit{Pilot light} & Data tereplikasi, server inti siap tetapi mati & Sekitar 2 jam &
+      Sekitar 5 menit & Sekitar 20\% & Layanan penting yang boleh berhenti beberapa jam \\ \hline
+    \textit{Warm standby} & Salinan kecil yang menyala penuh fungsi & Sekitar 30 menit & Sekitar
+      1 menit & Sekitar 45\% & Layanan klinis yang hanya boleh berhenti sebentar \\ \hline
+    \textit{Multi-site active-active} & Salinan penuh yang ikut melayani & Beberapa menit &
+      Hitungan detik & Sekitar 125\% & Layanan yang berhenti beberapa menit saja sudah
+      membahayakan \\ \hline
+  \end{tabularx}
+\end{table}
+
+DR adalah bagian dari urusan yang lebih luas, yaitu kelangsungan bisnis. ISO 22301:2019 menetapkan
+persyaratan sistem manajemen kelangsungan bisnis \cite{c12-iso22301}. Kelangsungan bisnis mencakup
+orang, gedung, pemasok, dan prosedur manual, bukan hanya sistem teknologi informasi (TI). Contohnya,
+formulir kertas IGD saat rekam medis elektronik padam adalah bagian dari rencana kelangsungan
+bisnis, bukan bagian dari rencana DR. Pembahasan rinci sistem manajemen kelangsungan bisnis ada di
+IT40813.
+
+\begin{kasus}[title={Kasus Medikara Health: RTO dan RPO untuk Tiga Layanan}]
+  Tim capstone menjalankan analisis dampak bisnis untuk tiga layanan: rekam medis elektronik,
+  Medikara+, dan \textit{Enterprise Resource Planning} (ERP) keuangan. Misalkan pendapatan
+  Medikara sekitar Rp2,2 miliar per hari dari sekitar 3.300 kunjungan per hari (1,2 juta kunjungan
+  dibagi 365 hari) ditambah rawat inap. Bila rekam medis elektronik padam, layanan tetap berjalan
+  dengan formulir kertas, tetapi melambat. Ditambah lembur dan entri ulang, kerugiannya diperkirakan
+  sekitar Rp150 juta per jam. Kewajiban regulasinya mencakup Permenkes 24/2022 dan Undang-Undang
+  (UU) 27/2022 tentang Pelindungan Data Pribadi (PDP) \cite{uu27-2022-pdp}. Hasil lengkapnya
+  tercantum pada Tabel \ref{tab:ch12-kasus-bia} dan
+  pada lembar ``Contoh Medikara'' di \berkas{sources/chapter12/templat-analisis-dampak-bisnis.xlsx}.
+
+  Rekam medis elektronik mendapat RTO 1 jam karena dampak keselamatan pasien tinggi. Target teknis
+  ini lebih ketat daripada batas RTO sistem SIMRS 120 menit dari analisis dampak bisnis IT40813 Bab
+  10, supaya ada cadangan waktu. \textit{Pilot light} dengan RTO sekitar 2 jam tidak memenuhi target
+  itu, sehingga tim memilih \textit{warm standby}. Medikara+ cukup memakai \textit{pilot light}, dan ERP keuangan cukup memakai
+  \textit{backup and restore} dengan cadangan log transaksi setiap jam. Total biaya DR ketiganya
+  sekitar Rp724 juta per tahun ($540 + 120 + 64$). Bila ketiganya memakai \textit{multi-site
+  active-active}, biayanya sekitar Rp3,25 miliar per tahun ($1.500 + 750 + 1.000$).
+
+  Keputusan ini punya dua konsekuensi. Pertama, selisih sekitar Rp2,5 miliar per tahun tidak
+  membeli perlindungan yang berarti bagi ERP keuangan, yang memang boleh menunggu sampai 24 jam.
+  Kedua, target RTO 1 jam untuk rekam medis harus dibuktikan lewat uji pemulihan. Sebelum diuji,
+  angka itu baru janji di atas kertas.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Hasil analisis dampak bisnis tiga layanan Medikara Health (angka rekaan)}
+  \label{tab:ch12-kasus-bia}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Butir} & \textbf{Rekam medis elektronik} & \textbf{Medikara+} &
+      \textbf{ERP keuangan} \\ \hline
+    Dampak bila berhenti & IGD dan rawat inap kehilangan riwayat alergi, obat, dan hasil
+      laboratorium; formulir kertas dipakai & Pasien tidak dapat membuat janji; telekonsultasi
+      terputus & Penagihan dan pembayaran pemasok tertunda \\ \hline
+    Kerugian finansial per jam & Sekitar Rp150 juta & Sekitar Rp40 juta & Sekitar Rp15 juta \\
+      \hline
+    Dampak keselamatan pasien & Tinggi & Sedang & Rendah \\ \hline
+    Kewajiban regulasi & Permenkes 24/2022, UU PDP & UU PDP & Pelaporan keuangan dan pajak \\
+      \hline
+    Waktu henti maksimum yang dapat ditoleransi & 2 jam & 8 jam & 48 jam \\ \hline
+    RTO dan RPO & 1 jam dan 5 menit & 4 jam dan 15 menit & 24 jam dan 60 menit \\ \hline
+    Strategi DR & \textit{Warm standby} & \textit{Pilot light} & \textit{Backup and restore} \\
+      \hline
+    Biaya infrastruktur produksi per tahun & Rp1,2 miliar & Rp600 juta & Rp800 juta \\ \hline
+    Biaya DR per tahun & Sekitar Rp540 juta & Sekitar Rp120 juta & Sekitar Rp64 juta \\ \hline
+  \end{tabularx}
+\end{table}
+
+Satu hal pada tabel itu mudah terlewat. Data pasien di ketiga layanan adalah data pribadi menurut UU
+PDP, sehingga lokasi kedua dan cadangannya tunduk pada aturan yang sama dengan lokasi utama. Lokasi
+kedua yang murah tetapi melanggar aturan lokasi data bukan pilihan.
 
 \section{Ransomware dan Cadangan yang Tidak Dapat Diubah}
+\label{sec:ch12-ransomware}
 
-% TODO
-% Cakupan: cara ransomware menyerang cadangan; prinsip cadangan terpisah dan tidak dapat diubah; pelajaran dari insiden PDNS 2 Surabaya 2024 tentang cakupan cadangan dan uji pemulihan.
+Strategi DR pada seksi sebelumnya mengandaikan bencana datang dari luar: pusat data padam, jaringan
+putus, atau \textit{region} terganggu. \textit{Ransomware} berbeda. Penyerang masuk ke dalam,
+mengenkripsi data, lalu meminta tebusan. CISA mencatat bahwa banyak varian \textit{ransomware}
+berusaha menemukan cadangan yang dapat dijangkau, lalu menghapus atau mengenkripsinya
+\cite{c12-cisa2023}. Cadangan yang berada di jaringan yang sama, di akun yang sama, dan dapat
+dihapus dengan kredensial administrator yang sama bukan pertahanan. Cadangan seperti itu justru
+menjadi sasaran berikutnya.
+
+Dua hal pada perlindungan data sering tertukar. Pembagiannya begini. Replikasi menyalin keadaan
+terkini, termasuk kerusakannya: tabel yang terhapus atau berkas yang terenkripsi ikut tersalin
+dalam hitungan detik. \textit{Whitepaper} DR AWS mencatat bahwa replikasi terus-menerus belum tentu
+melindungi dari kerusakan data atau serangan berbahaya sebaik cadangan pada titik waktu tertentu
+\cite{c12-aws-dr2021}. Cadangan menyimpan keadaan masa lalu, sehingga organisasi dapat kembali ke
+titik sebelum serangan. Replikasi menjaga ketersediaan. Cadangan menjaga kemampuan kembali.
+
+\subsection{Prinsip Cadangan yang Tahan Ransomware}
+
+CISA menyarankan cadangan data kritis yang disimpan terpisah dari jaringan (\textit{offline}),
+terenkripsi, serta diuji ketersediaan dan keutuhannya secara berkala dalam skenario pemulihan
+bencana \cite{c12-cisa2023}. Beberapa penyedia \textit{cloud} menawarkan penyimpanan yang tidak
+dapat diubah (\textit{immutable storage}). Selama masa kunci, data di dalamnya tidak dapat diubah
+atau dihapus, bahkan oleh administrator. CISA mengingatkan dua hal tentang penyimpanan ini:
+penyimpanan seperti itu belum tentu memenuhi kriteria kepatuhan tertentu, dan salah konfigurasi
+dapat menimbulkan biaya besar \cite{c12-cisa2023}. Salah satu contohnya adalah masa kunci yang
+terlalu panjang, sehingga data uji pun tidak dapat dihapus sampai masa kunci berakhir.
+
+Analoginya seperti menyimpan salinan akta tanah. Salinan di laci meja kerja, yang kuncinya
+tergantung di dinding, mudah diambil siapa pun yang masuk ruangan. Salinan di brankas bank dengan
+kunci waktu tidak dapat dibuka sebelum waktunya, bahkan oleh pemiliknya sendiri.
+
+Tabel \ref{tab:ch12-prinsip-cadangan} merangkum lima prinsip cadangan yang tahan
+\textit{ransomware} beserta cara memeriksanya. Banyak organisasi juga memakai aturan praktis 3-2-1:
+tiga salinan data, di dua jenis media, dengan satu salinan di luar lokasi utama.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lima prinsip cadangan yang tahan \textit{ransomware} dan cara memeriksanya}
+  \label{tab:ch12-prinsip-cadangan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Prinsip} & \textbf{Artinya} & \textbf{Cara memeriksa} \\ \hline
+    Lengkap & Semua data kritis, konfigurasi, dan kunci enkripsi tercakup & Daftar cadangan
+      dicocokkan dengan daftar layanan kritis; setiap selisih diberi pemilik \\ \hline
+    Terpisah & Akun, kredensial, dan jaringan berbeda dari produksi; minimal satu salinan di
+      lokasi lain & Administrator produksi dicoba menghapus cadangan, dan hasilnya harus ditolak
+      \\ \hline
+    Tidak dapat diubah & Selama masa kunci, tidak ada yang dapat mengubah atau menghapus &
+      Masa kunci tercatat; percobaan penghapusan di lingkungan uji ditolak \\ \hline
+    Terenkripsi & Isi cadangan tidak terbaca bila salinannya dicuri & Kunci enkripsi disimpan
+      terpisah dari cadangan dan ikut dicadangkan \\ \hline
+    Teruji & Pemulihan dicoba berkala dan waktunya diukur & Catatan uji terakhir memuat waktu
+      pulih nyata dibandingkan dengan RTO \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Pelajaran dari PDNS 2 Surabaya}
+
+Pendahuluan bab ini mencatat empat fakta PDNS 2: penyerang sudah bergerak sejak 17 Juni, tebusan
+yang diminta 8 juta dolar Amerika Serikat \cite{c12-antara2024}, 282 instansi pengguna terdampak
+\cite{c12-cnn2024}, dan hanya 2 persen data yang memiliki cadangan \cite{c12-cnbc2024}. Fakta itu
+dapat dibaca sebagai tiga pelajaran arsitektur. Pertama, cakupan cadangan adalah keputusan yang
+harus dibuat sejak awal dan diperiksa terus, bukan pilihan yang diserahkan pada kebiasaan setiap
+pengguna. Kedua, keputusan tidak membayar tebusan hanya bermakna bila organisasi sanggup pulih
+sendiri. Tanpa cadangan yang bersih, tidak membayar berarti kehilangan data. Ketiga, ratusan
+instansi di satu pusat data adalah konsentrasi risiko. Satu kejadian mengenai semuanya sekaligus.
+Dari sisi tata kelola, pembagian tanggung jawab antara pengelola pusat data dan instansi pengguna
+perlu tertulis jelas, seperti model tanggung jawab bersama di Bab 2. Latihan 2 di akhir bab
+mengurai pelajaran ini lebih rinci.
+
+\begin{kasus}[title={Kasus Medikara Health: Audit Cadangan Setelah Membaca Kasus PDNS 2}]
+  Misalkan setelah membaca kasus PDNS 2, komite audit meminta tim TI memeriksa cadangan untuk 46
+  aplikasi dalam inventaris Bab 4. Hasilnya: 31 aplikasi punya jadwal cadangan, 12 aplikasi pernah
+  diuji pulih dalam 12 bulan terakhir, dan hanya 3 aplikasi yang cadangannya berada di akun
+  terpisah. Cadangan SIMRS RS Bandung disimpan di server yang sama dengan basis datanya, dan dapat
+  dihapus dengan akun administrator domain.
+
+  Temuan ini punya dua konsekuensi. Pertama, angka ``31 dari 46 punya cadangan'' terdengar baik,
+  tetapi angka yang lebih jujur adalah ``3 dari 46 punya cadangan yang selamat dari
+  \textit{ransomware}''. Kedua, perbaikan tidak dimulai dari membeli produk baru, melainkan dari
+  daftar layanan kritis hasil analisis dampak bisnis: rekam medis, Medikara+, dan ERP keuangan
+  lebih dahulu dipindah ke cadangan terpisah yang tidak dapat diubah, lalu diuji pulih.
+\end{kasus}
 
 \section{Chaos Engineering dan Game Day}
+\label{sec:ch12-chaos}
 
-% TODO
-% Cakupan: menguji resiliensi dengan sengaja memicu kegagalan secara terkendali; game day sebagai latihan bersama tim teknis dan bisnis; syarat aman sebelum memulai.
+Rencana DR yang belum pernah diuji adalah dugaan. Pertanyaan kemudian muncul: bagaimana membuktikan
+bahwa pola resiliensi dan rencana pemulihan benar-benar bekerja, tanpa menunggu bencana sungguhan?
+Jawabannya adalah memicu kegagalan dengan sengaja, secara terkendali.
+
+\subsection{Chaos Engineering}
+
+\textit{Principles of Chaos Engineering} mendefinisikan \textit{chaos engineering} sebagai disiplin
+bereksperimen pada sebuah sistem untuk membangun keyakinan bahwa sistem itu mampu bertahan dalam
+kondisi yang bergejolak di lingkungan produksi \cite{c12-principles-chaos}. Eksperimennya mengikuti
+empat langkah. Pertama, tetapkan keadaan normal (\textit{steady state}) sebagai keluaran sistem yang
+terukur. Kedua, susun hipotesis bahwa keadaan normal itu bertahan pada kelompok kontrol maupun
+kelompok eksperimen. Ketiga, masukkan peristiwa yang mencerminkan kejadian nyata, misalnya server
+mati, cakram rusak, atau sambungan jaringan terputus. Keempat, cari selisih keadaan normal antara
+kedua kelompok untuk menguji hipotesis. Prinsip yang sama menuntut cakupan dampak eksperimen
+(\textit{blast radius}) ditekan sekecil mungkin \cite{c12-principles-chaos}.
+
+Analoginya seperti latihan evakuasi kebakaran di gedung perkantoran. Latihan dijadwalkan, petugas
+ditunjuk, jalur keluar diperiksa, dan latihan dimulai dari satu lantai sebelum seluruh gedung.
+Tujuannya menemukan pintu darurat yang terkunci sebelum ada kebakaran sungguhan.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Netflix menjalankan Chaos Monkey, layanan internal yang memilih secara acak mesin virtual
+        yang menjalankan layanan produksi lalu mematikannya. Chaos Monkey hanya aktif pada jam
+        kerja normal, supaya insinyur dapat segera menangani layanan yang gagal. Netflix juga
+        menjalankan latihan Chaos Kong yang mensimulasikan kegagalan satu \textit{region} penuh,
+        sekali sebulan. Keadaan normalnya diukur dengan jumlah pemutaran video yang dimulai per
+        detik, karena angka itulah yang mencerminkan apakah pengguna dapat menonton
+        \cite{c12-basiri2016}.
+  \item Misalkan Medikara memulai dengan eksperimen kecil di lingkungan uji: layanan integrasi
+        dibuat menolak 20 persen panggilan ke tiruan layanan kepesertaan selama 10 menit.
+        Hipotesisnya, waktu pendaftaran tetap di bawah 2 menit karena \textit{timeout} 3 detik dan
+        \textit{circuit breaker} sudah terpasang. Bila hipotesis gagal, temuan itu diperbaiki
+        sebelum eksperimen dipindah ke produksi.
+\end{enumerate}
+
+\textbf{Peringatan etika.} Eksperimen kegagalan dan uji beban hanya dijalankan pada sistem milik
+sendiri atau sistem yang sudah berizin tertulis. Kegagalan layanan BPJS Kesehatan atau SATUSEHAT
+disimulasikan di sisi Medikara, misalnya dengan tiruan layanan atau dengan memblokir panggilan di
+layanan integrasi. Sistem milik mitra tidak boleh dibebani atau diganggu.
+
+\subsection{Game Day}
+
+Dua hal sering tertukar di sini. Pembagiannya begini. \textit{Chaos engineering} adalah eksperimen
+berulang yang sering diotomasi dan berfokus pada perilaku sistem. \textit{Game day} adalah latihan
+terjadwal yang melibatkan manusia, baik tim teknis maupun tim bisnis, untuk menguji rencana
+pemulihan dan cara mengambil keputusan. Panduan Azure Well-Architected menyebut latihan semacam ini
+sebagai \textit{DR drill}: latihan terencana untuk menguji prosedur DR dan memastikan kemampuan
+pulih dalam kondisi terkendali \cite{c12-azure-dr}. \textit{Game day} dapat berupa latihan meja
+(\textit{tabletop}): peserta duduk bersama, fasilitator membacakan kejadian satu per satu, dan
+peserta menjawab apa yang akan dilakukan. Tidak ada sistem yang disentuh. Bentuk ini cocok untuk
+latihan pertama, karena kelemahan prosedur dan komunikasi biasanya sudah terlihat tanpa menyentuh
+produksi.
+
+Misalkan latihan meja pertama Medikara memakai skenario ``\textit{region} utama tidak tersedia
+selama empat jam''. Peserta menemukan bahwa aplikasi rekam medis di lokasi kedua dapat dinyalakan,
+tetapi petugas tidak dapat masuk karena layanan identitas hanya ada di \textit{region} utama.
+Rekam medis baru dapat dipakai pada menit ke-80, sehingga RTO 1 jam tidak terpenuhi. Temuan itu
+murah karena ditemukan di ruang rapat, bukan di IGD pukul tiga dini hari.
+
+Sebelum eksperimen atau \textit{game day} menyentuh sistem nyata, beberapa syarat harus dipenuhi.
+Tabel \ref{tab:ch12-syarat-aman} merangkumnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Syarat aman sebelum eksperimen kegagalan atau \textit{game day} menyentuh sistem nyata}
+  \label{tab:ch12-syarat-aman}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Syarat} & \textbf{Alasan} & \textbf{Contoh di Medikara} \\ \hline
+    Hipotesis dan keadaan normal terukur & Tanpa ukuran, hasil latihan hanya kesan &
+      Misalkan keadaan normal loket: 99 persen pendaftaran selesai di bawah 2 menit, diukur seperti
+      SLI pada Bab 11 \\ \hline
+    Cakupan dampak kecil & Kesalahan latihan tidak boleh menjadi insiden besar & Satu klinik
+      pratama, atau 5 persen lalu lintas Medikara+ \\ \hline
+    Kriteria berhenti dan wewenang menghentikan & Latihan harus dapat dihentikan seketika &
+      Berhenti bila antrean IGD naik di atas 10 pasien; kepala operasi TI berwenang menghentikan
+      \\ \hline
+    Izin tertulis & Sistem dan pengguna milik pihak yang harus tahu & Persetujuan direktur
+      pelayanan dan pemilik sistem; mitra diberi tahu \\ \hline
+    Pemantauan berjalan & Dampak harus terlihat saat terjadi & Panel SLO dan antrean loket dapat
+      dilihat seluruh peserta \\ \hline
+    Cara kembali sudah diuji & Latihan tidak boleh meninggalkan kerusakan & Langkah kembali ke
+      \textit{region} utama sudah dicoba di lingkungan uji \\ \hline
+  \end{tabularx}
+\end{table}
 
 \section{Aktivitas: Rencana Resiliensi dan DR}
+\label{sec:ch12-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menetapkan RTO, RPO, dan strategi DR untuk layanan kritis, memperkirakan biayanya, dan menyusun satu skenario uji pemulihan.
-% Peran dalam tim: anggota non-teknis memimpin analisis dampak bisnis (kerugian per jam, keselamatan pasien, kewajiban regulasi); anggota teknis memetakan pola resiliensi dan arsitektur DR; seluruh anggota menyusun skenario uji.
-% Langkah: (1) ambil layanan kritis dari Bab 11; (2) lakukan analisis dampak bisnis sederhana; (3) tetapkan RTO dan RPO; (4) pilih strategi DR dan perkirakan biayanya; (5) susun satu skenario uji, misalnya region utama tidak tersedia selama empat jam, beserta jadwal ujinya.
-% Luaran dan tonggak capstone: C4, rencana resiliensi dan DR beserta jadwal uji pemulihan.
-% Berkas sources yang direncanakan: sources/chapter12/templat-analisis-dampak-bisnis.xlsx, sources/chapter12/templat-rencana-dr.md, sources/chapter12/skenario-game-day.md
+\textbf{Tujuan.} Tim menetapkan RTO, RPO, dan strategi DR untuk layanan kritis, memperkirakan biaya
+tambahannya, memetakan pola resiliensi untuk setiap ketergantungan penting, lalu menyusun satu
+skenario uji pemulihan beserta jadwalnya. Tim memakai organisasi nyata dengan izin tertulis dan data
+yang dianonimkan, atau memakai kasus Medikara Health.
+
+\textbf{Pembagian peran.} Rencana DR yang baik membutuhkan angka bisnis dan rancangan teknis dalam
+satu dokumen. Tabel \ref{tab:ch12-peran} membagi peran agar setiap anggota menyumbang sesuai latar
+belakangnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pembagian peran dalam Aktivitas Bab 12}
+  \label{tab:ch12-peran}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Peran} & \textbf{Diisi oleh} & \textbf{Tugas} \\ \hline
+    Pemimpin analisis dampak bisnis & Anggota non-teknis & Mewawancarai pemilik bisnis; menghitung
+      kerugian per jam, dampak keselamatan pasien, dan kewajiban regulasi \\ \hline
+    Perancang resiliensi & Anggota teknis & Memetakan ketergantungan dan memilih pola
+      \textit{timeout}, \textit{retry}, \textit{circuit breaker}, \textit{bulkhead}, dan
+      \textit{graceful degradation} \\ \hline
+    Perancang DR & Anggota teknis & Memilih strategi DR, lokasi kedua, dan cara penyalinan data;
+      memperkirakan biayanya \\ \hline
+    Penyusun skenario uji & Seluruh anggota, satu orang sebagai fasilitator & Menyusun urutan
+      kejadian, kriteria berhasil, dan jadwal uji pemulihan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Ambil dua sampai tiga layanan kritis dari Bab 11, beserta SLO-nya. Catat ketergantungan
+        setiap layanan: basis data, layanan identitas, integrasi mitra, dan jaringan.
+  \item Lakukan analisis dampak bisnis sederhana dengan lima pertanyaan pada seksi
+        \ref{sec:ch12-rto-rpo}. Isi lembar ``Isian Tim'' pada templat analisis dampak bisnis.
+  \item Tetapkan RTO dan RPO setiap layanan bersama pemilik bisnis. Pastikan RTO lebih pendek dari
+        waktu henti maksimum yang dapat ditoleransi.
+  \item Pilih strategi DR dan lokasi kedua untuk setiap layanan, dengan memperhatikan kendala
+        lokasi data dari Bab 2. Perkirakan biaya DR per tahun dan bandingkan dengan perkiraan
+        kerugian. Tuliskan pola resiliensi untuk setiap ketergantungan penting.
+  \item Susun satu skenario uji pemulihan, misalnya \textit{region} utama tidak tersedia selama
+        empat jam. Jalankan sebagai latihan meja, catat temuannya, lalu tetapkan jadwal uji
+        berikutnya untuk satu tahun ke depan.
+\end{enumerate}
+
+\textbf{Luaran dan kaitan capstone.} Luarannya adalah rencana resiliensi dan DR untuk layanan
+kritis, lembar analisis dampak bisnis yang sudah diisi, satu skenario uji beserta catatan hasil
+latihan meja, dan jadwal uji pemulihan. Keempatnya masuk ke tonggak C4 Peta Jalan dan Tata Kelola.
+Biaya DR menjadi masukan peta jalan modernisasi di Bab 14, jadwal uji pemulihan menjadi salah satu
+kontrol tata kelola yang diperiksa secara berkala, dan risiko yang ditemukan masuk ke
+\textit{risk register} serta rencana kelangsungan bisnis di IT40813.
+
+\textbf{Kriteria penilaian.} Tabel \ref{tab:ch12-penilaian} memuat kriteria dan bobotnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 12}
+  \label{tab:ch12-penilaian}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} >{\centering\arraybackslash}p{1.2cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{Tanda hasil yang baik} \\ \hline
+    Mutu analisis dampak bisnis & 30\% & Kerugian, keselamatan, dan regulasi dihitung dengan dasar
+      yang disebut; pemilik bisnis terlibat \\ \hline
+    Ketepatan RTO, RPO, dan strategi & 30\% & Target berasal dari dampak; strategi termurah yang
+      memenuhi target dipilih, dan alasannya ditulis \\ \hline
+    Pola resiliensi & 20\% & Setiap ketergantungan penting punya batas waktu, aturan pengulangan,
+      dan perilaku saat gagal yang disepakati \\ \hline
+    Skenario dan jadwal uji & 20\% & Skenario realistis, kriteria berhasil terukur, temuan latihan
+      meja dicatat beserta pemiliknya \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Berkas pendukung.} Templat analisis dampak bisnis dengan lembar contoh Medikara, lembar
+isian tim, dan perhitungan biaya otomatis ada di
+\berkas{sources/chapter12/templat-analisis-dampak-bisnis.xlsx}. Templat rencana beserta daftar
+periksanya ada di \berkas{sources/chapter12/templat-rencana-dr.md}. Contoh skenario latihan meja,
+templat skenario tim, dan syarat aman ada di \berkas{sources/chapter12/skenario-game-day.md}. Skrip
+untuk pendalaman teknis dan Latihan 3 ada di \berkas{sources/chapter12/simulasi-circuit-breaker.py}
+dan \berkas{sources/chapter12/bandingkan-strategi-dr.py}.
+
+\textbf{Etika.} Angka kerugian dan catatan gangguan dari organisasi nyata dipakai seizin organisasi.
+Nama orang, data pasien, alamat server, dan kunci akses dihapus sebelum dibagikan ke anggota tim.
+Latihan meja tidak menyentuh sistem. Pemindahan nyata hanya dilakukan pada sistem milik sendiri atau
+yang sudah berizin tertulis, setelah syarat aman pada Tabel \ref{tab:ch12-syarat-aman} terpenuhi.
+
+\textit{Pendalaman teknis (opsional).} Anggota teknis menjalankan
+\berkas{sources/chapter12/simulasi-circuit-breaker.py} seperti dijelaskan di kotak pendalaman seksi
+\ref{sec:ch12-pola}, lalu mengganti ambang dan jangka terbuka sesuai data latensi ketergantungan tim.
+Hasilnya dipakai untuk mengisi kolom \textit{circuit breaker} pada templat rencana DR.
 
 \section{Ringkasan}
 
-% TODO
+Sistem terdistribusi jarang gagal secara total. Yang lebih sering terjadi adalah kegagalan parsial,
+latensi tinggi, kegagalan berantai, titik kegagalan tunggal yang tersembunyi, dan kegagalan dari
+pihak ketiga. Latensi tinggi paling licin, karena jumlah permintaan yang menunggu sama dengan laju
+dikali lama menunggu. Layanan kepesertaan yang melambat dari 0,8 menjadi 30 detik menaikkan
+permintaan yang menunggu dari sekitar 2 menjadi 60, cukup untuk menghabiskan kolam 50 koneksi dan
+memanjangkan antrean loket.
+
+Lima pola resiliensi menjawab mode kegagalan itu. \textit{Timeout} mengubah lambat menjadi gagal
+cepat. \textit{Retry} dengan \textit{backoff} dan \textit{jitter} menangani gangguan sesaat, tetapi
+harus dibatasi karena tiga lapis pengulangan dapat melipatgandakan satu tindakan menjadi 64
+percobaan. \textit{Circuit breaker} menghentikan panggilan ke layanan yang sudah pasti gagal.
+\textit{Bulkhead} menyekat sumber daya. \textit{Graceful degradation} menjaga layanan inti tetap
+berjalan, dengan syarat fungsi keselamatan pasien tidak pernah dilewati.
+
+\textit{Multi-AZ} melindungi dari padamnya satu pusat data, sedangkan perlindungan dari gangguan
+seluruh \textit{region} membutuhkan lokasi kedua. Karena setiap penyedia global hanya punya satu
+\textit{region} di Indonesia, lokasi kedua untuk rekam medis harus dicari di penyedia lain, pusat
+data lokal, atau fasilitas sendiri. Data 15 terabyte yang butuh sekitar 33 jam untuk dikirim
+menunjukkan bahwa data harus sudah berada di lokasi kedua sebelum bencana.
+
+RTO dan RPO adalah keputusan bisnis yang lahir dari analisis dampak, dibatasi oleh waktu henti
+maksimum yang dapat ditoleransi. Empat strategi DR, dari \textit{backup and restore} sampai
+\textit{multi-site active-active}, menukar biaya dengan kecepatan pulih. Bagi Medikara, rekam medis
+memakai \textit{warm standby}, Medikara+ memakai \textit{pilot light}, dan ERP keuangan memakai
+\textit{backup and restore}, dengan total biaya sekitar Rp724 juta per tahun, jauh di bawah Rp3,25
+miliar bila semuanya \textit{active-active}. Cadangan yang lengkap, terpisah, tidak dapat diubah,
+terenkripsi, dan teruji adalah pertahanan terakhir terhadap \textit{ransomware}, seperti
+diperlihatkan kasus PDNS 2 yang hanya 2 persen datanya memiliki cadangan.
+
+\textit{Chaos engineering} dan \textit{game day} mengubah rencana menjadi bukti, dengan cakupan
+dampak yang kecil, kriteria berhenti yang jelas, dan izin tertulis. Latihan meja sudah cukup untuk
+menemukan ketergantungan yang terlewat, seperti layanan identitas yang membuat RTO 1 jam meleset
+menjadi 80 menit. Pesan utama bab ini: resiliensi tidak dibeli sekaligus untuk semua layanan,
+melainkan ditetapkan per layanan dari dampak bisnisnya, lalu dibuktikan lewat uji pemulihan yang
+terjadwal.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: RTO dan RPO pada Rekam Medis Elektronik}
+
+Latihan ini membuktikan bahwa RTO dan RPO adalah dua ukuran yang berbeda arah, dan bahwa satu
+rancangan dapat memenuhi target pada satu jenis kejadian tetapi gagal pada kejadian lain. Target
+rekam medis elektronik Medikara adalah RTO 1 jam dan RPO 5 menit.
+
 \begin{enumerate}
-  \item Jelaskan perbedaan RTO dan RPO dengan contoh layanan rekam medis elektronik.
-  \item Pada insiden PDNS 2 tahun 2024, hanya sebagian kecil data yang memiliki cadangan. Pelajaran arsitektur dan tata kelola apa yang dapat diambil?
-  \item Mengapa strategi \textit{multi-site active-active} belum tentu tepat untuk semua layanan Medikara Health?
+  \item Tuliskan target RTO dan RPO layanan, lalu jelaskan dengan kalimat sendiri arti
+        masing-masing bagi petugas IGD.
+  \item Susun tiga skenario kejadian yang berbeda jenis, misalnya satu AZ padam, kesalahan operator,
+        dan \textit{ransomware}.
+  \item Untuk setiap skenario, catat waktu kejadian, titik pemulihan terakhir yang bersih, dan waktu
+        layanan kembali melayani.
+  \item Hitung data yang hilang (RPO nyata) dan waktu henti (RTO nyata), lalu bandingkan dengan
+        target.
+  \item Bandingkan hasil dengan contoh pada Tabel \ref{tab:ch12-lat1-contoh}, lalu isi Tabel
+        \ref{tab:ch12-lat1-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, contoh terisi: tiga skenario untuk rekam medis elektronik Medikara dengan
+           target RTO 1 jam dan RPO 5 menit (rekaan)}
+  \label{tab:ch12-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.7cm}}
+    \hline
+    \textbf{Skenario dan waktu kejadian} & \textbf{Titik pemulihan bersih terakhir} &
+      \textbf{Pulih pukul} & \textbf{RPO nyata} & \textbf{RTO nyata} & \textbf{Memenuhi?} \\
+      \hline
+    AZ 1 padam pukul 10.00 & 10.00, replikasi sinkron ke AZ 2 & 10.04 & 0 menit & 4 menit & Ya
+      \\ \hline
+    Operator menghapus tabel pukul 14.20 & 14.15, pemulihan ke titik waktu & 15.05 & 5 menit &
+      45 menit & Ya, tepat di batas RPO \\ \hline
+    \textit{Ransomware} mengenkripsi basis data pukul 02.00; replikasi ikut tersalin & 01.00,
+      cadangan per jam yang tidak dapat diubah & 11.00 & 60 menit & 9 jam & Tidak, keduanya
+      meleset \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, lembar isian: tiga skenario untuk layanan pilihan tim}
+  \label{tab:ch12-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}p{1.7cm}}
+    \hline
+    \textbf{Skenario dan waktu kejadian} & \textbf{Titik pemulihan bersih terakhir} &
+      \textbf{Pulih pukul} & \textbf{RPO nyata} & \textbf{RTO nyata} & \textbf{Memenuhi?} \\
+      \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, skenario \textit{ransomware} meleset di RPO dan RTO sekaligus, padahal
+        replikasi sinkron sudah terpasang. Jelaskan penyebabnya berdasarkan isi tabel.
+  \item Bila cadangan yang tidak dapat diubah dibuat setiap 5 menit, bukan setiap jam, kolom mana
+        pada skenario ketiga yang berubah, dan kolom mana yang tetap? Apa yang masih harus
+        diperbaiki untuk memenuhi RTO?
+\end{enumerate}
+
+\subsection*{Latihan 2: Pelajaran Arsitektur dan Tata Kelola dari PDNS 2}
+
+Latihan ini membuktikan kemampuan mengubah fakta insiden menjadi keputusan arsitektur dan tata
+kelola yang dapat diterapkan di organisasi lain. Pada insiden PDNS 2 tahun 2024, hanya sebagian
+kecil data yang memiliki cadangan. Tugasnya adalah menurunkan pelajaran dari fakta yang dapat
+dirujuk, bukan dari dugaan.
+
+\begin{enumerate}
+  \item Baca ketiga sumber berita yang dirujuk bab ini \cite{c12-antara2024,c12-cnn2024,c12-cnbc2024}.
+        Catat setiap fakta beserta angkanya dan sumbernya.
+  \item Pisahkan fakta dari pendapat. Pernyataan pejabat dicatat sebagai pernyataan, bukan sebagai
+        hasil audit.
+  \item Untuk setiap fakta, tulis satu pelajaran arsitektur dan satu pelajaran tata kelola.
+  \item Terapkan setiap pelajaran pada Medikara atau organisasi pilihan tim, dalam bentuk tindakan
+        yang dapat diperiksa.
+  \item Bandingkan hasil dengan contoh pada Tabel \ref{tab:ch12-lat2-contoh}, lalu isi Tabel
+        \ref{tab:ch12-lat2-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, contoh terisi: fakta PDNS 2 dan pelajarannya bagi Medikara Health}
+  \label{tab:ch12-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Fakta dan sumber} & \textbf{Pelajaran arsitektur} & \textbf{Pelajaran tata kelola} &
+      \textbf{Tindakan di Medikara} \\ \hline
+    Hanya 2 persen data memiliki cadangan \cite{c12-cnbc2024} & Cadangan menjadi bagian rancangan
+      setiap layanan, bukan pilihan pengguna & Cakupan cadangan diperiksa berkala dan dilaporkan
+      ke komite audit & Daftar 46 aplikasi dicocokkan dengan daftar cadangan setiap triwulan \\
+      \hline
+    Upaya mematikan fitur keamanan terdeteksi sejak 17 Juni, enkripsi mulai 20 Juni
+      \cite{c12-antara2024} & Perubahan pada kontrol keamanan dipantau sebagai sinyal bahaya &
+      Ada jalur eskalasi yang jelas untuk sinyal keamanan di luar jam kerja & Peringatan
+      ``antivirus dimatikan'' masuk ke petugas jaga dalam 15 menit \\ \hline
+    282 instansi pengguna terdampak sekaligus \cite{c12-cnn2024} & Konsentrasi pada satu lokasi
+      diimbangi lokasi kedua dan cadangan terpisah & Pembagian tanggung jawab cadangan antara
+      pengelola dan pengguna ditulis di kontrak & Kontrak penyedia memuat siapa yang mencadangkan,
+      menguji, dan memulihkan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, lembar isian: fakta PDNS 2 dan pelajarannya bagi organisasi pilihan tim}
+  \label{tab:ch12-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Fakta dan sumber} & \textbf{Pelajaran arsitektur} & \textbf{Pelajaran tata kelola} &
+      \textbf{Tindakan di organisasi} \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Dari pelajaran yang diisi, mana yang paling murah diterapkan dan mana yang paling besar
+        pengaruhnya terhadap kemampuan pulih? Apakah keduanya pelajaran yang sama?
+  \item Penyerang sudah bergerak tiga hari sebelum enkripsi. Bila cadangan hanya disimpan 2 hari,
+        apa akibatnya bagi titik pemulihan yang bersih? Hubungkan dengan masa kunci cadangan.
+  \item Pelajaran mana yang tidak dapat diselesaikan oleh tim TI sendiri dan membutuhkan keputusan
+        direksi atau perubahan kontrak?
+\end{enumerate}
+
+\subsection*{Latihan 3: Mengapa Active-Active Tidak Untuk Semua Layanan}
+
+Latihan ini membuktikan bahwa \textit{multi-site active-active} belum tentu tepat untuk semua layanan
+Medikara Health, dengan menghitung biaya DR dan perkiraan kerugian tahunan untuk keempat strategi.
+Total biaya tahunan adalah biaya DR ditambah perkiraan kerugian tahunan. Perkiraan kerugian
+tahunan adalah frekuensi kejadian besar per tahun dikali RTO strategi dikali kerugian per jam.
+Misalkan frekuensi kejadian besar, termasuk \textit{ransomware}, kesalahan konfigurasi besar, dan
+gangguan \textit{region}, adalah 0,5 kali per tahun.
+
+\begin{enumerate}
+  \item Pilih satu layanan dan ambil kerugian per jam, biaya infrastruktur produksi, serta target
+        RTO dan RPO dari Tabel \ref{tab:ch12-kasus-bia} atau dari analisis tim.
+  \item Hitung biaya DR setiap strategi dengan rasio biaya pada Tabel \ref{tab:ch12-strategi}.
+  \item Hitung perkiraan kerugian tahunan setiap strategi dengan RTO kasar pada tabel yang sama.
+  \item Jumlahkan keduanya, lalu tandai strategi yang memenuhi RTO dan RPO target. Skrip
+        \berkas{sources/chapter12/bandingkan-strategi-dr.py} dapat dipakai untuk memeriksa hitungan.
+  \item Bandingkan hasil dengan contoh pada Tabel \ref{tab:ch12-lat3-contoh}, lalu isi Tabel
+        \ref{tab:ch12-lat3-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, contoh terisi: rekam medis elektronik Medikara, kerugian Rp150 juta per jam,
+           biaya produksi Rp1,2 miliar per tahun, target RTO 1 jam dan RPO 5 menit (juta rupiah per
+           tahun, rekaan)}
+  \label{tab:ch12-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedleft\arraybackslash}p{1.2cm} >{\raggedleft\arraybackslash}p{1.5cm} >{\raggedleft\arraybackslash}p{1.8cm} >{\raggedleft\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{1.6cm}}
+    \hline
+    \textbf{Strategi} & \textbf{RTO (jam)} & \textbf{Biaya DR} & \textbf{Perkiraan kerugian} &
+      \textbf{Total} & \textbf{Memenuhi target?} \\ \hline
+    \textit{Backup and restore} & 12 & 96 & 900 & 996 & Tidak \\ \hline
+    \textit{Pilot light} & 2 & 240 & 150 & 390 & Tidak \\ \hline
+    \textit{Warm standby} & 0,5 & 540 & 37,5 & 577,5 & Ya \\ \hline
+    \textit{Multi-site active-active} & 0,1 & 1.500 & 7,5 & 1.507,5 & Ya \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, lembar isian: empat strategi untuk layanan pilihan tim (juta rupiah per
+           tahun)}
+  \label{tab:ch12-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedleft\arraybackslash}p{1.2cm} >{\raggedleft\arraybackslash}p{1.5cm} >{\raggedleft\arraybackslash}p{1.8cm} >{\raggedleft\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{1.6cm}}
+    \hline
+    \textbf{Strategi} & \textbf{RTO (jam)} & \textbf{Biaya DR} & \textbf{Perkiraan kerugian} &
+      \textbf{Total} & \textbf{Memenuhi target?} \\ \hline
+    \textit{Backup and restore} & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textit{Pilot light} & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textit{Warm standby} & \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textit{Multi-site active-active} & \dots & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, total terendah dimiliki \textit{pilot light} (390), tetapi strategi yang
+        memenuhi target adalah \textit{warm standby} (577,5). Siapa yang seharusnya memutuskan
+        apakah selisih Rp187,5 juta per tahun itu layak dibayar, dan atas dasar apa?
+  \item Ulangi hitungan untuk ERP keuangan dengan angka pada Tabel \ref{tab:ch12-kasus-bia}. Berapa
+        selisih total antara \textit{multi-site active-active} dan strategi termurah yang memenuhi
+        target? Apa artinya bagi usulan ``semua layanan \textit{active-active}''?
+  \item Bila frekuensi kejadian besar naik menjadi 2 kali per tahun, apakah urutan strategi untuk
+        rekam medis berubah? Tunjukkan perhitungannya.
 \end{enumerate}

@@ -1,0 +1,55 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  klien/.style={draw, rounded corners, fill=blue!8, minimum width=3.4cm,
+    minimum height=0.75cm, align=center, text width=3.2cm},
+  fasad/.style={draw, rounded corners, fill=orange!12, minimum width=3.4cm,
+    minimum height=0.7cm, align=center, text width=3.2cm},
+  lama/.style={draw, rounded corners, fill=blue!8, minimum width=1.6cm,
+    minimum height=0.95cm, align=center, text width=1.45cm},
+  baru/.style={draw, rounded corners, fill=green!10, minimum width=1.6cm,
+    minimum height=0.95cm, align=center, text width=1.45cm},
+  acl/.style={draw, rounded corners, fill=praditagreen!15, minimum width=3.4cm,
+    minimum height=0.6cm, align=center, text width=3.2cm}
+]
+  % Tiga panel: kondisi awal, masa transisi, dan kondisi akhir.
+  \foreach \nomor/\geser/\judul in {1/0/{Tahap 1: fasad dipasang},
+    2/4.15/{Tahap 2: pindah bertahap}, 3/8.3/{Tahap 3: modul lama dimatikan}} {
+    \node[font=\scriptsize\bfseries] at (\geser+1.8,3.45) {\judul};
+    \node[klien] (k\nomor) at (\geser+1.8,2.7) {Medikara+, loket,\\klinik mitra};
+    \node[fasad] (f\nomor) at (\geser+1.8,1.55) {Fasad perutean};
+    \draw[panah] (k\nomor) -- (f\nomor);
+  }
+
+  % Tahap 1: seluruh permintaan masih menuju SIMRS.
+  \node[lama] (s1) at (0.85,0.1) {SIMRS lama};
+  \node[baru, dashed, fill=white] (b1) at (2.75,0.1) {Layanan Janji Temu};
+  \draw[panah, line width=1.6pt] (f1.south -| s1.north) -- (s1.north)
+    node[midway, left, font=\tiny] {100\%};
+  \node[font=\tiny\mdseries, text width=3.4cm, align=center] at (1.8,-1.15)
+    {layanan baru diuji\\tanpa lalu lintas pasien};
+
+  % Tahap 2: rumah sakit kecil lebih dahulu dipindah ke layanan baru.
+  \node[lama] (s2) at (5.0,0.1) {SIMRS lama};
+  \node[baru] (b2) at (6.9,0.1) {Layanan Janji Temu};
+  \draw[panah] (f2.south -| s2.north) -- (s2.north)
+    node[midway, left, font=\tiny] {RS lain};
+  \draw[panah] (f2.south -| b2.north) -- (b2.north)
+    node[midway, right, font=\tiny, align=left, inner sep=1.5pt] {Depok,\\Bogor};
+  \node[acl] (a2) at (5.95,-1.15) {\textit{anticorruption layer}};
+  \draw[panah] (b2.south) -- (b2.south |- a2.north);
+  \draw[panah] (s2.south |- a2.north) -- (s2.south);
+
+  % Tahap 3: modul janji temu SIMRS tidak lagi menerima permintaan.
+  \node[lama, fill=gray!35] (s3) at (9.15,0.1) {modul janji temu nonaktif};
+  \node[baru] (b3) at (11.05,0.1) {Layanan Janji Temu};
+  \draw[panah, line width=1.6pt] (f3.south -| b3.north) -- (b3.north)
+    node[midway, right, font=\tiny] {100\%};
+  \node[acl] (a3) at (10.1,-1.15) {\textit{anticorruption layer}};
+  \draw[panah] (b3.south) -- (b3.south |- a3.north);
+  \draw[panah] (s3.south |- a3.north) -- (s3.south);
+
+  % Garis pemisah antarpanel.
+  \draw[gray!50, dashed] (3.875,-1.6) -- (3.875,3.7);
+  \draw[gray!50, dashed] (8.025,-1.6) -- (8.025,3.7);
+\end{tikzpicture}

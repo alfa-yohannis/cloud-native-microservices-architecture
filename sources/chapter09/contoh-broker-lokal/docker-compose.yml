@@ -1,0 +1,10 @@
+# Menjalankan RabbitMQ lokal untuk Pendalaman Teknis Bab 09. Pakai: docker compose up -d
+# Konsol pengelolaan: http://localhost:15672 (pengguna dan sandi bawaan: guest).
+# Hanya untuk komputer sendiri. Port ini tidak boleh dibuka ke jaringan publik.
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: medikara-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"

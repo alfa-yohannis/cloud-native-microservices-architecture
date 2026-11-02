@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  induk/.style={draw, rounded corners, fill=praditagreen!15, minimum width=11.4cm,
+    minimum height=0.9cm, align=center, font=\footnotesize\bfseries},
+  kepala/.style={align=center, text width=3.5cm, font=\scriptsize\bfseries},
+  inti/.style={draw, rounded corners, fill=orange!12, text width=3.3cm,
+    minimum height=0.85cm, align=center},
+  pendukung/.style={draw, rounded corners, fill=blue!8, text width=3.3cm,
+    minimum height=0.85cm, align=center},
+  umum/.style={draw, dashed, rounded corners, fill=white, text width=3.3cm,
+    minimum height=0.85cm, align=center}
+]
+  % Domain induk: seluruh bisnis Medikara Health.
+  \node[induk] (domain) at (4,0)
+    {Domain Medikara Health: layanan kesehatan terintegrasi lintas fasilitas};
+
+  % Kepala kolom untuk tiga jenis subdomain.
+  \node[kepala] (hinti) at (0,-1.25)
+    {\textit{Core subdomain}\\{\tiny\mdseries pembeda di mata pasien dan mitra}};
+  \node[kepala] (hdukung) at (4,-1.25)
+    {\textit{Supporting subdomain}\\{\tiny\mdseries khas Medikara, bukan pembeda}};
+  \node[kepala] (humum) at (8,-1.25)
+    {\textit{Generic subdomain}\\{\tiny\mdseries sama di semua organisasi}};
+  \draw[panah] (domain.south -| hinti) -- (hinti.north);
+  \draw[panah] (domain.south -| hdukung) -- (hdukung.north);
+  \draw[panah] (domain.south -| humum) -- (humum.north);
+
+  % Core: langsung menopang strategi "Satu Pasien, Satu Rekam Medis".
+  \node[inti] at (0,-2.3) {Rekam medis terpadu\\{\tiny\mdseries lintas 5 rumah sakit dan 18 klinik}};
+  \node[inti] at (0,-3.3) {Perjalanan pasien\\{\tiny\mdseries janji temu lewat Medikara+}};
+  \node[inti] at (0,-4.3) {Rujukan dan mitra\\{\tiny\mdseries klinik mitra, asuransi, perusahaan}};
+
+  % Supporting: perlu dan khas, tetapi tidak membuat pasien memilih Medikara.
+  \node[pendukung] at (4,-2.3) {Pendaftaran dan admisi};
+  \node[pendukung] at (4,-3.3) {Penagihan pasien\\{\tiny\mdseries usulan awal, diuji di Latihan 2}};
+  \node[pendukung] at (4,-4.3) {Klaim BPJS Kesehatan dan asuransi};
+  \node[pendukung] at (4,-5.3) {Laboratorium};
+  \node[pendukung] at (4,-6.3) {Apotek dan obat};
+
+  % Generic: solusi jadi sudah tersedia di pasar.
+  \node[umum] at (8,-2.3) {Akuntansi\\{\tiny\mdseries ERP keuangan terpusat}};
+  \node[umum] at (8,-3.3) {Kepegawaian dan penggajian};
+  \node[umum] at (8,-4.3) {Identitas dan akses pengguna};
+  \node[umum] at (8,-5.3) {Surel dan kolaborasi};
+
+  % Keterangan bentuk kotak.
+  \node[anchor=north, align=center, gray!60!black] at (4,-6.95)
+    {{\tiny\mdseries Kotak putus-putus: cukup dibeli atau disewa, misalnya sebagai SaaS}};
+\end{tikzpicture}

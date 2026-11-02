@@ -1,0 +1,37 @@
+# Contoh manifest deklaratif Bab 05: keadaan yang diinginkan untuk app.py di RS Bogor.
+# Pakai: dibaca sebagai ilustrasi; cara menerapkannya dibahas pada Bab 8 dan Bab 13.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jadwal-dokter-bogor
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jadwal-dokter
+  template:
+    metadata:
+      labels:
+        app: jadwal-dokter
+    spec:
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: jadwal-dokter
+          image: registry.medikara.example/jadwal-dokter:5.3.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KODE_RUMAH_SAKIT
+              value: RS-BOGOR
+            - name: PORT
+              value: "8080"
+            - name: ALAMAT_BASIS_DATA
+              valueFrom:
+                secretKeyRef:
+                  name: simrs-bogor-rahasia
+                  key: alamat-basis-data
+            - name: KUNCI_AKSES_BPJS
+              valueFrom:
+                secretKeyRef:
+                  name: simrs-bogor-rahasia
+                  key: kunci-akses-bpjs

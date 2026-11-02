@@ -1,4 +1,5 @@
 \chapter{Domain-Driven Design dan Batas Layanan}
+\label{ch:ch06}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,56 +10,1008 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: tim TI Medikara Health ingin memecah SIMRS, tetapi bagian pendaftaran, keuangan, dan laboratorium memakai kata "pasien" dengan makna berbeda; batas layanan yang salah membuat sistem baru sama kusutnya dengan sistem lama.
+Setelah kartu skor \textit{twelve-factor} pada Bab 5, tim teknologi informasi (TI) Medikara Health
+sepakat bahwa SIMRS (Sistem Informasi Manajemen Rumah Sakit) perlu dipecah menjadi beberapa
+layanan. Rapat pertama langsung tersendat pada satu kata. Kepala pendaftaran menyebut pasien
+sebagai orang yang sudah punya nomor rekam medis dan boleh dilayani. Bagian keuangan menyebut
+pasien sebagai pihak yang ditagih, lengkap dengan penjaminnya: BPJS Kesehatan, asuransi,
+perusahaan, atau pribadi. Laboratorium menyebut pasien sebagai pemilik spesimen pada satu
+permintaan pemeriksaan. Ketiganya benar di tempat masing-masing. Masalahnya, SIMRS menyimpan
+ketiga makna itu dalam satu tabel yang dipakai bersama, sehingga perubahan kecil untuk satu bagian
+sering merusak bagian lain.
+
+Memecah sistem tanpa membereskan perbedaan makna ini berbahaya. Bila batas layanan ditarik di
+tempat yang salah, misalnya satu layanan ``pasien'' untuk semua bagian, layanan baru tetap saling
+bergantung seperti modul lama. Bedanya, kini ketergantungan itu berjalan lewat jaringan. Hasilnya
+sistem baru yang sama kusutnya dengan sistem lama, ditambah kelambatan dan titik gagal yang lebih
+banyak. Karena itu, sebelum bertanya ``layanan apa yang dibangun'', tim perlu bertanya lebih dahulu
+``bisnis ini terdiri dari bagian apa, dan kata apa yang dipakai di setiap bagian''. Cara
+menjawabnya adalah lokakarya: pakar bisnis dan tim teknis menyusun alur kerja bersama di satu
+dinding.
+
+\IfFileExists{../figures/ch06-diagram-konsep.png}{%
+  Hasil lokakarya dipakai untuk menelusuri peristiwa, bahasa domain,
+batas model, dan calon pemisahan layanan.
+
+  Gambar \ref{fig:ch06-lokakarya} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch06-diagram-konsep.png}
+  \caption{Dari peristiwa bisnis ke batas model domain}
+  \label{fig:ch06-lokakarya}
+\end{figure}
+}{}
+
+Rujukan utama bab ini adalah buku \textit{Domain-Driven Design} karya Evans \cite{evans2003},
+\textit{Implementing Domain-Driven Design} karya Vernon \cite{vernon2013}, \textit{Learning
+Domain-Driven Design} karya Khononov \cite{c06-khononov2021}, buku EventStorming karya Brandolini
+\cite{c06-brandolini2021}, serta lembar ringkas \textit{context mapping} dari komunitas DDD Crew
+\cite{c06-dddcrew-contextmap}. Bab ini bergerak dalam lima langkah: \textit{subdomain} dan
+\textit{ubiquitous language}, \textit{bounded context}, \textit{context map}, EventStorming, dan
+penurunan kandidat layanan. Hasilnya adalah peta domain dan \textit{context map} kondisi saat ini
+untuk tonggak capstone C2.
 
 \section{Domain, Subdomain, dan Ubiquitous Language}
+\label{sec:ch06-subdomain}
 
-% TODO
-% Cakupan: DDD sebagai cara memahami bisnis sebelum memecah sistem; core, supporting, dan generic subdomain serta konsekuensinya pada keputusan membangun sendiri atau membeli; ubiquitous language sebagai kosakata bersama antara bisnis dan teknologi.
-% Kasus Medikara: pemetaan subdomain layanan pasien, rekam medis, penagihan, klaim, laboratorium, apotek, dan sumber daya manusia.
+Domain-Driven Design (DDD) adalah pendekatan merancang perangkat lunak yang berangkat dari
+pemahaman mendalam tentang bisnis yang dilayaninya. Evans memperkenalkan pendekatan ini pada 2003
+dengan satu gagasan pokok: struktur perangkat lunak mengikuti model bisnis yang disepakati bersama
+oleh pakar bisnis dan tim teknis \cite{evans2003}. Domain adalah wilayah kegiatan yang dilayani
+sistem, misalnya layanan kesehatan bagi Medikara Health. Domain yang besar terdiri dari beberapa
+\textit{subdomain}, yaitu bagian bisnis dengan tujuan, aturan, dan pelakunya sendiri, misalnya
+pendaftaran, penagihan, atau laboratorium. \textit{Subdomain} ditemukan di bisnis, bukan dirancang
+oleh tim teknis. Tugas tim adalah mengenalinya.
+
+\textit{Subdomain} tidak sama penting. Vernon dan Khononov membaginya menjadi tiga jenis
+\cite{vernon2013,c06-khononov2021}. \textit{Core subdomain} adalah bagian yang membuat organisasi
+berbeda dari pesaingnya, sehingga menjadi alasan pelanggan atau mitra memilihnya.
+\textit{Supporting subdomain} diperlukan agar bisnis berjalan dan cukup khas untuk organisasi itu,
+tetapi tidak menjadi pembeda. \textit{Generic subdomain} adalah bagian yang dikerjakan semua
+organisasi sejenis dengan cara yang hampir sama, sehingga solusi jadi sudah tersedia di pasar.
+
+Analoginya seperti rumah makan padang yang terkenal karena rendangnya. Resep dan cara memasak
+rendang adalah alasan pelanggan datang. Resep itu dijaga ketat dan dipegang juru masak terbaik.
+Jadwal belanja bahan dan cara menata etalase disesuaikan dengan menu rumah makan itu, tetapi tidak
+ada pelanggan yang datang karena jadwal belanjanya. Mesin pembayaran kartu dan aplikasi pembukuan
+dibeli atau disewa, karena tidak ada untungnya membuat sendiri. Mengerahkan juru masak terbaik untuk
+merakit mesin kasir adalah pemborosan.
+
+Khononov menambahkan dua pembeda yang mudah diperiksa: kerumitan aturan bisnisnya dan ketersediaan
+solusi di pasar \cite{c06-khononov2021}. Tabel \ref{tab:ch06-jenis-subdomain} merangkum ketiga
+jenis beserta keputusan yang biasanya menyertainya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga jenis \textit{subdomain} dan keputusan yang menyertainya}
+  \label{tab:ch06-jenis-subdomain}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Core}} & \textbf{\textit{Supporting}} & \textbf{\textit{Generic}}
+      \\ \hline
+    Peran bagi bisnis & Pembeda dari pesaing, alasan pasien atau mitra memilih & Menopang
+      \textit{core}, khas organisasi, bukan pembeda & Dibutuhkan semua organisasi sejenis \\ \hline
+    Kerumitan aturan & Tinggi dan terus dipelajari & Rendah sampai sedang & Bisa tinggi, tetapi
+      sudah dipecahkan pihak lain \\ \hline
+    Laju perubahan & Sering, mengikuti strategi & Jarang sampai sedang & Mengikuti pembaruan vendor
+      atau aturan umum \\ \hline
+    Bangun atau beli & Dibangun dan dikuasai sendiri & Dibangun sederhana, atau dibeli lalu
+      disesuaikan & Dibeli atau disewa, misalnya Software as a Service (SaaS) \\ \hline
+    Penempatan orang & Tim terbaik dan pakar domain paling senior & Tim yang lebih kecil & Tim
+      pengelola kontrak dan integrasi \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pembagian ini punya dua konsekuensi. Pertama, keputusan membangun sendiri atau membeli menjadi
+beralasan, bukan selera. Membangun sendiri bagian \textit{generic} berarti membayar mahal untuk
+sesuatu yang tidak membedakan organisasi. Membeli bagian \textit{core} berarti menyerahkan pembeda
+kepada vendor yang juga menjualnya ke pesaing. Kedua, kerja DDD yang mahal, misalnya lokakarya
+panjang dan model yang dirancang hati-hati, diprioritaskan untuk \textit{core}. Bagian
+\textit{generic} cukup dipilih produknya dan diamankan integrasinya.
+
+Klasifikasi juga bergantung pada strategi. Penagihan bisa \textit{generic} bagi sebuah rumah
+sakit, tetapi menjadi \textit{core} bagi perusahaan yang menjual perangkat lunak penagihan.
+Klasifikasi juga dapat bergeser seiring waktu, ketika strategi organisasi berubah.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Penggajian sekitar 4.800 karyawan mengikuti aturan pajak dan iuran jaminan sosial yang sama
+        untuk semua perusahaan. Bagian ini \textit{generic}. Membangunnya sendiri berarti
+        memelihara perubahan aturan pajak setiap tahun tanpa satu pun manfaat bagi pasien.
+  \item Rekam medis terpadu lintas 5 rumah sakit dan 18 klinik pratama adalah inti strategi ``Satu
+        Pasien, Satu Rekam Medis''. Data kunjungan 2025 menunjukkan sekitar 168.000 dari 1,2 juta
+        kunjungan, atau 14 persen, dilakukan pasien yang sebelumnya berobat di fasilitas Medikara
+        lain. Pola rujukan seperti ini khas Medikara, sehingga bagian ini \textit{core}.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Peta Subdomain Awal}]
+  Tim transformasi menyusun peta \textit{subdomain} awal dari dokumen strategi 2026 sampai 2030
+  dan wawancara dengan tujuh kepala bagian. Hasilnya ada di Gambar \ref{fig:ch06-peta-subdomain}.
+  Tiga \textit{subdomain} digolongkan \textit{core} karena langsung menopang strategi: rekam medis
+  terpadu, perjalanan pasien dan janji temu, serta rujukan dan ekosistem mitra. Lima digolongkan
+  \textit{supporting}: pendaftaran, penagihan, klaim, laboratorium, dan apotek. Empat digolongkan
+  \textit{generic}: akuntansi, kepegawaian dan penggajian, identitas dan akses
+  pengguna, serta surel.
+
+  Perdebatan paling panjang terjadi pada klaim BPJS Kesehatan. Misalkan sekitar 46 persen
+  pendapatan rumah sakit Medikara berasal dari klaim ini, sehingga sebagian peserta ingin
+  menggolongkannya \textit{core}. Kesimpulannya tetap \textit{supporting}. Nilainya besar, tetapi
+  aturannya ditetapkan BPJS Kesehatan dan sama untuk semua rumah sakit, sehingga tidak membuat
+  pasien memilih Medikara. Nilai yang besar tidak sama dengan pembeda.
+
+  Peta ini punya dua konsekuensi. Pertama, Medikara+ yang kini dibuat vendor ternyata menopang
+  \textit{subdomain core}. Ketergantungan penuh pada vendor untuk bagian pembeda adalah risiko
+  strategis yang perlu masuk ke peta jalan modernisasi. Kedua, ERP (\textit{Enterprise Resource
+  Planning}) keuangan yang sudah terpusat tidak perlu diusik. Cukup integrasinya yang dirapikan.
+\end{kasus}
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch06-peta-subdomain.tex}
+  \caption{Peta \textit{subdomain} awal Medikara Health: tiga \textit{core}, lima
+           \textit{supporting}, dan empat \textit{generic}}
+  \label{fig:ch06-peta-subdomain}
+\end{figure}
+
+\subsection{Ubiquitous Language}
+
+\textit{Ubiquitous language} adalah kosakata bersama yang dipakai pakar bisnis dan tim teknis secara
+konsisten di percakapan, dokumen, diagram, dan kode, di dalam satu batas model
+\cite{evans2003,c06-fowler-ul}. Bila petugas pendaftaran menyebut ``kunjungan'', layar, laporan,
+dan nama tabel juga memakai ``kunjungan'', bukan ``registrasi'' di satu tempat dan ``episode'' di
+tempat lain. Bahasa ini tidak disusun sekali lalu dibekukan. Bahasa ini tumbuh setiap kali tim
+menemukan istilah yang membingungkan, lalu menyepakati maknanya.
+
+Analoginya seperti proyek bangunan. Arsitek, mandor, dan tukang memakai istilah yang sama pada
+gambar kerja: sloof, kolom, balok, dan ring balok. Bila mandor menyebut ``balok'' untuk bagian yang
+di gambar kerja disebut ``sloof'', tukang bisa mengecor di tempat yang salah. Proyek yang rapi
+menyepakati istilah sejak awal, lalu memakainya di setiap gambar, rapat, dan laporan harian.
+
+Glosarium adalah wujud tertulis \textit{ubiquitous language}. Tabel \ref{tab:ch06-glosarium}
+menunjukkan potongan glosarium Medikara Health untuk alur rawat jalan. Kolom terakhir mencatat
+istilah lain yang ditemukan di SIMRS hasil akuisisi.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Potongan glosarium alur rawat jalan Medikara Health}
+  \label{tab:ch06-glosarium}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.4cm}}
+    \hline
+    \textbf{Istilah} & \textbf{Makna yang disepakati} & \textbf{Istilah lain yang ditemukan} \\
+      \hline
+    Kunjungan & Satu kedatangan pasien ke satu poliklinik pada satu hari; dibuka saat pendaftaran,
+      ditutup setelah tagihan selesai & Registrasi (Jakarta), episode (Bandung),
+      \textit{encounter} (adaptor SATUSEHAT) \\ \hline
+    Penjamin & Pihak yang menanggung biaya kunjungan: BPJS Kesehatan, asuransi, perusahaan, atau
+      pribadi & Cara bayar, kelompok pasien, debitur \\ \hline
+    Rujukan masuk & Surat dari fasilitas lain yang menjadi dasar pasien BPJS Kesehatan dilayani di
+      rumah sakit & Surat pengantar, \textit{referral} \\ \hline
+    Pasien baru & Orang yang belum punya nomor rekam medis di seluruh jaringan Medikara & Pasien
+      baru per rumah sakit (Depok, Bogor) \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Lima SIMRS memakai tiga istilah berbeda untuk kunjungan. Laporan jumlah kunjungan bulanan
+        yang digabung dari \textit{spreadsheet} lima rumah sakit pernah selisih sekitar 9 persen,
+        karena satu rumah sakit menghitung kunjungan ulang ke poliklinik yang sama pada hari yang
+        sama sebagai dua registrasi.
+  \item Istilah ``pasien baru'' di Depok dan Bogor berarti baru di rumah sakit itu, sedangkan di
+        Jakarta berarti baru di seluruh jaringan. Akibatnya, satu orang bisa punya dua atau tiga
+        nomor rekam medis. Pencocokan awal menemukan sekitar 38.000 nomor ganda akibat perbedaan
+        makna ini saja. Angka itu hanya sebagian dari sekitar 600.000 salinan identitas di tujuh
+        sumber data pada IT40513 Bab 9 (2,1 juta catatan untuk sekitar 1,5 juta orang), yang juga
+        mencakup sebab lain.
+\end{enumerate}
+
+Pertanyaan kemudian muncul: apakah seluruh Medikara Health harus memakai satu makna untuk setiap
+istilah? Jawabannya tidak. Glosarium pada Tabel \ref{tab:ch06-glosarium} berlaku untuk alur rawat
+jalan. Bagian lain boleh memakai kata yang sama dengan makna lain, asalkan batasnya jelas. Batas
+itulah yang dibahas pada seksi berikut.
 
 \section{Bounded Context}
+\label{sec:ch06-bounded-context}
 
-% TODO
-% Cakupan: bounded context sebagai batas berlakunya satu model dan satu bahasa; satu istilah dengan makna berbeda di konteks berbeda; ukuran bounded context yang wajar.
-% Kasus Medikara: makna "pasien" di pendaftaran, keuangan, dan laboratorium.
+\textit{Bounded context} adalah batas eksplisit tempat satu model dan satu \textit{ubiquitous
+language} berlaku secara konsisten \cite{evans2003}. Di dalam batas itu, setiap istilah punya satu
+makna. Di luar batas itu, istilah yang sama boleh bermakna lain. Fowler mencatat bahwa satu model
+tunggal untuk seluruh organisasi besar hampir tidak mungkin dicapai dan tidak sepadan biayanya. DDD
+menanganinya dengan membagi model besar menjadi beberapa \textit{bounded context}, lalu menuliskan
+hubungan antarkonteks secara eksplisit \cite{c06-fowler-bc}. Batas ini mencakup bahasa, model,
+data, dan kode. Batas bukan pagar yang menghalangi kerja sama, melainkan penanda tempat penerjemahan
+harus dilakukan.
+
+Analoginya seperti kata ``kartu''. Di bank, kartu berarti kartu debit. Di loket rumah sakit, kartu
+berarti kartu berobat. Di lapangan sepak bola, kartu berarti kartu kuning atau merah. Tidak ada yang
+bingung, karena setiap tempat punya konteks yang jelas. Kebingungan baru muncul bila ketiga tempat
+dipaksa memakai satu formulir ``kartu'' dengan semua kolom sekaligus: nomor rekening, nomor rekam
+medis, dan nama pemain yang diganjar.
+
+Gambar \ref{fig:ch06-makna-pasien} memperlihatkan cara \textit{bounded context} menangani kata
+``pasien'' di Medikara Health. Setiap konteks hanya menyimpan atribut yang dibutuhkannya. Yang
+dibagi antarkonteks hanya identitas penghubung, yaitu nomor rekam medis. Pemisahan seperti ini juga
+dipakai standar HL7 FHIR (\textit{Health Level Seven Fast Healthcare Interoperability Resources})
+yang menjadi dasar SATUSEHAT. Data demografis dan administratif pasien ada di \textit{resource}
+Patient, sedangkan data penjaminan ada di \textit{resource} Coverage yang terpisah
+\cite{fhir-r4-patient}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch06-makna-pasien.tex}
+  \caption{Satu kata ``pasien'', tiga makna di tiga \textit{bounded context};
+           yang dibagi hanya identitas penghubung}
+  \label{fig:ch06-makna-pasien}
+\end{figure}
+
+Dua hal pada DDD sering tertukar: \textit{subdomain} dan \textit{bounded context}. Pembagiannya
+begini. \textit{Subdomain} berada di ruang masalah: bagian bisnis yang ditemukan, ada atau tidak
+ada sistemnya. \textit{Bounded context} berada di ruang solusi: batas model yang dirancang tim.
+Idealnya satu \textit{bounded context} melayani satu \textit{subdomain}, tetapi hubungan keduanya
+tidak selalu satu banding satu \cite{c06-khononov2021}. Tabel \ref{tab:ch06-subdomain-konteks}
+merangkum perbedaannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Perbedaan \textit{subdomain} dan \textit{bounded context}}
+  \label{tab:ch06-subdomain-konteks}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{\textit{Subdomain}} & \textbf{\textit{Bounded context}} \\ \hline
+    Pertanyaan & Bagian bisnis apa saja yang ada? & Di mana satu model dan satu bahasa berlaku?
+      \\ \hline
+    Sifat & Ditemukan dari bisnis & Dirancang oleh tim \\ \hline
+    Penentu & Strategi dan cara kerja organisasi & Arsitek dan tim, bersama pakar domain \\
+      \hline
+    Wujud & Peta \textit{subdomain} & Batas model, kode, data, dan tim pemilik \\ \hline
+    Hubungan & Satu \textit{subdomain} bisa dilayani satu atau beberapa konteks & Satu konteks
+      idealnya melayani satu \textit{subdomain}; pada sistem lama sering melayani banyak \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Ukuran Bounded Context yang Wajar}
+
+Tidak ada ukuran baku untuk \textit{bounded context}. Ada dua arah kesalahan. Konteks yang terlalu
+besar ditandai oleh istilah bermakna ganda di dalamnya, banyak tim yang mengubah model yang sama,
+dan rapat koordinasi di setiap rilis. Konteks yang terlalu kecil ditandai oleh satu perubahan bisnis
+yang selalu menyentuh beberapa konteks sekaligus, dan konteks yang tidak bisa menyelesaikan tugasnya
+tanpa terus bertanya ke konteks lain. Khononov memberi patokan kepemilikan: satu \textit{bounded
+context} dimiliki satu tim, walaupun satu tim boleh memiliki beberapa konteks
+\cite{c06-khononov2021}. Patokan bahasa juga membantu. Bila dua kelompok pakar domain butuh
+``kamus'' untuk saling mengerti, di situ ada batas.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Satu konteks ``layanan rumah sakit'' yang mencakup pendaftaran, pelayanan klinis,
+        laboratorium, apotek, penagihan, dan klaim terlalu besar. Tabel pasien di SIMRS rumah sakit
+        Jakarta berisi 87 kolom dan diubah oleh enam modul. Setiap perubahan kolom harus diuji
+        ulang oleh keenam modul itu.
+  \item Memecah pendaftaran menjadi tiga konteks, yaitu identitas pasien, antrean loket, dan
+        verifikasi penjamin, yang semuanya dikerjakan tim yang sama, terlalu kecil. Setiap
+        perubahan formulir pendaftaran akan menyentuh tiga konteks dan tiga rilis.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Satu Kolom, Tiga Bagian}]
+  Misalkan pada Maret 2026 bagian keuangan rumah sakit Depok meminta kolom penjamin pada tabel
+  pasien diwajibkan terisi sebelum pasien dilayani, agar tidak ada tagihan tanpa penanggung. Vendor
+  SIMRS mengubah aturan itu dalam satu hari. Akibatnya terasa di dua tempat lain. Di instalasi gawat
+  darurat, petugas tidak bisa membuat permintaan pemeriksaan laboratorium untuk pasien yang datang
+  tanpa identitas lengkap. Selama tiga hari, sekitar 140 permintaan pemeriksaan tertahan rata-rata
+  25 menit. Di laboratorium, label spesimen gagal dicetak untuk pasien rujukan dari klinik mitra
+  yang penjaminnya belum diverifikasi.
+
+  Aturan keuangan itu benar di konteks penagihan, tetapi salah di konteks pelayanan darurat dan
+  laboratorium. Dengan \textit{bounded context}, aturan ``penjamin wajib jelas'' hanya berlaku di
+  konteks penagihan, yaitu sebelum tagihan ditutup, bukan sebelum pasien dilayani. Laboratorium
+  cukup mengenal pasien sebagai subjek spesimen dengan nomor rekam medis, umur, dan jenis kelamin.
+  Insiden ini menjadi bahan Latihan 1.
+\end{kasus}
 
 \section{Context Map dan Pola Hubungannya}
+\label{sec:ch06-context-map}
 
-% TODO
-% Cakupan: context map sebagai peta hubungan antarkonteks; pola customer-supplier, conformist, anticorruption layer, shared kernel, dan open host service; keterkaitan pola hubungan dengan hubungan antartim dan antarorganisasi.
-% Kasus Medikara: hubungan dengan BPJS Kesehatan dan SATUSEHAT sebagai contoh conformist dan anticorruption layer.
+\textit{Context map} adalah peta yang menunjukkan \textit{bounded context} dalam satu sistem atau
+organisasi, beserta hubungan di antaranya \cite{evans2003}. Setiap hubungan punya arah. Konteks hulu
+(\textit{upstream}) adalah konteks yang keputusannya memengaruhi konteks lain. Konteks hilir
+(\textit{downstream}) adalah konteks yang terdampak oleh perubahan di hulu, tetapi tidak sebaliknya.
+DDD Crew membedakan tiga jenis hubungan tim di balik peta itu: saling bergantung, hulu-hilir, dan
+bebas \cite{c06-dddcrew-contextmap}. Pola hubungan menjelaskan cara kedua pihak menangani arah
+pengaruh tersebut.
+
+Analoginya seperti irigasi sawah. Pengelola pintu air di hulu menentukan kapan dan berapa banyak
+air mengalir. Petani di hilir punya beberapa pilihan. Bila pengelola mau mendengar, petani
+mengajukan jadwal kebutuhan air setiap musim tanam. Bila pengelola tidak bisa diajak bicara, petani
+menyesuaikan jadwal tanam dengan jadwal air apa adanya. Petani yang cermat membuat kolam penampung
+dan saringan sendiri, sehingga lumpur dari hulu tidak langsung masuk ke sawah.
+
+Tiga pilihan petani itu sejajar dengan tiga pola yang paling sering dipakai: \textit{customer-supplier},
+\textit{conformist}, dan \textit{anticorruption layer}. Tabel \ref{tab:ch06-pola-hubungan}
+merangkum lima pola yang dibahas di bab ini \cite{evans2003,c06-dddcrew-contextmap}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lima pola hubungan pada \textit{context map}}
+  \label{tab:ch06-pola-hubungan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Pola} & \textbf{Arti singkat} & \textbf{Kapan dipakai} & \textbf{Biaya atau risiko} \\
+      \hline
+    \textit{Customer-supplier} & Hilir menyampaikan kebutuhan, hulu merencanakan pemenuhannya &
+      Kedua tim dalam satu organisasi dan bisa bernegosiasi & Butuh forum perencanaan bersama
+      yang rutin \\ \hline
+    \textit{Conformist} & Hilir memakai model hulu apa adanya & Hulu tidak mau atau tidak bisa
+      menyesuaikan, dan modelnya cukup baik & Model hilir ikut berubah setiap kali hulu berubah
+      \\ \hline
+    \textit{Anticorruption layer} & Hilir membangun lapisan penerjemah agar model hulu tidak masuk
+      ke modelnya & Model hulu berbeda jauh, sering berubah, atau mutunya buruk & Ada kode dan
+      pemeliharaan tambahan \\ \hline
+    \textit{Shared kernel} & Dua konteks berbagi sebagian kecil model secara eksplisit & Dua tim
+      yang bekerja berdekatan, bagian bersamanya kecil & Setiap perubahan bagian bersama wajib
+      disepakati kedua tim \\ \hline
+    \textit{Open host service} & Hulu menyediakan protokol terbuka dan terdokumentasi untuk banyak
+      pemakai & Hulu melayani banyak konteks hilir & Hulu memelihara kontrak dan versinya \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+\textit{Open host service} hampir selalu berpasangan dengan \textit{published language}, yaitu
+bahasa pertukaran yang terdokumentasi dan dipakai bersama, misalnya HL7 FHIR. DDD Crew juga
+mencatat pola lain \cite{c06-dddcrew-contextmap}: \textit{partnership} untuk dua tim yang berhasil
+atau gagal bersama, \textit{separate ways} untuk dua konteks yang sengaja tidak dihubungkan, dan
+\textit{big ball of mud} untuk bagian sistem yang modelnya bercampur tanpa batas jelas.
+
+Gambar \ref{fig:ch06-context-map} adalah \textit{context map} kondisi saat ini untuk alur rawat
+jalan Medikara Health. Peta ini jujur tentang keadaan, bukan gambaran yang diinginkan. Klaim
+ditandai warna lain karena menjadi prioritas perbaikan.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch06-context-map.tex}
+  \caption{\textit{Context map} kondisi saat ini untuk alur rawat jalan Medikara Health}
+  \label{fig:ch06-context-map}
+\end{figure}
+
+Dua contoh dari peta tersebut:
+\begin{enumerate}
+  \item ERP keuangan adalah produk \textit{generic} yang dibeli. Penagihan mengikuti format jurnal
+        ERP apa adanya. Pola \textit{conformist} di sini wajar, karena model akuntansi sudah baku
+        dan jarang berubah. Membangun penerjemah sendiri hanya menambah biaya.
+  \item Aplikasi apotek di 12 apotek membaca tabel resep di basis data SIMRS secara langsung,
+        sesuai temuan pemetaan dependensi pada Bab 4. Hubungan ini tidak mengikuti pola apa pun.
+        Setiap perubahan struktur tabel resep berisiko menghentikan pelayanan obat. Hubungan
+        seperti ini adalah ciri \textit{big ball of mud} dan menjadi calon perbaikan pertama.
+\end{enumerate}
+
+\subsection{Hubungan Antartim di Balik Pola}
+
+Conway mengamati bahwa organisasi yang merancang sistem cenderung menghasilkan rancangan yang
+meniru struktur komunikasinya \cite{conway1968}. Pengamatan ini dikenal sebagai hukum Conway.
+Akibatnya, \textit{context map} sekaligus peta hubungan antartim dan antarorganisasi. Pola tidak
+dipilih menurut selera teknis, tetapi menurut kenyataan siapa yang bisa memengaruhi siapa.
+
+Keputusan memilih pola punya dua konsekuensi. Pertama, \textit{customer-supplier} hanya mungkin
+bila hulu bersedia mendengar. Di dalam Medikara, tim pendaftaran dan tim penagihan berada di bawah
+direksi yang sama, sehingga kebutuhan penagihan dapat dijadwalkan dalam rencana kerja pendaftaran.
+Kedua, terhadap pihak luar yang jauh lebih besar, pilihan realistisnya hanya \textit{conformist}
+atau \textit{anticorruption layer}. Satu rumah sakit hanyalah satu dari banyak fasilitas kesehatan
+yang terhubung ke BPJS Kesehatan dan SATUSEHAT, sehingga tidak dapat meminta perubahan model.
+
+\begin{kasus}[title={Kasus Medikara Health: BPJS Kesehatan dan SATUSEHAT}]
+  Saat ini modul klaim di kelima SIMRS bersikap \textit{conformist} terhadap BPJS Kesehatan. Kode,
+  nama kolom, dan status dari layanan web BPJS Kesehatan dipakai langsung di layar, tabel, dan
+  laporan. Misalkan dalam satu tahun BPJS Kesehatan mengubah ketentuan teknis layanannya tiga kali.
+  Setiap perubahan dikerjakan di lima versi SIMRS oleh tiga vendor berbeda. Rata-rata dibutuhkan 30
+  hari kerja sampai seluruh rumah sakit siap, dan selama masa itu sebagian berkas klaim tertunda.
+
+  Integrasi ke SATUSEHAT sedikit lebih baik. Adaptor SATUSEHAT yang sudah berjalan menerjemahkan
+  data kunjungan SIMRS ke \textit{resource} FHIR, misalnya Patient dan Encounter, sebelum dikirim.
+  Adaptor ini sudah berfungsi sebagai \textit{anticorruption layer}, walaupun tidak dirancang dengan
+  sengaja. Masih ada aturan klinis yang diselipkan di dalamnya, misalnya penentuan jenis kunjungan.
+
+  Usulan untuk kondisi target ada dua. Pertama, satu \textit{anticorruption layer} bersama
+  dipasang di depan konteks klaim, sehingga perubahan dari BPJS Kesehatan cukup dikerjakan di satu
+  tempat. Kedua, adaptor SATUSEHAT dirapikan menjadi \textit{anticorruption layer} resmi, dan aturan
+  klinis dikembalikan ke konteks pelayanan klinis. Biaya tambahannya satu komponen yang harus
+  dipelihara tim integrasi. Perhitungan untung ruginya menjadi bahan Latihan 3.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Struktur Anticorruption Layer}]
+  Evans menggambarkan \textit{anticorruption layer} sebagai gabungan tiga bagian
+  \cite{evans2003}. Ketiganya dapat dipetakan ke integrasi klaim Medikara sebagai berikut.
+  \begin{enumerate}
+    \item \textit{Facade}: antarmuka sederhana ke layanan web BPJS Kesehatan yang menyembunyikan
+          rincian alamat, otentikasi, dan versi.
+    \item \textit{Adapter}: komponen yang menerima permintaan dalam bahasa konteks klaim, misalnya
+          ``ajukan klaim kunjungan ini'', lalu memanggil \textit{facade}.
+    \item \textit{Translator}: fungsi yang menerjemahkan kode dan status BPJS Kesehatan ke istilah
+          konteks klaim, misalnya status ``dikembalikan untuk perbaikan''.
+  \end{enumerate}
+  Pengujian dipusatkan pada \textit{translator}. Setiap perubahan dari hulu cukup ditambahkan
+  sebagai kasus uji baru: contoh respons lama dan baru, lalu hasil terjemahan yang diharapkan.
+  Bila \textit{anticorruption layer} dijalankan sebagai layanan terpisah, ia ikut menambah satu
+  titik gagal, sehingga perlu antrean dan percobaan ulang. Rinciannya dibahas pada Bab 9.
+\end{pendalaman}
 
 \section{EventStorming sebagai Lokakarya Kolaboratif}
+\label{sec:ch06-eventstorming}
 
-% TODO
-% Cakupan: tujuan dan format EventStorming; peran pakar domain, fasilitator, dan pencatat; urutan kerja dari domain event, command, aktor, sampai kelompok konteks; tips menjalankan lokakarya daring dengan papan virtual.
-% Kasus Medikara: alur pendaftaran rawat jalan sampai klaim BPJS Kesehatan.
+EventStorming adalah format lokakarya yang dikembangkan Alberto Brandolini untuk mempelajari domain
+bisnis secara bersama-sama \cite{c06-brandolini2021}. Peserta menulis \textit{domain event}, yaitu
+kejadian penting dalam bisnis yang ditulis dalam bentuk lampau, misalnya ``Pasien terdaftar'' atau
+``Klaim diajukan'', di catatan tempel berwarna oranye. Catatan itu ditempel di dinding panjang dan
+diurutkan dari kiri ke kanan mengikuti waktu. Dinding yang penuh memperlihatkan alur bisnis yang
+selama ini tersebar di kepala banyak orang. Brandolini membedakan tiga format: Big Picture untuk
+memahami satu lini bisnis secara utuh, Process Modelling untuk menelaah satu proses, dan Software
+Design untuk merancang perangkat lunak di dalam satu \textit{bounded context}
+\cite{c06-brandolini2021,c06-dddcrew-eventstorming}. Bab ini memakai Big Picture yang dipersempit
+pada satu alur layanan pasien.
+
+\textit{Domain event} dipilih sebagai titik awal karena paling mudah disepakati. Pakar bisnis
+terbiasa bercerita dengan kejadian: ``setelah pasien terdaftar, perawat memanggil''. Mereka jarang
+terbiasa bercerita dengan tabel dan kolom. Akibatnya, peserta non-teknis dapat menyumbang sama
+banyaknya dengan peserta teknis.
+
+Analoginya seperti panitia pernikahan yang menyusun kronologi hari H di papan tulis untuk evaluasi.
+Setiap seksi menulis kejadian yang ditanganinya: tamu datang, akad dimulai, katering tiba, foto
+keluarga selesai. Kertas ditempel berurutan, lalu urutannya diperbaiki bersama. Celah langsung
+terlihat: katering tiba setelah tamu mulai makan, karena seksi konsumsi menunggu kabar dari seksi
+acara yang tidak pernah dikirim. Tidak ada satu seksi pun yang tahu seluruh cerita, tetapi bersama
+mereka tahu.
+
+Selain \textit{domain event}, papan EventStorming memakai beberapa jenis catatan lain dengan warna
+tetap. Tabel \ref{tab:ch06-elemen-es} mendaftar elemen yang dipakai di bab ini, mengikuti lembar
+ringkas DDD Crew \cite{c06-dddcrew-eventstorming}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Elemen papan EventStorming dan warna catatannya}
+  \label{tab:ch06-elemen-es}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Elemen} & \textbf{Warna} & \textbf{Bentuk tulisan} & \textbf{Contoh Medikara} \\ \hline
+    \textit{Domain event} & Oranye & Kata kerja bentuk lampau & Pasien terdaftar \\ \hline
+    \textit{Command} & Biru & Kata kerja perintah & Daftarkan pasien \\ \hline
+    Aktor & Kuning, kecil & Peran orang, bukan nama orang & Petugas loket \\ \hline
+    Sistem eksternal & Merah muda, lebar & Nama sistem & Layanan web BPJS Kesehatan \\ \hline
+    \textit{Policy} & Ungu muda & ``Setiap kali \dots, maka \dots'' & Setiap kali hasil kritis
+      tervalidasi, dokter diberi tahu \\ \hline
+    Informasi & Hijau & Informasi untuk mengambil keputusan & Daftar antrean poliklinik \\ \hline
+    \textit{Hot spot} & Merah muda terang & Pertanyaan, masalah, atau perselisihan & Siapa menutup
+      kunjungan bila pasien pulang sebelum membayar? \\ \hline
+  \end{tabularx}
+\end{table}
+
+Lokakarya membutuhkan empat peran. Pakar domain adalah orang yang mengerjakan atau mengawasi proses,
+misalnya kepala pendaftaran, perawat, dokter, dan kasir. Tugasnya bercerita dan mengoreksi.
+Fasilitator menjaga aturan main, mengajukan pertanyaan, tidak memihak, dan memastikan setiap orang
+ikut menempel. Pencatat istilah memegang glosarium dan mencatat istilah yang diperdebatkan.
+Penjaga waktu memastikan setiap langkah selesai tepat waktu, lalu merangkum hasil di akhir sesi.
+
+Urutan kerja lokakarya Big Picture yang dipersempit terdiri dari lima langkah:
+\begin{enumerate}
+  \item \textbf{Eksplorasi bebas.} Selama sekitar 20 menit, setiap peserta menulis \textit{domain
+        event} yang ia ketahui tanpa diskusi. Jumlah lebih penting daripada kerapian.
+  \item \textbf{Menegakkan urutan waktu.} Peserta menyusun catatan menjadi satu garis waktu,
+        membuang duplikat, dan menandai \textit{pivotal event}, yaitu kejadian penting yang
+        menandai pergantian tahap, misalnya ``Kunjungan ditutup''.
+  \item \textbf{Menandai \textit{hot spot}.} Alur dibaca dari kiri ke kanan. Setiap perdebatan
+        yang tidak selesai dalam dua menit ditulis sebagai \textit{hot spot}, lalu ditinggalkan.
+  \item \textbf{Menambah pemicu.} \textit{Command}, aktor, sistem eksternal, dan \textit{policy}
+        ditempel di dekat \textit{event} yang dipicunya.
+  \item \textbf{Mengelompokkan menjadi kandidat \textit{bounded context}.} \textit{Event} yang
+        melayani satu tujuan dan memakai satu bahasa dikelompokkan. \textit{Pivotal event},
+        pergantian aktor, dan pergantian makna istilah menjadi petunjuk batas.
+\end{enumerate}
+
+Gambar \ref{fig:ch06-papan} menunjukkan papan ringkas hasil kelima langkah untuk alur rawat jalan.
+Warna pada gambar memakai palet modul, sedangkan warna catatan fisik mengikuti Tabel
+\ref{tab:ch06-elemen-es}.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch06-papan-eventstorming.tex}
+  \caption{Papan EventStorming ringkas dari pendaftaran rawat jalan sampai klaim BPJS Kesehatan,
+           dengan \textit{pivotal event} sebagai petunjuk batas \textit{bounded context}}
+  \label{fig:ch06-papan}
+\end{figure}
+
+\subsection{Menjalankan Lokakarya Daring}
+
+Tim capstone jarang bisa berkumpul di depan satu dinding, karena tatap muka hanya pada hari Sabtu.
+Lokakarya daring dengan papan virtual menjadi pilihan yang wajar. Beberapa penyesuaian membantu:
+\begin{itemize}
+  \item Bagi lokakarya menjadi dua sesi masing-masing 120 menit, bukan satu hari penuh. Perhatian
+        peserta di depan layar lebih cepat habis daripada di depan dinding.
+  \item Siapkan templat papan dengan garis waktu kosong dan warna catatan yang dikunci, agar
+        peserta tidak memilih warna sendiri.
+  \item Batasi peserta enam sampai sepuluh orang, dan minta setiap orang mencoba menempel catatan
+        sebelum sesi dimulai.
+  \item Minta kamera menyala. Fasilitator mengatur giliran bicara, dibantu satu pendamping yang
+        memantau ruang obrolan.
+  \item Buka glosarium di sisi papan, dan ekspor papan sebagai gambar di akhir setiap sesi.
+\end{itemize}
+Panduan lengkap, agenda menit per menit, dan daftar periksa ada di
+\berkas{sources/chapter06/panduan-fasilitasi-eventstorming.md}.
+
+\begin{kasus}[title={Kasus Medikara Health: Dari Pendaftaran Rawat Jalan sampai Klaim BPJS}]
+  Misalkan tim menjalankan lokakarya di rumah sakit Bogor dalam dua sesi daring masing-masing 120
+  menit. Pesertanya sembilan orang: kepala pendaftaran, perawat poliklinik, dokter umum, analis
+  laboratorium, apoteker, kasir, petugas klaim, serta dua anggota tim TI sebagai fasilitator dan
+  pencatat istilah. Sesi pertama menghasilkan 64 \textit{domain event} dan 11 \textit{hot spot}.
+  Setelah duplikat dibuang, tersisa 47 \textit{domain event}. Sesi kedua menambahkan pemicu, lalu
+  mengelompokkan \textit{event} menjadi enam kandidat \textit{bounded context}: janji temu,
+  pendaftaran, pelayanan klinis, laboratorium, penagihan, dan klaim. Apotek dibahas pada sesi
+  tambahan karena apoteker harus kembali bertugas.
+
+  Tiga \textit{hot spot} paling ramai tampak di Gambar \ref{fig:ch06-papan}. Pertama, verifikasi
+  kepesertaan BPJS Kesehatan lambat pada jam ramai, sehingga antrean loket memanjang. Kedua, hasil
+  laboratorium kritis masih disampaikan lewat telepon karena belum masuk rekam medis tepat waktu.
+  Ketiga, berkas klaim dikembalikan karena kode diagnosis di klaim tidak sama dengan catatan dokter.
+  Misalkan sekitar 7 persen berkas klaim rawat jalan dikembalikan setiap bulan, dan setiap berkas
+  butuh rata-rata dua hari kerja untuk diperbaiki.
+
+  \textit{Hot spot} ketiga juga membuka temuan bahasa. Kata ``diagnosis'' ternyata punya dua makna:
+  diagnosis klinis yang ditulis dokter, dan kode diagnosis yang disusun petugas klaim agar sesuai
+  aturan BPJS Kesehatan. Keduanya tersimpan di tabel yang sama dan sama-sama boleh diubah. Inilah
+  sumber berkas yang tidak cocok.
+\end{kasus}
 
 \section{Dari Bounded Context ke Kandidat Layanan}
+\label{sec:ch06-kandidat-layanan}
 
-% TODO
-% Cakupan: heuristik menurunkan kandidat layanan (kepemilikan data, laju perubahan, kebutuhan skala, tim pengelola); bounded context tidak selalu sama dengan satu layanan; kaitan dengan capability map disinggung singkat (dibahas rinci di IT40513).
-% Pendalaman teknis: mencocokkan bounded context dengan modul dan tabel basis data aplikasi yang ada.
+Kandidat layanan adalah usulan unit perangkat lunak yang kelak dapat dibangun, di-\textit{deploy},
+dan diubah secara mandiri. Kandidat ini diturunkan dari \textit{bounded context}, tetapi tidak
+otomatis satu banding satu. Newman menyarankan batas layanan mengikuti domain bisnis, agar satu
+perubahan bisnis cukup menyentuh satu layanan \cite{newman2021}. Skelton dan Pais menyebut batas
+seperti ini \textit{fracture plane}, yaitu garis alami tempat sistem dapat dibelah tanpa merusak
+aliran kerja tim. \textit{Bounded context} adalah salah satunya, bersama kepatuhan regulasi, laju
+perubahan, isolasi kinerja, dan lokasi tim \cite{skelton2025}.
+
+Analoginya seperti dapur restoran besar yang dibagi menjadi beberapa stasiun: stasiun panggangan,
+stasiun sayur, dan stasiun kue. Setiap stasiun punya bahan, alat, koki penanggung jawab, dan
+ritmenya sendiri. Kue disiapkan sejak subuh, sedangkan panggangan paling sibuk saat makan siang.
+Namun tidak ada restoran yang membuat stasiun khusus untuk garam. Stasiun yang terlalu kecil membuat
+koki sibuk saling mengoper piring.
+
+Lima heuristik membantu menurunkan kandidat layanan. Tabel \ref{tab:ch06-heuristik} memuat
+pertanyaan pemandu dan contohnya di Medikara Health.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Heuristik menurunkan kandidat layanan dari \textit{bounded context}}
+  \label{tab:ch06-heuristik}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Heuristik} & \textbf{Pertanyaan pemandu} & \textbf{Tanda layak dipisah} &
+      \textbf{Contoh Medikara} \\ \hline
+    Kepemilikan data & Siapa satu-satunya yang boleh mengubah data ini? & Data punya satu pemilik
+      jelas; konteks lain cukup membaca lewat Application Programming Interface (API) atau
+      \textit{event} & Hasil laboratorium hanya
+      diubah laboratorium \\ \hline
+    Laju perubahan & Seberapa sering aturannya berubah, dan karena siapa? & Berubah jauh lebih sering
+      atau karena pihak luar & Aturan klaim berubah mengikuti BPJS Kesehatan \\ \hline
+    Kebutuhan skala & Apakah bebannya naik turun berbeda dari bagian lain? & Puncak beban berbeda
+      waktu atau besarnya & Janji temu naik sekitar 60 persen saat program vaksinasi \\ \hline
+    Tim pengelola & Tim mana yang menjaganya dalam jangka panjang? & Ada satu tim yang sanggup
+      memilikinya penuh & Tim kanal digital untuk Medikara+ \\ \hline
+    Kepatuhan dan risiko & Apakah bagian ini memegang data atau aturan dengan tuntutan khusus? &
+      Kontrol akses dan jejak audit berbeda dari bagian lain & Rekam medis elektronik \\ \hline
+  \end{tabularx}
+\end{table}
+
+Hubungan antara \textit{bounded context} dan layanan punya tiga bentuk. Bentuk pertama, satu
+konteks menjadi satu layanan. Ini bentuk yang paling umum. Bentuk kedua, satu konteks dipecah
+menjadi beberapa layanan karena kebutuhan skala atau risikonya berbeda, misalnya pengiriman
+notifikasi janji temu yang bebannya melonjak dipisah dari pengelolaan jadwal. Bentuk ketiga,
+beberapa konteks tetap berada dalam satu aplikasi yang dipasang bersama, tetapi modulnya dipisah
+tegas. Bentuk ini disebut \textit{modular monolith} dan dibahas pada Bab 7.
+
+Dua kesalahan sering muncul. Kesalahan pertama memecah menurut entitas, misalnya layanan pasien,
+layanan dokter, dan layanan obat. Hampir setiap alur bisnis lalu memanggil ketiganya, sehingga
+layanan saling bergantung erat. Kesalahan kedua memecah menurut lapisan teknis, misalnya layanan
+tampilan, layanan logika, dan layanan data. Setiap perubahan fitur menyentuh ketiga lapisan dan
+ketiga tim.
+
+\textit{Capability map} dari mata kuliah IT40513 menjadi masukan yang berguna di sini.
+\textit{Capability map} memperlihatkan kemampuan bisnis yang dibutuhkan organisasi, sehingga
+membantu menebak \textit{subdomain}. Namun satu \textit{capability} tidak otomatis menjadi satu
+\textit{bounded context}. Penyusunan \textit{capability map} dibahas rinci di IT40513.
+
+Dua contoh dari Medikara Health:
+\begin{enumerate}
+  \item Janji temu Medikara+ melonjak sekitar 60 persen setiap kali program vaksinasi diumumkan,
+        sedangkan pendaftaran di loket tidak. Perbedaan kebutuhan skala ini menjadikan janji temu
+        kandidat layanan tersendiri yang dapat diskalakan tanpa ikut menambah kapasitas SIMRS.
+  \item Pendaftaran dan pelayanan klinis berbagi identitas pasien dengan erat dan dikelola tim
+        yang sama. Memisahkan keduanya sekarang hanya menambah panggilan jaringan. Keduanya tetap
+        satu aplikasi dengan modul yang dipisah tegas, lalu ditinjau ulang setelah satu tahun.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Daftar Kandidat Layanan Awal}]
+  Tim memakai hasil lokakarya Bogor dan peta \textit{subdomain} untuk menyusun daftar kandidat
+  layanan awal pada Tabel \ref{tab:ch06-kandidat-layanan}. Daftar ini masih kandidat. Keterkaitan
+  di antaranya didiagnosis pada Bab 7, dan pilihan \textit{runtime}-nya ditentukan pada Bab 8.
+
+  Keputusan ini punya dua konsekuensi. Pertama, klaim dan janji temu menjadi calon awal
+  pemisahan, karena keduanya punya alasan yang paling kuat: aturan dari pihak luar dan lonjakan
+  beban. Urutan akhirnya ditetapkan pada peta jalan Bab 14. Kedua, rekam medis justru dipecah paling
+  akhir. Bagian ini paling bernilai dan paling sensitif, sehingga perubahannya ditunda sampai tim
+  sudah berpengalaman dari pemisahan awal.
+\end{kasus}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kandidat layanan awal Medikara Health dari alur rawat jalan}
+  \label{tab:ch06-kandidat-layanan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{\textit{Bounded context}} & \textbf{Jenis} & \textbf{Keputusan awal} &
+      \textbf{Alasan utama} \\ \hline
+    Janji temu & \textit{Core} & Layanan sendiri & Beban melonjak saat vaksinasi; dimiliki tim kanal
+      digital \\ \hline
+    Pendaftaran & \textit{Supporting} & Modul dalam aplikasi klinis & Berbagi identitas pasien
+      dengan pelayanan klinis; tim sama \\ \hline
+    Pelayanan klinis dan rekam medis & \textit{Core} & Aplikasi klinis, dipecah paling akhir &
+      Data paling sensitif; kontrol akses dan jejak audit ketat \\ \hline
+    Laboratorium & \textit{Supporting} & Layanan sendiri & Satu laboratorium rujukan melayani
+      seluruh jaringan; hasil pemeriksaan punya pemilik jelas \\ \hline
+    Penagihan & \textit{Supporting} & Modul terpisah & Klasifikasinya diuji pada Latihan 2 \\
+      \hline
+    Klaim & \textit{Supporting} & Layanan sendiri dengan \textit{anticorruption layer} & Aturan
+      berubah mengikuti BPJS Kesehatan \\ \hline
+    Akuntansi & \textit{Generic} & Tetap di ERP keuangan & Sudah terpusat dan stabil \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Mencocokkan Konteks dengan Tabel Basis Data}]
+  Batas yang digambar di papan perlu diuji pada sistem yang ada. Caranya, setiap modul aplikasi
+  dikelompokkan ke satu \textit{bounded context}, lalu akses modul ke tabel basis data dicatat dari
+  dokumentasi, kode, atau catatan \textit{query}. Berkas
+  \berkas{sources/chapter06/contoh-akses-tabel-simrs.csv} berisi data rekaan 34 akses dari 8 modul
+  SIMRS rumah sakit Jakarta ke 14 tabel. Listing \ref{lst:ch06-kelompokkan} mengumpulkan konteks
+  penulis dan pembaca setiap tabel.
+
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries, commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red}, frame=lines, numbers=left,
+  numberstyle=\tiny\color{gray}, backgroundcolor=\color{lightgray!10},
+  breaklines=true, showstringspaces=false, captionpos=b,
+  caption={Pengelompokan akses tabel per konteks, tersedia di \berkas{sources/chapter06/cocokkan-tabel-konteks.py}},
+  label={lst:ch06-kelompokkan}]
+def kelompokkan_akses(daftar_akses):
+  """Mengumpulkan konteks penulis dan pembaca untuk setiap tabel.
+
+  Himpunan dipakai agar satu konteks yang punya beberapa modul penulis tidak
+  terhitung dua kali. Dua modul dalam satu konteks memang boleh berbagi tabel.
+  """
+  penulis = defaultdict(set)
+  pembaca = defaultdict(set)
+  for akses in daftar_akses:
+    tabel = akses["tabel"]
+    if akses["akses"] == AKSES_TULIS:
+      penulis[tabel].add(akses["konteks"])
+    elif akses["akses"] == AKSES_BACA:
+      pembaca[tabel].add(akses["konteks"])
+  return penulis, pembaca
+\end{lstlisting}
+
+  Skrip dijalankan dengan \texttt{python cocokkan-tabel-konteks.py contoh-akses-tabel-simrs.csv}.
+  Hasilnya: hanya 9 dari 14 tabel yang punya satu konteks penulis. Lima tabel ditulis lebih dari
+  satu konteks, yaitu \texttt{item\_tagihan} (apotek, laboratorium, penagihan), \texttt{kunjungan}
+  (pendaftaran, pelayanan klinis, penagihan), \texttt{diagnosis} (pelayanan klinis, klaim),
+  \texttt{pasien} (pendaftaran, pelayanan klinis), dan \texttt{penjamin\_pasien} (pendaftaran,
+  penagihan). Skrip juga mencatat 10 pembacaan lintas konteks yang kelak perlu diganti dengan API
+  atau \textit{event}. Tabel \texttt{diagnosis} yang ditulis dua konteks cocok dengan
+  \textit{hot spot} kode diagnosis di lokakarya Bogor. Temuan seperti ini memperkuat batas yang
+  diusulkan, atau justru menunjukkan bahwa batasnya perlu digeser.
+\end{pendalaman}
 
 \section{Aktivitas: Lokakarya EventStorming dan Context Map}
 
-% TODO
-% Tujuan aktivitas: menemukan bounded context kondisi saat ini dari satu alur layanan pasien dan menggambarkan hubungannya dalam context map.
-% Peran dalam tim: anggota yang memahami proses bisnis, terutama yang berlatar kesehatan atau manajemen, menjadi pakar domain; anggota teknis menjadi fasilitator dan pencatat istilah; satu anggota menjaga waktu dan merangkum hasil.
-% Langkah: (1) pilih satu alur layanan pasien; (2) tempel domain event secara berurutan; (3) tambahkan command, aktor, dan sistem eksternal; (4) kelompokkan menjadi bounded context; (5) gambar context map kondisi saat ini, termasuk BPJS Kesehatan dan SATUSEHAT.
-% Luaran dan tonggak capstone: C2, peta domain dan context map kondisi saat ini.
-% Berkas sources yang direncanakan: sources/chapter06/panduan-fasilitasi-eventstorming.md, sources/chapter06/templat-papan-eventstorming.pdf, sources/chapter06/templat-context-map.drawio
+\textbf{Tujuan.} Tim menemukan \textit{bounded context} kondisi saat ini dari satu alur layanan
+pasien, lalu menggambarkan hubungannya dalam \textit{context map}. Keduanya menjadi bagian tonggak
+capstone C2 (Kondisi Saat Ini).
+
+\textbf{Pembagian peran.}
+\begin{itemize}
+  \item Anggota yang memahami proses bisnis, terutama yang berlatar kesehatan atau manajemen,
+        menjadi pakar domain. Bila memungkinkan, tim mengundang satu atau dua narasumber dari
+        organisasi pilihan.
+  \item Anggota berlatar teknis menjadi fasilitator dan pencatat istilah.
+  \item Satu anggota menjaga waktu dan merangkum hasil di akhir setiap sesi.
+\end{itemize}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Pilih satu alur layanan pasien, misalnya dari pendaftaran rawat jalan sampai klaim BPJS
+        Kesehatan. Bawa \textit{capability map} dari IT40513 dan peta dependensi dari Bab 4 sebagai
+        bahan awal.
+  \item Tempel \textit{domain event} secara berurutan di papan virtual, mengikuti agenda sesi 1
+        di \berkas{sources/chapter06/panduan-fasilitasi-eventstorming.md}. Tandai \textit{pivotal
+        event} dan \textit{hot spot}.
+  \item Tambahkan \textit{command}, aktor, dan sistem eksternal. Catat setiap istilah bermakna
+        ganda di glosarium.
+  \item Kelompokkan \textit{event} menjadi \textit{bounded context}. Beri setiap konteks nama,
+        jenis \textit{subdomain}, dan tim pemilik saat ini.
+  \item Gambar \textit{context map} kondisi saat ini dengan
+        \berkas{sources/chapter06/templat-context-map.drawio}, termasuk hubungan dengan BPJS
+        Kesehatan dan SATUSEHAT. Setiap panah diberi arah hulu-hilir dan nama pola.
+\end{enumerate}
+
+\textbf{Luaran.} Ekspor papan EventStorming, glosarium paling sedikit sepuluh istilah, peta
+\textit{subdomain}, dan \textit{context map} kondisi saat ini, ditambah ringkasan satu halaman
+tentang tiga \textit{hot spot} terpenting. Luaran ini masuk ke C2 sebagai peta domain dan
+\textit{context map} kondisi saat ini, dan dipakai lagi untuk mendiagnosis keterkaitan pada Bab 7.
+
+\textbf{Kriteria penilaian.} Tabel \ref{tab:ch06-kriteria-aktivitas} memuat kriteria singkat yang
+dipakai saat tinjauan Sabtu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 06}
+  \label{tab:ch06-kriteria-aktivitas}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} & \textbf{Bukti yang dicari} \\ \hline
+    Kelengkapan alur dan \textit{event} & 25 persen & Alur utuh dari awal sampai akhir;
+      \textit{event} berbentuk lampau; \textit{hot spot} tercatat \\ \hline
+    Kualitas batas \textit{bounded context} & 30 persen & Setiap batas dijelaskan dengan
+      \textit{pivotal event}, bahasa, atau pemilik \\ \hline
+    \textit{Context map} & 25 persen & Semua hubungan punya arah dan pola, termasuk BPJS Kesehatan
+      dan SATUSEHAT \\ \hline
+    Glosarium dan kolaborasi & 20 persen & Istilah bermakna ganda tercatat; semua peran ikut
+      menyumbang \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Etika.} Lokakarya dengan organisasi nyata hanya dijalankan seizin organisasi. Nama orang,
+data pasien, dan data karyawan tidak boleh ditulis di papan. Contoh kejadian cukup ditulis umum,
+misalnya ``Pasien terdaftar'', bukan nama pasien yang terdaftar.
+
+\textbf{Pendalaman teknis (opsional).} Anggota berlatar teknis mencocokkan \textit{bounded context}
+hasil lokakarya dengan modul dan tabel basis data aplikasi yang ada, memakai
+\berkas{sources/chapter06/cocokkan-tabel-konteks.py} seperti pada kotak pendalaman seksi
+\ref{sec:ch06-kandidat-layanan}. Daftar akses diisi dari dokumentasi atau wawancara dengan tim TI,
+bukan dengan memindai sistem tanpa izin.
 
 \section{Ringkasan}
 
-% TODO
+DDD berangkat dari bisnis, bukan dari teknologi. Domain organisasi dibagi menjadi
+\textit{subdomain} yang ditemukan dari cara kerja bisnis. \textit{Core subdomain} adalah pembeda dan
+layak dibangun serta dikuasai sendiri. \textit{Supporting subdomain} diperlukan dan khas, tetapi
+bukan pembeda. \textit{Generic subdomain} cukup dibeli atau disewa. Klasifikasi ini menentukan
+tempat investasi dan orang terbaik ditempatkan. Kasus klaim BPJS Kesehatan menunjukkan bahwa nilai
+yang besar tidak sama dengan pembeda.
+
+\textit{Ubiquitous language} menyatukan kosakata pakar bisnis dan tim teknis di dalam satu batas.
+Batas itu adalah \textit{bounded context}: tempat satu model dan satu bahasa berlaku konsisten.
+Kata ``pasien'' boleh bermakna orang yang terdaftar di pendaftaran, pihak yang ditagih di penagihan,
+dan subjek spesimen di laboratorium. Yang dibagi hanya identitas penghubung. Insiden kolom penjamin
+di Depok memperlihatkan akibatnya bila ketiga makna dijejalkan ke satu tabel.
+
+\textit{Context map} memetakan hubungan antarkonteks beserta arah hulu dan hilirnya. Pola
+\textit{customer-supplier}, \textit{conformist}, \textit{anticorruption layer}, \textit{shared
+kernel}, dan \textit{open host service} dipilih menurut kenyataan hubungan antartim, sejalan
+dengan hukum Conway. Terhadap pihak luar yang besar seperti BPJS Kesehatan dan SATUSEHAT, pilihan
+realistisnya \textit{conformist} atau \textit{anticorruption layer}, dan yang kedua melindungi
+model sendiri dari perubahan di hulu.
+
+EventStorming adalah cara kolaboratif untuk menemukan semua itu. Pakar domain dan tim teknis
+menempel \textit{domain event} berurutan, menandai \textit{hot spot}, menambah pemicu, lalu
+mengelompokkan \textit{event} menjadi kandidat \textit{bounded context}. Dari situ kandidat layanan
+diturunkan dengan heuristik kepemilikan data, laju perubahan, kebutuhan skala, tim pengelola, serta
+kepatuhan dan risiko. Satu konteks tidak selalu menjadi satu layanan.
+
+Pesan utama bab ini: batas layanan yang baik ditemukan dari bahasa dan alur bisnis, bukan dari
+daftar tabel atau struktur menu aplikasi lama. Memecah sistem sebelum batasnya dipahami hanya
+memindahkan kekusutan ke jaringan. Peta domain dan \textit{context map} kondisi saat ini dari
+Aktivitas bab ini menjadi dasar diagnosis keterkaitan dan keputusan gaya arsitektur pada Bab 7.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Satu Kata, Tiga Makna}
+
+Latihan ini membuktikan bahwa perbedaan makna satu istilah dapat ditangani dengan batas yang jelas,
+bukan dengan memaksakan satu definisi. Pertanyaannya: kata ``pasien'' bisa bermakna berbeda di
+bagian pendaftaran, keuangan, dan laboratorium. Jelaskan cara \textit{bounded context} menangani
+perbedaan makna ini.
+
 \begin{enumerate}
-  \item Kata ``pasien'' bisa bermakna berbeda di bagian pendaftaran, keuangan, dan laboratorium. Jelaskan cara \textit{bounded context} menangani perbedaan makna ini.
-  \item Tentukan apakah layanan penagihan di Medikara Health termasuk \textit{core}, \textit{supporting}, atau \textit{generic subdomain}. Jelaskan konsekuensinya terhadap keputusan membangun sendiri atau membeli.
-  \item Mengapa integrasi dengan sistem eksternal seperti BPJS Kesehatan sebaiknya dilindungi oleh \textit{anticorruption layer}?
+  \item Baca kembali kasus ``Satu Kolom, Tiga Bagian'' dan Gambar \ref{fig:ch06-makna-pasien}.
+  \item Untuk setiap konteks, tulis makna istilah, atribut yang benar-benar dibutuhkan, dan aturan
+        yang hanya berlaku di konteks itu, seperti pada Tabel \ref{tab:ch06-lat1-contoh}.
+  \item Tentukan identitas penghubung yang dibagi antarkonteks, beserta konteks yang
+        menerbitkannya.
+  \item Pilih satu istilah bermakna ganda di organisasi pilihan tim, misalnya ``pelanggan'',
+        ``produk'', atau ``kunjungan'', lalu isi Tabel \ref{tab:ch06-lat1-hasil}.
+  \item Tulis dua paragraf yang menjelaskan cara \textit{bounded context} mencegah insiden serupa.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 1: makna ``pasien'' di tiga konteks Medikara Health}
+  \label{tab:ch06-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Konteks} & \textbf{Makna ``pasien''} & \textbf{Atribut yang dibutuhkan} &
+      \textbf{Aturan yang hanya berlaku di sini} \\ \hline
+    Pendaftaran & Orang yang dikenali dan boleh dilayani & Nama, tanggal lahir, nomor
+      kependudukan, alamat, kontak darurat & Satu orang hanya punya satu nomor rekam medis di
+      seluruh jaringan \\ \hline
+    Penagihan & Pihak yang ditagih beserta penjaminnya & Penjamin, nomor kepesertaan, hak kelas,
+      plafon, saldo tagihan & Penjamin wajib jelas sebelum tagihan ditutup \\ \hline
+    Laboratorium & Subjek pemeriksaan pada satu spesimen & Nomor permintaan, jenis spesimen, waktu
+      pengambilan, umur, jenis kelamin & Nilai rujukan dipilih menurut umur dan jenis kelamin \\
+      \hline
+    Identitas penghubung & Nomor rekam medis & Diterbitkan konteks pendaftaran & Konteks lain hanya
+      menyimpan dan merujuknya \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 1}
+  \label{tab:ch06-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Konteks} & \textbf{Makna istilah} & \textbf{Atribut yang dibutuhkan} & \textbf{Aturan
+      yang hanya berlaku di sini} \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots \\ \hline
+    Identitas penghubung & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, aturan mana yang memicu insiden Depok ketika diberlakukan di luar konteksnya?
+        Pada titik alur mana aturan itu seharusnya berlaku?
+  \item Atribut mana yang muncul di lebih dari satu baris tabel hasil tim? Konteks mana yang
+        seharusnya menjadi pemilik atribut itu, dan bagaimana konteks lain memperolehnya?
+\end{enumerate}
+
+\subsection*{Latihan 2: Penagihan, Core atau Bukan}
+
+Latihan ini membuktikan bahwa klasifikasi \textit{subdomain} ditentukan oleh kriteria yang dapat
+diperiksa, bukan oleh besarnya nilai uang. Tentukan apakah layanan penagihan di Medikara Health
+termasuk \textit{core}, \textit{supporting}, atau \textit{generic subdomain}. Jelaskan
+konsekuensinya terhadap keputusan membangun sendiri atau membeli.
+
+\begin{enumerate}
+  \item Pelajari contoh klasifikasi apotek pada Tabel \ref{tab:ch06-lat2-contoh}.
+  \item Kumpulkan bahan tentang penagihan: alur tagihan, jenis penjamin, aturan diskon dan paket,
+        serta produk penagihan yang tersedia di pasar.
+  \item Jawab setiap pertanyaan kriteria untuk penagihan, lalu tentukan arah klasifikasinya.
+  \item Isi Tabel \ref{tab:ch06-lat2-hasil}, termasuk baris kesimpulan dan keputusan bangun atau
+        beli.
+  \item Bandingkan hasilnya dengan usulan awal pada Gambar \ref{fig:ch06-peta-subdomain}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 2: klasifikasi \textit{subdomain} apotek Medikara Health}
+  \label{tab:ch06-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{Kriteria} & \textbf{Pertanyaan} & \textbf{Jawaban untuk apotek} & \textbf{Arah} \\
+      \hline
+    Pembeda & Apakah pasien atau mitra memilih Medikara karena bagian ini? & Jarang; harga dan
+      jenis obat serupa dengan apotek lain & Bukan \textit{core} \\ \hline
+    Kerumitan & Seberapa rumit aturannya? & Sedang: interaksi obat, stok, kedaluwarsa, resep
+      BPJS Kesehatan & \textit{Supporting} atau \textit{generic} \\ \hline
+    Solusi pasar & Adakah produk jadi yang sesuai? & Ada, tetapi harus terhubung dengan resep
+      elektronik dari pelayanan klinis & Condong \textit{generic} \\ \hline
+    Laju perubahan & Seberapa sering berubah, dan karena siapa? & Daftar obat dan harga bulanan;
+      aturan klinis jarang berubah & Rendah \\ \hline
+    Kekhasan & Apa yang khas Medikara? & 12 apotek melayani resep dari 5 rumah sakit dan 18 klinik,
+      termasuk antar obat lewat Medikara+ & \textit{Supporting} \\ \hline
+    \textbf{Kesimpulan} & \multicolumn{3}{>{\raggedright\arraybackslash}p{8.2cm}}{\textit{Supporting}.
+      Beli produk apotek; bangun sendiri hanya integrasi resep elektronik dan layanan antar obat.}
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 2: klasifikasi \textit{subdomain} penagihan}
+  \label{tab:ch06-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{Kriteria} & \textbf{Pertanyaan} & \textbf{Jawaban untuk penagihan} & \textbf{Arah} \\
+      \hline
+    Pembeda & Apakah pasien atau mitra memilih Medikara karena bagian ini? & \dots & \dots \\
+      \hline
+    Kerumitan & Seberapa rumit aturannya? & \dots & \dots \\ \hline
+    Solusi pasar & Adakah produk jadi yang sesuai? & \dots & \dots \\ \hline
+    Laju perubahan & Seberapa sering berubah, dan karena siapa? & \dots & \dots \\ \hline
+    Kekhasan & Apa yang khas Medikara? & \dots & \dots \\ \hline
+    \textbf{Kesimpulan} & \multicolumn{3}{>{\raggedright\arraybackslash}p{8.2cm}}{\dots} \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh apotek, kriteria mana yang paling menentukan kesimpulan? Apakah kriteria yang
+        sama juga paling menentukan pada penagihan?
+  \item Misalkan Medikara kelak menjual paket langganan kesehatan karyawan kepada perusahaan, dengan
+        skema tagihan bulanan per karyawan. Apakah klasifikasi penagihan bergeser? Jelaskan
+        dampaknya pada keputusan membangun atau membeli.
+\end{enumerate}
+
+\subsection*{Latihan 3: Melindungi Klaim dengan Anticorruption Layer}
+
+Latihan ini membuktikan bahwa manfaat \textit{anticorruption layer} dapat dihitung dari jumlah
+tempat yang harus diubah setiap kali pihak luar berubah. Pertanyaannya: mengapa integrasi dengan
+sistem eksternal seperti BPJS Kesehatan sebaiknya dilindungi oleh \textit{anticorruption layer}?
+
+\begin{enumerate}
+  \item Baca kembali kasus ``BPJS Kesehatan dan SATUSEHAT'' dan contoh pada Tabel
+        \ref{tab:ch06-lat3-contoh}.
+  \item Pilih satu sistem eksternal lain, misalnya SATUSEHAT atau sistem klaim asuransi swasta.
+  \item Daftar tiga perubahan yang pernah terjadi atau mungkin terjadi pada sistem itu. Gunakan
+        catatan rilis atau pengumuman resmi bila tersedia.
+  \item Hitung tempat yang harus diubah dan perkiraan waktunya, tanpa dan dengan
+        \textit{anticorruption layer}.
+  \item Isi Tabel \ref{tab:ch06-lat3-hasil}, lalu catat biaya tambahan yang muncul bila
+        \textit{anticorruption layer} dibangun.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Contoh Latihan 3: tiga perubahan layanan BPJS Kesehatan dalam setahun, waktu dalam
+           hari kerja (angka rekaan)}
+  \label{tab:ch06-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r r}
+    \hline
+    \textbf{Perubahan dari hulu (misalkan)} & \multicolumn{2}{>{\centering\arraybackslash}p{2.6cm}}{\textbf{Tanpa \textit{anticorruption layer}}} &
+      \multicolumn{2}{>{\centering\arraybackslash}p{2.6cm}}{\textbf{Dengan \textit{anticorruption layer}}} \\ \hline
+     & \textbf{Tempat} & \textbf{Waktu} & \textbf{Tempat} & \textbf{Waktu} \\ \hline
+    Kode status klaim baru ditambahkan (layar, tabel, laporan di 5 SIMRS) & 15 & 30 & 1 & 5 \\
+      \hline
+    Format tanggal pada respons berubah & 5 & 20 & 1 & 3 \\ \hline
+    Versi layanan baru dengan alamat dan cara otentikasi berbeda & 5 & 40 & 1 & 10 \\ \hline
+    \textbf{Total setahun} & \textbf{25} & \textbf{90} & \textbf{3} & \textbf{18} \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Lembar isian Latihan 3}
+  \label{tab:ch06-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r r}
+    \hline
+    \textbf{Perubahan dari hulu} & \multicolumn{2}{>{\centering\arraybackslash}p{2.6cm}}{\textbf{Tanpa \textit{anticorruption layer}}} &
+      \multicolumn{2}{>{\centering\arraybackslash}p{2.6cm}}{\textbf{Dengan \textit{anticorruption layer}}} \\ \hline
+     & \textbf{Tempat} & \textbf{Waktu} & \textbf{Tempat} & \textbf{Waktu} \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \dots & \dots & \dots & \dots & \dots \\ \hline
+    \textbf{Total} & \dots & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada contoh, berapa kali lebih cepat perubahan selesai dengan \textit{anticorruption
+        layer}? Biaya apa yang tidak tampak di tabel, tetapi tetap harus ditanggung?
+  \item Pada sistem pilihan tim, perubahan mana yang paling diuntungkan oleh
+        \textit{anticorruption layer}, dan mengapa?
+  \item Penagihan bersikap \textit{conformist} terhadap ERP keuangan. Mengapa pola itu tetap
+        wajar di sana, padahal terhadap BPJS Kesehatan tidak?
 \end{enumerate}

@@ -1,0 +1,45 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, text width=1.6cm,
+    minimum height=0.8cm, align=center},
+  induk/.style={draw, rounded corners, fill=praditagreen!15, text width=1.7cm,
+    minimum height=1.0cm, align=center},
+  judul/.style={font=\footnotesize\bfseries, anchor=west},
+  ket/.style={font=\tiny, fill=white, inner sep=1pt, align=center},
+  nomor/.style={circle, draw, fill=orange!12, font=\tiny\bfseries, inner sep=1pt}
+]
+  % Panel A: choreography, tiap layanan bereaksi pada event di broker.
+  \node[judul] at (-0.6,2.35) {A. \textit{Choreography}};
+  \node[draw, rounded corners, fill=praditagreen!15, minimum width=5.4cm,
+    minimum height=0.5cm] (bus) at (2.2,0) {\textit{event broker}};
+  \node[tahap] (jt) at (0.6,1.5) {Janji temu};
+  \node[tahap] (lab) at (3.8,1.5) {Laboratorium};
+  \node[tahap] (nt) at (0.1,-1.5) {Notifikasi};
+  \node[tahap] (df) at (2.2,-1.5) {Pendaftaran};
+  \node[tahap] (rm) at (4.3,-1.5) {Pelayanan klinis};
+  \draw[panah] (jt) -- node[ket] {\textit{JanjiTemuDibuat}} (jt |- bus.north);
+  \draw[panah] (lab) -- node[ket] {\textit{HasilLabTersedia}} (lab |- bus.north);
+  \draw[panah, dashed] (nt |- bus.south) -- (nt);
+  \draw[panah, dashed] (df |- bus.south) -- (df);
+  \draw[panah, dashed] (rm |- bus.south) -- (rm);
+  \node[ket, text width=5.2cm] at (2.2,-2.45)
+    {tanpa pengatur pusat; alur tersebar di banyak layanan};
+
+  % Pemisah dua panel.
+  \draw[gray!50, dashed] (5.45,2.5) -- (5.45,-2.7);
+
+  % Panel B: orchestration, satu pengatur memanggil langkah secara berurutan.
+  \node[judul] at (5.7,2.35) {B. \textit{Orchestration}};
+  \node[induk] (ork) at (8.45,0) {Orkestrator klaim\\{\tiny\mdseries menyimpan status}};
+  \node[tahap] (polis) at (6.65,1.5) {Mitra asuransi\\{\tiny\mdseries cek polis}};
+  \node[tahap] (resume) at (10.25,1.5) {Pelayanan klinis\\{\tiny\mdseries resume medis}};
+  \node[tahap] (biaya) at (6.65,-1.5) {Penagihan\\{\tiny\mdseries rincian biaya}};
+  \node[tahap] (erp) at (10.25,-1.5) {ERP keuangan\\{\tiny\mdseries catat piutang}};
+  \draw[panah] (ork) -- node[nomor] {1} (polis);
+  \draw[panah] (ork) -- node[nomor] {2} (resume);
+  \draw[panah] (ork) -- node[nomor] {3} (biaya);
+  \draw[panah] (ork) -- node[nomor] {4} (erp);
+  \node[ket, text width=5.2cm] at (8.45,-2.45)
+    {satu pengatur menentukan urutan dan status klaim};
+\end{tikzpicture}

@@ -1,0 +1,27 @@
+# Kegunaan: contoh Application Argo CD Bab 13 untuk layanan jadwal dokter.
+# Pakai: kubectl apply -n argocd -f application-jadwal-dokter.yaml pada
+# klaster latihan sendiri (kind/minikube) yang sudah terpasang Argo CD.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jadwal-dokter
+  namespace: argocd
+spec:
+  project: default
+  # Prinsip 1 dan 2: keadaan yang diinginkan tersimpan di Git berversi.
+  source:
+    repoURL: https://github.com/contoh-medikara/konfigurasi-layanan.git
+    targetRevision: main
+    path: jadwal-dokter/produksi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jadwal-dokter
+  # Prinsip 3 dan 4: agen menarik perubahan dan terus merekonsiliasi.
+  syncPolicy:
+    automated:
+      # Sumber daya yang dihapus dari Git ikut dihapus dari klaster.
+      prune: true
+      # Perubahan manual di klaster (drift) dikembalikan ke isi Git.
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

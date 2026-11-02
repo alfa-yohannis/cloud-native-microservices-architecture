@@ -1,0 +1,42 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  kotak/.style={draw=black!45, rounded corners=2pt, text width=2.6cm,
+    minimum height=0.8cm, align=center, inner sep=2pt},
+  pemicu/.style={kotak, fill=blue!8},
+  hasil/.style={kotak, fill=green!10},
+  masalah/.style={kotak, text width=4.4cm, minimum height=0.7cm},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[font=\scriptsize\bfseries] at (0, 1.55) {Pemicu};
+  \node[pemicu] (p1) at (0, 0.9) {Jadwal harian pukul 06.00};
+  \node[pemicu] (p2) at (0, -0.1) {Berkas hasil laboratorium tiba};
+  \node[pemicu] (p3) at (0, -1.1) {Permintaan dari Medikara+};
+
+  % Tiga kotak bertumpuk menandai instans fungsi yang bertambah dan berkurang
+  \node[kotak, fill=orange!12, text width=2.4cm, minimum height=1.6cm]
+    at (4.5, 0.05) {};
+  \node[kotak, fill=orange!12, text width=2.4cm, minimum height=1.6cm]
+    at (4.4, -0.05) {};
+  \node[kotak, fill=orange!12, text width=2.4cm, minimum height=1.6cm]
+    (fungsi) at (4.3, -0.15)
+    {\textbf{Fungsi}\\{\tiny\mdseries 0 instans saat sepi,\\ ratusan saat
+     ramai;\\ dibayar per eksekusi}};
+  \node[font=\scriptsize\bfseries] at (4.4, 1.55) {Platform penyedia};
+
+  \node[font=\scriptsize\bfseries] at (8.8, 1.55) {Tujuan};
+  \node[hasil] (h1) at (8.8, 0.9) {Pesan pengingat ke pasien};
+  \node[hasil] (h2) at (8.8, -0.1) {Rekam medis dan SATUSEHAT};
+  \node[hasil] (h3) at (8.8, -1.1) {Jawaban ke aplikasi};
+
+  \foreach \p in {p1, p2, p3} {
+    \draw[panah] (\p.east) -- (fungsi.west);
+  }
+  \draw[panah] (fungsi.east) -- (h1.west);
+  \draw[panah] (fungsi.east) -- (h2.west);
+  \draw[panah] (fungsi.east) -- (h3.west);
+
+  \node[masalah, fill=red!22] at (2.15, -2.35)
+    {\textit{Cold start}: jeda ketika instans pertama dinyalakan setelah sepi};
+  \node[masalah, fill=gray!35] at (6.95, -2.35)
+    {Batas waktu per eksekusi dan ketergantungan pada format pemicu penyedia};
+\end{tikzpicture}

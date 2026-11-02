@@ -1,0 +1,78 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  strategi/.style={draw, rounded corners, fill=blue!8, align=center,
+    text width=2.45cm, minimum height=0.8cm, font=\scriptsize\bfseries},
+  isi/.style={draw, rounded corners, fill=white, align=left,
+    text width=2.45cm, minimum height=1.55cm, font=\tiny, inner sep=3pt},
+  angka/.style={draw, rounded corners, fill=orange!12, align=left,
+    text width=2.45cm, minimum height=1.5cm, font=\tiny, inner sep=3pt},
+  server/.style={draw, minimum width=0.32cm, minimum height=0.22cm,
+    inner sep=0pt},
+  tabung/.style={draw, cylinder, shape border rotate=90, aspect=0.45,
+    fill=gray!30, minimum width=0.42cm, minimum height=0.5cm, inner sep=0pt},
+  legenda/.style={anchor=west, font=\tiny, gray!40!black}
+]
+  % Empat strategi dari kiri ke kanan.
+  \node[strategi] (s1) at (0,0) {\textit{Backup and}\\\textit{restore}};
+  \node[strategi] (s2) at (3.05,0) {\textit{Pilot light}};
+  \node[strategi] (s3) at (6.1,0) {\textit{Warm standby}};
+  \node[strategi] (s4) at (9.15,0) {\textit{Multi-site}\\\textit{active-active}};
+
+  % Isi lokasi kedua untuk tiap strategi.
+  \node[isi, anchor=north] at (0,-0.55)
+    {Hanya salinan cadangan data. Server dibangun setelah bencana
+    dinyatakan.};
+  \node[isi, anchor=north] at (3.05,-0.55)
+    {Data direplikasi terus-menerus. Server inti sudah disiapkan, tetapi
+    dimatikan.};
+  \node[isi, anchor=north] at (6.1,-0.55)
+    {Salinan kecil menyala dan berfungsi penuh, lalu diperbesar saat
+    bencana.};
+  \node[isi, anchor=north] at (9.15,-0.55)
+    {Dua lokasi melayani pengguna bersamaan. Lokasi yang selamat menanggung
+    seluruh beban.};
+
+  % Ikon kecil kondisi lokasi kedua: tabung data dan server.
+  \node[tabung] at (-0.45,-2.45) {};
+  \node[tabung] at (2.6,-2.45) {};
+  \node[server, dashed] at (3.15,-2.45) {};
+  \node[server, dashed] at (3.6,-2.45) {};
+  \node[tabung] at (5.65,-2.45) {};
+  \node[server, fill=praditagreen!40] at (6.2,-2.45) {};
+  \node[server, dashed] at (6.65,-2.45) {};
+  \node[tabung] at (8.7,-2.45) {};
+  \node[server, fill=praditagreen!40] at (9.25,-2.45) {};
+  \node[server, fill=praditagreen!40] at (9.7,-2.45) {};
+  \node[server, fill=praditagreen!40] at (10.15,-2.45) {};
+
+  % Perkiraan kasar yang dipakai di bab ini.
+  \node[angka, anchor=north] at (0,-2.8)
+    {RTO: sekitar 12 jam\\RPO: sejak cadangan terakhir, misalnya 1 jam\\
+    Biaya DR: sekitar 8\% biaya produksi};
+  \node[angka, anchor=north] at (3.05,-2.8)
+    {RTO: sekitar 2 jam\\RPO: sekitar 5 menit\\
+    Biaya DR: sekitar 20\% biaya produksi};
+  \node[angka, anchor=north] at (6.1,-2.8)
+    {RTO: sekitar 30 menit\\RPO: sekitar 1 menit\\
+    Biaya DR: sekitar 45\% biaya produksi};
+  \node[angka, anchor=north] at (9.15,-2.8)
+    {RTO: beberapa menit\\RPO: hitungan detik\\
+    Biaya DR: sekitar 125\% biaya produksi};
+
+  % Dua arah perubahan.
+  \draw[panah, red!60!black] (-1.25,-4.75) -- (10.4,-4.75)
+    node[midway, below, font=\tiny, red!60!black]
+    {biaya dan kerumitan naik};
+  \draw[panah, praditagreen] (-1.25,-5.3) -- (10.4,-5.3)
+    node[midway, below, font=\tiny, praditagreen]
+    {RTO dan RPO makin pendek};
+
+  % Keterangan ikon.
+  \node[tabung, minimum width=0.3cm, minimum height=0.36cm] at (-1.05,-5.95) {};
+  \node[legenda] at (-0.85,-5.95) {data di lokasi kedua};
+  \node[server, dashed] at (2.3,-5.95) {};
+  \node[legenda] at (2.5,-5.95) {server disiapkan tetapi mati};
+  \node[server, fill=praditagreen!40] at (6.1,-5.95) {};
+  \node[legenda] at (6.3,-5.95) {server menyala dan melayani};
+\end{tikzpicture}

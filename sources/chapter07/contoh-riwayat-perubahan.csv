@@ -1,0 +1,42 @@
+# Contoh riwayat permintaan perubahan SIMRS RS Jakarta Januari sampai Maret 2025 (rekaan). Dipakai oleh hitung-coupling.py dan lembar-diagnosis-coupling.xlsx.
+id_perubahan,tanggal,peminta,modul_diubah,ringkasan
+PP-2025-001,2025-01-03,Keuangan,penagihan;klaim_bpjs,Tarif paket BPJS baru untuk tindakan bedah
+PP-2025-002,2025-01-06,Pendaftaran,pendaftaran,Kolom nomor ponsel pasien
+PP-2025-003,2025-01-08,Rekam medis,rekam_medis;pendaftaran,Format nomor rekam medis baru
+PP-2025-004,2025-01-09,Farmasi,farmasi,Peringatan interaksi obat
+PP-2025-005,2025-01-13,Keuangan,penagihan;klaim_bpjs;laporan,Rekap klaim tertunda per bulan
+PP-2025-006,2025-01-15,Laboratorium,laboratorium;rekam_medis,Hasil laboratorium tampil di ringkasan pasien
+PP-2025-007,2025-01-17,Manajemen,laporan,Laporan kunjungan harian
+PP-2025-008,2025-01-20,Keuangan,penagihan;klaim_bpjs,Kode diagnosis sekunder pada klaim
+PP-2025-009,2025-01-22,Rawat inap,rawat_inap;penagihan,Tarif kamar kelas baru
+PP-2025-010,2025-01-24,Pendaftaran,pendaftaran;rekam_medis,Penggabungan data pasien ganda
+PP-2025-011,2025-01-28,Farmasi,farmasi;penagihan,Harga obat formularium baru
+PP-2025-012,2025-01-30,Radiologi,radiologi,Jadwal pemakaian alat CT
+PP-2025-013,2025-02-03,Keuangan,klaim_bpjs,Perubahan alamat layanan klaim
+PP-2025-014,2025-02-04,Keuangan,penagihan;klaim_bpjs,Validasi berkas klaim sebelum dikirim
+PP-2025-015,2025-02-06,Rekam medis,rekam_medis,Templat resume medis
+PP-2025-016,2025-02-07,Pendaftaran,pendaftaran;rekam_medis;klaim_bpjs,Nomor peserta BPJS wajib saat mendaftar
+PP-2025-017,2025-02-10,Laboratorium,laboratorium;rekam_medis;penagihan,Paket pemeriksaan laboratorium baru
+PP-2025-018,2025-02-12,Manajemen,laporan;pendaftaran,Laporan waktu tunggu pendaftaran
+PP-2025-019,2025-02-13,Farmasi,farmasi;rekam_medis,Resep elektronik dari catatan dokter
+PP-2025-020,2025-02-14,Keuangan,penagihan;klaim_bpjs,Pembulatan selisih tarif
+PP-2025-021,2025-02-17,Rawat inap,rawat_inap;rekam_medis,Catatan perawat per sif
+PP-2025-022,2025-02-19,Keuangan,penagihan,Faktur asuransi swasta
+PP-2025-023,2025-02-20,Pendaftaran,pendaftaran,Antrean daring dari Medikara+
+PP-2025-024,2025-02-24,Keuangan,penagihan;klaim_bpjs;laporan,Laporan klaim yang ditolak
+PP-2025-025,2025-02-26,Laboratorium,laboratorium,Nilai rujukan hasil darah
+PP-2025-026,2025-02-27,Farmasi,farmasi;penagihan,Potongan harga obat karyawan
+PP-2025-027,2025-03-03,Rekam medis,rekam_medis;pendaftaran,Data alergi dicatat saat pendaftaran
+PP-2025-028,2025-03-04,Keuangan,penagihan;klaim_bpjs,Kode tindakan terbaru
+PP-2025-029,2025-03-06,Manajemen,laporan;penagihan,Pendapatan per poliklinik
+PP-2025-030,2025-03-07,Radiologi,radiologi;rekam_medis;penagihan,Tarif dan hasil pemeriksaan MRI
+PP-2025-031,2025-03-10,Keuangan,penagihan;klaim_bpjs,Klaim susulan rawat jalan
+PP-2025-032,2025-03-12,Rawat inap,rawat_inap;farmasi,Permintaan obat dari bangsal
+PP-2025-033,2025-03-13,Pendaftaran,pendaftaran;rekam_medis,Riwayat kunjungan lintas poliklinik
+PP-2025-034,2025-03-17,Laboratorium,laboratorium;rekam_medis,Hasil kritis memicu pemberitahuan
+PP-2025-035,2025-03-18,Keuangan,klaim_bpjs;laporan,Rekap klaim per dokter penanggung jawab
+PP-2025-036,2025-03-20,Farmasi,farmasi,Stok minimum apotek rumah sakit
+PP-2025-037,2025-03-21,Keuangan,penagihan;klaim_bpjs;rawat_inap,Klaim naik kelas rawat inap
+PP-2025-038,2025-03-24,Pendaftaran,pendaftaran;laporan,Laporan pasien baru per bulan
+PP-2025-039,2025-03-26,Rekam medis,rekam_medis;laboratorium,Lampiran hasil laboratorium pada resume
+PP-2025-040,2025-03-28,Keuangan,penagihan;klaim_bpjs,Penyesuaian tarif April

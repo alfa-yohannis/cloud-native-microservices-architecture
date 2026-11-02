@@ -1,0 +1,28 @@
+{"_keterangan": "Contoh masukan rekaan untuk guardrail-region.rego Bab 14; format disederhanakan, bukan format asli rencana Terraform. Pakai: lihat perintah di README.md.",
+  "sumber_daya": [
+    {
+      "nama": "basis-data-rekam-medis",
+      "jenis": "basis_data",
+      "region": "ap-southeast-3",
+      "tag": {"kelas-data": "rekam-medis", "pemilik": "tim-rekam-medis"}
+    },
+    {
+      "nama": "cadangan-rekam-medis",
+      "jenis": "penyimpanan_objek",
+      "region": "ap-southeast-1",
+      "tag": {"kelas-data": "rekam-medis", "pemilik": "tim-platform"}
+    },
+    {
+      "nama": "situs-informasi-publik",
+      "jenis": "penyimpanan_objek",
+      "region": "ap-southeast-1",
+      "tag": {"kelas-data": "publik", "pemilik": "tim-pemasaran"}
+    },
+    {
+      "nama": "log-uji-beban",
+      "jenis": "penyimpanan_objek",
+      "region": "ap-southeast-3",
+      "tag": {"pemilik": "tim-janji-temu"}
+    }
+  ]
+}

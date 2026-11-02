@@ -1,0 +1,43 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  kotak/.style={draw, rounded corners, minimum width=1.9cm, minimum height=0.85cm,
+    align=center, font=\scriptsize\bfseries, text width=1.8cm}
+]
+  % Sumber data tagihan dengan format yang berbeda-beda.
+  \node[kotak, fill=blue!8] (pa) at (0,1.1)
+    {Tagihan\\penyedia A};
+  \node[kotak, fill=blue!8] (pb) at (0,0)
+    {Tagihan\\penyedia B};
+  \node[kotak, fill=blue!8] (saas) at (0,-1.1)
+    {Tagihan\\SaaS};
+
+  \node[kotak, fill=orange!12] (focus) at (2.5,0)
+    {Normalisasi\\FOCUS\\{\tiny\mdseries satu skema kolom}};
+  \node[kotak, fill=blue!8] (alokasi) at (5.0,0)
+    {Alokasi\\lewat \textit{tag}\\{\tiny\mdseries layanan, lingkungan, fasilitas}};
+  \node[kotak, fill=blue!8] (show) at (7.5,0.75)
+    {\textit{Showback}\\{\tiny\mdseries diperlihatkan}};
+  \node[kotak, fill=blue!8] (charge) at (7.5,-0.75)
+    {\textit{Chargeback}\\{\tiny\mdseries dibebankan}};
+  \node[kotak, fill=green!10] (unit) at (10.0,0)
+    {Biaya per unit\\{\tiny\mdseries per kunjungan, per janji temu}};
+
+  % Biaya tanpa tag menjadi penanda masalah yang memicu perbaikan aturan.
+  \node[kotak, fill=red!22] (tanpa) at (5.0,-1.75)
+    {Biaya tanpa \textit{tag}\\{\tiny\mdseries belum ada pemilik}};
+
+  \draw[panah] (pa.east) -- (focus.west);
+  \draw[panah] (pb.east) -- (focus.west);
+  \draw[panah] (saas.east) -- (focus.west);
+  \draw[panah] (focus) -- (alokasi);
+  \draw[panah] (alokasi.east) -- (show.west);
+  \draw[panah] (alokasi.east) -- (charge.west);
+  \draw[panah] (show.east) -- (unit.west);
+  \draw[panah] (charge.east) -- (unit.west);
+  \draw[panah] (alokasi) -- (tanpa);
+  \draw[panah, dashed] (tanpa.west) to[bend left=70]
+    node[pos=0.45, left, align=right]
+    {\tiny\mdseries perbaiki aturan\\\tiny\mdseries\textit{tagging}}
+    (alokasi.south west);
+\end{tikzpicture}

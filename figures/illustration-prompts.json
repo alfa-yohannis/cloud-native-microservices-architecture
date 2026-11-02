@@ -1,0 +1,79 @@
+{
+  "ch05-loket-kembar.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. A bright modern hospital registration lobby during a rush. A row of identical service counters staffed by different clerks can be extended by adding an identical new counter. Every counter connects by a thin subtle line to ONE shared secure filing cabinet behind the row. Smartphone-carrying visitors distribute naturally across the counters. No counter stores its own private files. Emphasize horizontal scaling with interchangeable stateless application instances and a shared backing service; depict this as a metaphor rather than a technical diagram.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 260519,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch06-lokakarya-bersama.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. A mixed team of healthcare business experts and software engineers collaboratively mapping a patient-service journey on a large wall. Plain colored sticky squares with absolutely no writing form a chronological row, then group into several distinct bounded clusters. One clinician points to a cluster while a developer listens and another facilitator moves a card. Show shared understanding, event discovery, domain language, and explicit boundaries rather than computers doing all the thinking.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 226664,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch10-lemari-arsip-per-bagian.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. Several hospital departments each have their own clearly separate locked filing cabinet and desk. Clerks carry sealed envelopes taken from an outgoing tray on one department's desk to incoming trays on the others; thin subtle dotted routes connect the trays. One clerk checks that a local update and its outgoing envelope are kept together. Convey database-per-service, transactional outbox, and coordinated updates without implying a single shared database.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 241683,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch11-dasbor-hijau.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. A split conceptual hospital scene. On the left, a calm technical operations room shows a wall of simple green abstract status lights and healthy-looking gauges without labels. On the right, patients are frustrated: one repeatedly taps a phone and another waits in a long registration queue. A narrow visual gap emphasizes that green infrastructure indicators do not necessarily reflect successful patient journeys. Keep the mood thoughtful, not frightening.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 227890,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch12-rumah-sakit-tetap-menyala.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. A modern hospital remains warmly illuminated and continues serving patients during a neighborhood power outage at dusk. Surrounding office buildings are dark, while subtle redundant power and backup-service infrastructure supports the hospital. Include a small response team calmly checking a recovery kit. Convey resilience, tested recovery, and essential service continuity without disaster spectacle.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 334279,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch13-antrean-dan-jalur.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. Two contrasting delivery paths within one healthcare organization. On the left, large bundles of blank paperwork wait at many manual approval desks. On the right, a smooth automated conveyor carries many small identical parcels through a few visible quality-check gates toward a modern hospital. A mixed team works beside a shared toolbox platform under the conveyor. Convey DevOps, small safe releases, GitOps consistency, and platform self-service.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 330366,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  },
+  "ch14-peta-jalan.jpg": {
+    "tool": "imagegen bawaan",
+    "date": "2026-10-30",
+    "prompt": "Use case: scientific-educational. A finished landscape 16:9 conceptual illustration for an Indonesian postgraduate textbook using a fictional healthcare network as a teaching case. Clean flat editorial illustration with carefully composed people and concrete everyday visual metaphors, professional adult education style. Palette: restrained deep green #257147, soft blue, light gray, white background, small muted orange highlights only where helpful. No text, letters, numbers, labels, logos, watermarks, or legible screens. No private medical data. One coherent scene, visually clear at printed textbook size. A gradual winding road leads from an older operating hospital to a modern healthcare campus on a green hill. Three distinct construction stages form stepping-stone sections of the route; low guardrails follow the curves. The old hospital stays illuminated and serving patients while the new route is built. A few small vehicles and people use completed sections. Convey staged modernization, strangler-style transition, and cloud governance guardrails.",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "bytes": 409870,
+    "note": "Ilustrasi konseptual; bukan dokumentasi pasien atau sistem produksi."
+  }
+}

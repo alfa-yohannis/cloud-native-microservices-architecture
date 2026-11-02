@@ -1,0 +1,53 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  zona/.style={draw, rounded corners, fill=blue!8, align=center,
+    text width=1.55cm, minimum height=1.25cm},
+  kanan/.style={draw, rounded corners, align=center, text width=3.0cm,
+    minimum height=1.15cm},
+  ket/.style={font=\tiny, gray!40!black, align=center}
+]
+  % Region utama dengan tiga availability zone.
+  \node[draw, rounded corners, thick, fill=praditagreen!15,
+    minimum width=6.4cm, minimum height=2.9cm] (region) at (3.2,0.9) {};
+  \node[font=\scriptsize\bfseries, anchor=north] at (region.north)
+    {\textit{Region} utama di Jakarta};
+  \node[zona] (z1) at (1.1,0.75)
+    {\textbf{AZ 1}\\{\tiny\mdseries aplikasi dan basis data utama}};
+  \node[zona] (z2) at (3.2,0.75)
+    {\textbf{AZ 2}\\{\tiny\mdseries salinan siap ambil alih}};
+  \node[zona] (z3) at (5.3,0.75)
+    {\textbf{AZ 3}\\{\tiny\mdseries salinan siap ambil alih}};
+  \draw[thick, dashed, {Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}]
+    (z1.east) -- (z2.west);
+  \draw[thick, dashed, {Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}]
+    (z2.east) -- (z3.west);
+  \node[ket, anchor=north] at (3.2,-0.05)
+    {replikasi sinkron antarzona: hampir tanpa data hilang};
+  \node[ket, anchor=north, text width=6.2cm] at (3.2,-0.75)
+    {\textbf{\textit{multi-AZ} melindungi dari:} satu pusat data padam\\
+    \textbf{tidak melindungi dari:} gangguan seluruh \textit{region}, data
+    terhapus atau terenkripsi};
+
+  % Lokasi kedua di Indonesia dan cadangan terpisah.
+  \node[kanan, fill=orange!12] (kedua) at (9.95,1.75)
+    {\textbf{Lokasi kedua di Indonesia}\\{\tiny\mdseries penyedia lain atau
+    pusat data sendiri; melindungi dari gangguan seluruh \textit{region}}};
+  \node[kanan, fill=green!10] (cadangan) at (9.95,0.05)
+    {\textbf{Cadangan terpisah akun}\\{\tiny\mdseries tidak dapat diubah
+    selama masa kunci; melindungi dari \textit{ransomware} dan salah hapus}};
+  \draw[panah] (region.east |- kedua.west) -- node[above, ket]
+    {replikasi\\asinkron} (kedua.west);
+  \draw[panah] (region.east |- cadangan.west) -- node[above, ket]
+    {salinan\\berkala} (cadangan.west);
+
+  % Region luar negeri dengan kendala lokasi data.
+  \node[kanan, fill=gray!35] (luar) at (9.95,-1.65)
+    {\textbf{\textit{Region} luar negeri}\\{\tiny\mdseries terdekat dari
+    Jakarta, tetapi di negara lain}};
+  \draw[panah, dashed, gray!60!black] (region.south east) -- node[below left,
+    ket, xshift=4pt] {salinan?} (luar.west);
+  \node[draw, rounded corners, fill=red!22, align=center, text width=3.0cm,
+    font=\tiny] at (9.95,-2.75)
+    {Rekam medis elektronik tidak ditempatkan di sini (Bab 2)};
+\end{tikzpicture}

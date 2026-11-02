@@ -1,0 +1,46 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tim/.style={draw, rounded corners, fill=blue!8, text width=1.55cm,
+    minimum height=0.9cm, align=center, inner sep=2pt},
+  kap/.style={draw, rounded corners, fill=blue!8, text width=1.25cm,
+    minimum height=0.62cm, align=center, inner sep=2pt, font=\tiny},
+  ket/.style={font=\tiny, gray!60!black}
+]
+  % Pengguna platform: lima tim stream-aligned.
+  \node[font=\tiny\bfseries] at (3.9,4.35)
+    {Tim \textit{stream-aligned}: pengguna platform};
+  \foreach \nama/\posisi in {{Tim pendaftaran dan jadwal}/0,
+      {Tim rekam medis}/1.95, {Tim farmasi dan laboratorium}/3.9,
+      {Tim penagihan dan klaim}/5.85, {Tim Medikara+}/7.8} {
+    \node[tim] at (\posisi,3.6) {\nama};
+    \draw[panah] (\posisi,3.13) -- (\posisi,2.74);
+  }
+  \node[ket, anchor=west] at (0.08,2.94) {swalayan};
+
+  % Antarmuka platform.
+  \node[draw, rounded corners, fill=orange!12, text width=9.35cm,
+    minimum height=0.7cm, align=center] at (3.9,2.36)
+    {\textbf{Antarmuka platform}\\portal pengembang, API, templat \textit{golden path},
+    dokumentasi};
+
+  % Kapabilitas platform.
+  \draw[rounded corners, fill=praditagreen!15] (-0.88,0.42) rectangle (8.68,1.82);
+  \node[font=\tiny\bfseries] at (3.9,1.62) {Kapabilitas platform};
+  \foreach \nama/\posisi in {{CI/CD}/-0.08, {GitOps}/1.52,
+      {Pemantauan dan log}/3.12, {Rahasia dan identitas}/4.72,
+      {Basis data terkelola}/6.32, {Pemindaian keamanan}/7.92} {
+    \node[kap] at (\posisi,0.95) {\nama};
+  }
+
+  % Fondasi infrastruktur dari bab sebelumnya.
+  \node[draw, rounded corners, fill=blue!8, text width=9.35cm,
+    minimum height=0.7cm, align=center] at (3.9,-0.12)
+    {\textbf{Fondasi}\\\textit{landing zone} (Bab 4), PaaS atau Kubernetes terkelola
+    (Bab 8), \textit{region} Jakarta};
+
+  % Wilayah tanggung jawab tim platform.
+  \draw[thick, praditagreen] (8.85,0.42) -- (9.0,0.42) -- (9.0,2.7) -- (8.85,2.7);
+  \node[font=\tiny, align=left, anchor=west] at (9.1,1.56)
+    {dikelola tim\\platform sebagai\\produk, bukan\\sebagai loket tiket};
+\end{tikzpicture}

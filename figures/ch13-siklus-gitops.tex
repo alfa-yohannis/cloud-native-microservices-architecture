@@ -1,0 +1,42 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  kotak/.style={draw, rounded corners, fill=blue!8, align=center,
+    minimum height=0.8cm, inner sep=3pt},
+  ket/.style={font=\tiny, gray!60!black, align=center}
+]
+  % Jalur usulan perubahan: pengembang, pull request, repositori Git.
+  \node[kotak, text width=1.6cm] (dev) at (0,2.6) {Pengembang atau operator};
+  \node[kotak, text width=1.7cm] (pr) at (2.7,2.6) {\textit{Pull request} dan tinjauan};
+  \node[kotak, text width=2.0cm, fill=orange!12] (git) at (6.0,2.6)
+    {Repositori Git\\{\tiny keadaan yang diinginkan:\\(1) deklaratif,
+    (2) berversi}};
+  \node[kotak, text width=1.7cm] (ci) at (2.7,4.3)
+    {\textit{Pipeline} CI: \textit{image} baru};
+  \draw[panah] (dev) -- (pr);
+  \draw[panah] (pr) -- node[ket, above] {digabung} (git);
+  \draw[panah] (ci) -- node[ket, right] {usulan tag versi baru} (pr);
+
+  % Agen GitOps di dalam klaster menarik dan merekonsiliasi.
+  \node[kotak, text width=2.0cm, fill=praditagreen!15] (agen) at (9.3,2.6)
+    {Agen GitOps\\(Argo CD atau Flux)};
+  \node[kotak, text width=2.0cm, fill=green!10] (klaster) at (9.3,0.6)
+    {Klaster produksi\\{\tiny keadaan aktual}};
+  \draw[panah] (git) -- node[ket, above] {(3) ditarik\\otomatis} (agen);
+  \draw[panah] ([xshift=-0.45cm]agen.south) --
+    node[ket, left] {terapkan} ([xshift=-0.45cm]klaster.north);
+  \draw[panah] ([xshift=0.45cm]klaster.north) --
+    node[ket, right] {(4) amati\\terus} ([xshift=0.45cm]agen.south);
+
+  % Perubahan manual langsung ke klaster dianggap drift.
+  \node[kotak, text width=2.0cm, fill=red!22] (drift) at (6.0,0.6)
+    {Ubahan manual ke klaster (\textit{drift}), dikembalikan agen};
+  \draw[panah, dashed, red!60!black] (drift) -- (klaster);
+
+  % Jejak audit yang dihasilkan siklus ini.
+  \draw[rounded corners, fill=blue!8] (-0.9,-1.05) rectangle (10.9,-0.35);
+  \node[font=\tiny, align=center] at (5.0,-0.7)
+    {Jejak audit: siapa mengusulkan (\textit{commit}), siapa menyetujui
+    (tinjauan), kapan berlaku (riwayat sinkronisasi),\\dan apa yang
+    menyimpang (\textit{drift})};
+\end{tikzpicture}

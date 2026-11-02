@@ -1,0 +1,1464 @@
+{
+  "code": "IT40713",
+  "format_version": 1,
+  "description": "Diagram konsep orisinal, disusun dari naskah bab; kotak generik, tanpa TikZ.",
+  "chapters": [
+    {
+      "caption": "Perjalanan permintaan janji temu dan ketergantungannya",
+      "nodes": [
+        {
+          "id": "pasien",
+          "text": "Pasien|ponsel dan koneksi",
+          "role": "actor",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "app",
+          "text": "Medikara+|aplikasi vendor",
+          "role": "service",
+          "column": 1,
+          "row": 1
+        },
+        {
+          "id": "simrs",
+          "text": "SIMRS rumah sakit|aturan jadwal",
+          "role": "service",
+          "column": 2.15,
+          "row": 1
+        },
+        {
+          "id": "hasil",
+          "text": "Hasil bagi pasien|status janji temu",
+          "role": "outcome",
+          "column": -0.15,
+          "row": 2
+        },
+        {
+          "id": "operasi",
+          "text": "Operasi layanan|orang, biaya, risiko",
+          "role": "control",
+          "column": 1,
+          "row": 0
+        },
+        {
+          "id": "db",
+          "text": "Basis data SIMRS|jadwal dan transaksi",
+          "role": "data",
+          "column": 2.15,
+          "row": 2
+        }
+      ],
+      "edges": [
+        {
+          "source": "pasien",
+          "target": "app",
+          "label": "permintaan / respons",
+          "dashed": false,
+          "source_port": "r",
+          "target_port": "l"
+        },
+        {
+          "source": "app",
+          "target": "simrs",
+          "label": "integrasi layanan",
+          "dashed": false,
+          "source_port": "r",
+          "target_port": "l"
+        },
+        {
+          "source": "simrs",
+          "target": "db",
+          "label": "baca / ubah data",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        },
+        {
+          "source": "app",
+          "target": "hasil",
+          "label": "menyajikan status",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "r"
+        },
+        {
+          "source": "operasi",
+          "target": "app",
+          "label": "menjaga layanan",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        },
+        {
+          "source": "operasi",
+          "target": "simrs",
+          "label": "mengelola dependensi",
+          "dashed": false,
+          "source_port": "r",
+          "target_port": "t"
+        }
+      ],
+      "note": "Layanan bergantung pada beberapa sistem dan tim. Penempatan di cloud saja belum membentuk praktik cloud-native.",
+      "basis": "Istilah aplikasi/server/data/jaringan, perjalanan Medikara+, kualitas layanan dan cloud-hosted versus cloud-native.",
+      "number": 1,
+      "filename": "ch01-diagram-konsep.png",
+      "source": "module/chapter01.tex",
+      "chapter_title": "Orientasi dan Bahasa Bersama Cloud-Native",
+      "sections": [
+        "Pendahuluan",
+        "Cara Kerja Mata Kuliah dan Proyek Capstone",
+        "Bahasa Bersama untuk Mahasiswa Non-Teknis",
+        "Bahasa Bersama untuk Mahasiswa Teknis",
+        "Kualitas Sistem dan Trade-off",
+        "Arti Cloud-Native bagi Organisasi",
+        "Aktivitas: Membentuk Tim dan Memetakan Pemicu Modernisasi",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Memilih model cloud berdasarkan workload dan kendali",
+      "nodes": [
+        {
+          "id": "work",
+          "text": "Workload dan data|layanan, sensitivitas",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "syarat",
+          "text": "Batas yang wajib lolos|hukum, lokasi, kontrol",
+          "role": "control",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "model",
+          "text": "Model layanan|IaaS / PaaS / SaaS",
+          "role": "service",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "ops",
+          "text": "Tanggung jawab bersama|pelanggan dan penyedia",
+          "role": "control",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "deploy",
+          "text": "Model penerapan|publik, privat, hybrid",
+          "role": "service",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "tempat",
+          "text": "Region dan zona|ketahanan dan lokasi",
+          "role": "data",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "work",
+          "target": "syarat",
+          "label": "kebutuhan",
+          "dashed": false
+        },
+        {
+          "source": "syarat",
+          "target": "model",
+          "label": "opsi memenuhi",
+          "dashed": false
+        },
+        {
+          "source": "model",
+          "target": "tempat",
+          "label": "pilihan lokasi",
+          "dashed": false
+        },
+        {
+          "source": "tempat",
+          "target": "deploy",
+          "label": "komposisi",
+          "dashed": false
+        },
+        {
+          "source": "deploy",
+          "target": "ops",
+          "label": "batas operasi",
+          "dashed": false
+        },
+        {
+          "source": "model",
+          "target": "ops",
+          "label": "pembagian pekerjaan",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        }
+      ],
+      "note": "Pada semua model, pelanggan tetap mengendalikan tujuan data dan hak akses. Residensi berbeda dari kedaulatan data.",
+      "basis": "NIST cloud, model layanan/penerapan, shared responsibility, region/AZ dan perbedaan residency/sovereignty/localization.",
+      "number": 2,
+      "filename": "ch02-diagram-konsep.png",
+      "source": "module/chapter02.tex",
+      "chapter_title": "Model Layanan, Model Penerapan, dan Lokasi Data",
+      "sections": [
+        "Pendahuluan",
+        "Lima Karakteristik Esensial Cloud",
+        "Model Layanan dan Shared Responsibility Model",
+        "Model Penerapan: Public, Private, Hybrid, dan Multi-Cloud",
+        "Region, Availability Zone, dan Region Cloud di Indonesia",
+        "Lokasi Data dan Kedaulatan Data dalam Regulasi Indonesia",
+        "Aktivitas: Matriks Kendala Penempatan Workload",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "FinOps: dari data biaya ke keputusan berulang",
+      "nodes": [
+        {
+          "id": "tag",
+          "text": "Billing dan tagging|alokasi biaya konsisten",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "unit",
+          "text": "Biaya per unit layanan|TCO setara horizon",
+          "role": "data",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "pilih",
+          "text": "Keputusan bersama|nilai, biaya, risiko",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "pantau",
+          "text": "Pantau hasil|biaya dan mutu layanan",
+          "role": "outcome",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "optim",
+          "text": "Optimasi workload|kapasitas dan model harga",
+          "role": "service",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "karbon",
+          "text": "Ukuran karbon|operasi dan perangkat",
+          "role": "data",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "tag",
+          "target": "unit",
+          "label": "alokasi",
+          "dashed": false
+        },
+        {
+          "source": "unit",
+          "target": "pilih",
+          "label": "bukti biaya",
+          "dashed": false,
+          "source_port": "t",
+          "target_port": "t"
+        },
+        {
+          "source": "karbon",
+          "target": "pilih",
+          "label": "tradeoff lingkungan",
+          "dashed": false
+        },
+        {
+          "source": "pilih",
+          "target": "optim",
+          "label": "prioritas tindakan",
+          "dashed": false,
+          "source_port": "l",
+          "target_port": "r"
+        },
+        {
+          "source": "optim",
+          "target": "pantau",
+          "label": "hasil perubahan",
+          "dashed": false
+        },
+        {
+          "source": "pantau",
+          "target": "tag",
+          "label": "perbarui siklus",
+          "dashed": true
+        }
+      ],
+      "note": "FinOps menghubungkan bisnis, keuangan, dan teknik. Biaya rendah belum tentu berarti emisi terendah atau nilai tertinggi.",
+      "basis": "TCO, model harga, Inform/Optimize/Operate, showback/chargeback, SCI dan unit fungsional.",
+      "number": 3,
+      "filename": "ch03-diagram-konsep.png",
+      "source": "module/chapter03.tex",
+      "chapter_title": "Ekonomi Cloud, FinOps, dan Keberlanjutan",
+      "sections": [
+        "Pendahuluan",
+        "CapEx, OpEx, dan Total Cost of Ownership",
+        "Model Harga Cloud",
+        "FinOps Framework 2026",
+        "Alokasi Biaya dan Unit Economics",
+        "Keberlanjutan dan Jejak Karbon",
+        "Aktivitas: Model Biaya Awal dan Sasaran Nilai Cloud",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Kesiapan dan fondasi mendahului gelombang migrasi",
+      "nodes": [
+        {
+          "id": "invent",
+          "text": "Inventaris workload|pemilik dan dependensi",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "siap",
+          "text": "Kesiapan organisasi|CAF dan gap kritis",
+          "role": "control",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "r",
+          "text": "Keputusan 7R|alasan tiap workload",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "ukur",
+          "text": "Layanan hasil migrasi|bukti nilai dan operasi",
+          "role": "outcome",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "migrasi",
+          "text": "Gelombang migrasi|uji dan rollback",
+          "role": "service",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "zona",
+          "text": "Landing zone|identitas, jaringan, log",
+          "role": "control",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "invent",
+          "target": "siap",
+          "label": "bukti kondisi",
+          "dashed": false
+        },
+        {
+          "source": "siap",
+          "target": "r",
+          "label": "batas kesiapan",
+          "dashed": false
+        },
+        {
+          "source": "r",
+          "target": "zona",
+          "label": "kebutuhan fondasi",
+          "dashed": false
+        },
+        {
+          "source": "zona",
+          "target": "migrasi",
+          "label": "prasyarat aman",
+          "dashed": false
+        },
+        {
+          "source": "r",
+          "target": "migrasi",
+          "label": "strategi per workload",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        },
+        {
+          "source": "migrasi",
+          "target": "ukur",
+          "label": "verifikasi hasil",
+          "dashed": false
+        }
+      ],
+      "note": "Retain atau retire dapat menjadi keputusan yang tepat. CCoE menjaga guardrail dan membantu tim, bukan memaksa refactor.",
+      "basis": "CAF enam perspektif, 7R, landing zone, CCoE, urutan prasyarat migrasi.",
+      "number": 4,
+      "filename": "ch04-diagram-konsep.png",
+      "source": "module/chapter04.tex",
+      "chapter_title": "Kerangka Adopsi Cloud dan Strategi Migrasi 7R",
+      "sections": [
+        "Pendahuluan",
+        "Tiga Kerangka Adopsi Cloud",
+        "Penilaian Kesiapan dengan Enam Perspektif",
+        "Inventaris Portofolio Aplikasi dan Dependensi",
+        "Strategi Migrasi 7R",
+        "Landing Zone dan Cloud Center of Excellence",
+        "Aktivitas: Penilaian Kesiapan dan Portofolio 7R",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Aplikasi stateless memisahkan proses dari data persisten",
+      "nodes": [
+        {
+          "id": "kode",
+          "text": "Kode dan dependensi|sumber terversi",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "rilis",
+          "text": "Build + konfigurasi|artefak rilis tetap",
+          "role": "control",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "replika",
+          "text": "Replika proses|stateless dan dapat diganti",
+          "role": "service",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "klien",
+          "text": "Permintaan pengguna|beban berubah",
+          "role": "actor",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "lb",
+          "text": "Load balancer|membagi permintaan",
+          "role": "control",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "data",
+          "text": "Backing services|data dan sesi persisten",
+          "role": "data",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "kode",
+          "target": "rilis",
+          "label": "build sekali",
+          "dashed": false
+        },
+        {
+          "source": "rilis",
+          "target": "replika",
+          "label": "deploy artefak",
+          "dashed": false,
+          "source_port": "t",
+          "target_port": "t"
+        },
+        {
+          "source": "klien",
+          "target": "lb",
+          "label": "request",
+          "dashed": false
+        },
+        {
+          "source": "lb",
+          "target": "replika",
+          "label": "distribusi beban",
+          "dashed": false,
+          "source_port": "r",
+          "target_port": "l"
+        },
+        {
+          "source": "replika",
+          "target": "data",
+          "label": "simpan di luar proses",
+          "dashed": false
+        }
+      ],
+      "note": "Replika tidak menyimpan sesi penting pada disk lokal. Penambahan replika membutuhkan kapasitas backing services yang cukup.",
+      "basis": "12-factor, build/release/run, external config, backing services, horizontal scaling, immutable instances.",
+      "number": 5,
+      "filename": "ch05-diagram-konsep.png",
+      "source": "module/chapter05.tex",
+      "chapter_title": "Prinsip Cloud-Native dan Twelve-Factor App",
+      "sections": [
+        "Pendahuluan",
+        "Definisi Cloud-Native menurut CNCF",
+        "Twelve-Factor App dan Statusnya Sekarang",
+        "Faktor tentang Kode, Konfigurasi, dan Backing Service",
+        "Faktor tentang Build, Proses, dan Skala",
+        "Faktor tentang Lingkungan, Log, dan Tugas Administratif",
+        "Immutable Infrastructure dan Konfigurasi Deklaratif",
+        "Aktivitas: Kartu Skor Kesenjangan Cloud-Native",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Dari peristiwa bisnis ke batas model domain",
+      "nodes": [
+        {
+          "id": "event",
+          "text": "EventStorming|peristiwa bisnis",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "bahasa",
+          "text": "Model dan bahasa|istilah per konteks",
+          "role": "service",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "konteks",
+          "text": "Bounded context|batas model, tanggung jawab",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "bpjs",
+          "text": "Sistem BPJS|model pihak luar",
+          "role": "actor",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "acl",
+          "text": "Anti-corruption layer|terjemahan model",
+          "role": "control",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "layanan",
+          "text": "Kandidat layanan|diperiksa coupling-nya",
+          "role": "service",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "event",
+          "target": "bahasa",
+          "label": "mengelompokkan makna",
+          "dashed": false
+        },
+        {
+          "source": "bahasa",
+          "target": "konteks",
+          "label": "menetapkan batas",
+          "dashed": false,
+          "source_port": "t",
+          "target_port": "t"
+        },
+        {
+          "source": "konteks",
+          "target": "layanan",
+          "label": "calon pemisahan",
+          "dashed": false
+        },
+        {
+          "source": "bpjs",
+          "target": "acl",
+          "label": "kontrak eksternal",
+          "dashed": false
+        },
+        {
+          "source": "acl",
+          "target": "konteks",
+          "label": "melindungi model",
+          "dashed": false,
+          "source_port": "r",
+          "target_port": "l"
+        }
+      ],
+      "note": "Satu bounded context tidak wajib menjadi satu microservice. Pasien dapat memiliki makna berbeda di pendaftaran dan keuangan.",
+      "basis": "DDD, subdomain, ubiquitous language, bounded context, context map dan ACL BPJS.",
+      "number": 6,
+      "filename": "ch06-diagram-konsep.png",
+      "source": "module/chapter06.tex",
+      "chapter_title": "Domain-Driven Design dan Batas Layanan",
+      "sections": [
+        "Pendahuluan",
+        "Domain, Subdomain, dan Ubiquitous Language",
+        "Bounded Context",
+        "Context Map dan Pola Hubungannya",
+        "EventStorming sebagai Lokakarya Kolaboratif",
+        "Dari Bounded Context ke Kandidat Layanan",
+        "Aktivitas: Lokakarya EventStorming dan Context Map",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Batas modul dipilih sebelum distribusi layanan",
+      "nodes": [
+        {
+          "id": "kebutuhan",
+          "text": "Kebutuhan perubahan|beban dan otonomi tim",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "coupling",
+          "text": "Evaluasi coupling|data, waktu, rilis, makna",
+          "role": "control",
+          "column": 1.03,
+          "row": 0
+        },
+        {
+          "id": "adr",
+          "text": "ADR keputusan|opsi dan konsekuensi",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "micro",
+          "text": "Microservices terpilih|deploy mandiri, biaya jaringan",
+          "role": "service",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "modul",
+          "text": "Modular monolith|batas tegas, satu deploy",
+          "role": "outcome",
+          "column": 1.03,
+          "row": 1
+        },
+        {
+          "id": "mono",
+          "text": "Monolit saat ini|batas bercampur",
+          "role": "service",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "kebutuhan",
+          "target": "coupling",
+          "label": "konteks keputusan",
+          "dashed": false
+        },
+        {
+          "source": "coupling",
+          "target": "adr",
+          "label": "bukti tradeoff",
+          "dashed": false
+        },
+        {
+          "source": "mono",
+          "target": "modul",
+          "label": "rapikan batas",
+          "dashed": false
+        },
+        {
+          "source": "adr",
+          "target": "modul",
+          "label": "arah inti SIMRS",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        },
+        {
+          "source": "modul",
+          "target": "micro",
+          "label": "bila terpicu",
+          "dashed": true
+        }
+      ],
+      "note": "Arah inti SIMRS adalah modular monolith. Ekstraksi layanan memerlukan alasan beban, kepemilikan, dan kemampuan operasi.",
+      "basis": "Monolith/modular monolith/microservices, Conway, empat coupling, enam pengembang dan ADR.",
+      "number": 7,
+      "filename": "ch07-diagram-konsep.png",
+      "source": "module/chapter07.tex",
+      "chapter_title": "Monolit, Modular Monolith, dan Microservices",
+      "sections": [
+        "Pendahuluan",
+        "Tiga Gaya Arsitektur: Monolit, Modular Monolith, dan Microservices",
+        "Coupling, Cohesion, dan Biaya Sistem Terdistribusi",
+        "Hukum Conway dan Struktur Tim",
+        "Kapan Microservices Tidak Tepat",
+        "Architecture Decision Record",
+        "Aktivitas: Diagnosis Arsitektur dan ADR Pertama",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Kubernetes merekonsiliasi keadaan yang diinginkan",
+      "nodes": [
+        {
+          "id": "artefak",
+          "text": "Registry image|artefak container",
+          "role": "data",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "desired",
+          "text": "Desired state|jumlah dan konfigurasi",
+          "role": "control",
+          "column": 0.97,
+          "row": 0
+        },
+        {
+          "id": "controller",
+          "text": "Controller Kubernetes|membandingkan keadaan",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "pengguna",
+          "text": "Permintaan layanan|trafik aplikasi",
+          "role": "actor",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "pod",
+          "text": "Pod aplikasi|instance berjalan",
+          "role": "service",
+          "column": 0.97,
+          "row": 1
+        },
+        {
+          "id": "actual",
+          "text": "Keadaan aktual|status dan kapasitas",
+          "role": "data",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "artefak",
+          "target": "desired",
+          "label": "referensi image",
+          "dashed": false
+        },
+        {
+          "source": "desired",
+          "target": "controller",
+          "label": "target deklaratif",
+          "dashed": false,
+          "source_port": "t",
+          "target_port": "t"
+        },
+        {
+          "source": "controller",
+          "target": "pod",
+          "label": "buat / ganti / skala",
+          "dashed": false,
+          "source_port": "l",
+          "target_port": "t"
+        },
+        {
+          "source": "pod",
+          "target": "actual",
+          "label": "melaporkan status",
+          "dashed": false
+        },
+        {
+          "source": "actual",
+          "target": "controller",
+          "label": "umpan balik",
+          "dashed": true
+        },
+        {
+          "source": "pengguna",
+          "target": "pod",
+          "label": "request layanan",
+          "dashed": false
+        }
+      ],
+      "note": "Kubernetes adalah salah satu opsi runtime. Managed control plane tetap menyisakan pekerjaan aplikasi, data, dan kebijakan.",
+      "basis": "Container/image/registry, desired versus actual state, reconciliation, managed Kubernetes dan opsi PaaS/serverless.",
+      "number": 8,
+      "filename": "ch08-diagram-konsep.png",
+      "source": "module/chapter08.tex",
+      "chapter_title": "Container, Kubernetes, dan Serverless",
+      "sections": [
+        "Pendahuluan",
+        "Virtual Machine dan Container",
+        "Orkestrasi Container dan Konsep Kubernetes",
+        "Managed Kubernetes dan PaaS",
+        "Serverless dan Function as a Service",
+        "Memilih Runtime dan Mengelola Vendor Lock-in",
+        "Aktivitas: Matriks Keputusan Runtime",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Penyampaian event dan penanganan duplikasi",
+      "nodes": [
+        {
+          "id": "prod",
+          "text": "Layanan penjadwalan|janji telah dikonfirmasi",
+          "role": "service",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "broker",
+          "text": "Broker / topik|menyalurkan event",
+          "role": "control",
+          "column": 0.95,
+          "row": 0
+        },
+        {
+          "id": "notif",
+          "text": "Layanan notifikasi|dedup dan kirim pesan",
+          "role": "service",
+          "column": 2.13,
+          "row": 0
+        },
+        {
+          "id": "event",
+          "text": "Event beridentitas|fakta bisnis, bukan perintah",
+          "role": "data",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "analis",
+          "text": "Proyeksi analitik|konsumen independen",
+          "role": "data",
+          "column": 0.95,
+          "row": 1
+        },
+        {
+          "id": "retry",
+          "text": "Retry dan dead letter|selidiki kegagalan",
+          "role": "risk",
+          "column": 2.13,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "prod",
+          "target": "broker",
+          "label": "menerbitkan",
+          "dashed": false
+        },
+        {
+          "source": "broker",
+          "target": "notif",
+          "label": "salinan langganan",
+          "dashed": false
+        },
+        {
+          "source": "prod",
+          "target": "event",
+          "label": "menetapkan event ID",
+          "dashed": false
+        },
+        {
+          "source": "broker",
+          "target": "analis",
+          "label": "salinan langganan",
+          "dashed": false
+        },
+        {
+          "source": "notif",
+          "target": "retry",
+          "label": "gagal diproses",
+          "dashed": false
+        },
+        {
+          "source": "retry",
+          "target": "notif",
+          "label": "retry",
+          "dashed": true,
+          "source_port": "r",
+          "target_port": "r"
+        }
+      ],
+      "note": "At-least-once memungkinkan event diterima ulang. Idempotensi atau deduplikasi diperlukan pada setiap efek yang penting.",
+      "basis": "Sinkron/asinkron, queue versus topic, event facts, delivery semantics, choreography dan orchestration.",
+      "number": 9,
+      "filename": "ch09-diagram-konsep.png",
+      "source": "module/chapter09.tex",
+      "chapter_title": "Komunikasi Antarlayanan dan Event-Driven Architecture",
+      "sections": [
+        "Pendahuluan",
+        "Komunikasi Sinkron dan Asinkron",
+        "Antrean Pesan, Publish/Subscribe, dan Event Broker",
+        "Pola Event: Notification, State Transfer, dan Event Sourcing",
+        "Choreography dan Orchestration",
+        "Pengiriman At-Least-Once dan Idempotensi",
+        "Service Mesh dan Batas dengan Desain API",
+        "Aktivitas: Peta Interaksi Layanan dan Katalog Event",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Transaksi lokal, outbox, dan kompensasi saga",
+      "nodes": [
+        {
+          "id": "jadwal",
+          "text": "Layanan jadwal|pemilik data slot",
+          "role": "service",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "tx",
+          "text": "Satu transaksi lokal|reservasi + baris outbox",
+          "role": "data",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "relay",
+          "text": "Relay outbox|publikasi dapat berulang",
+          "role": "control",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "komp",
+          "text": "Kompensasi bisnis|lepaskan slot jika gagal",
+          "role": "risk",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "bpjs",
+          "text": "Langkah BPJS|transaksi lokal sendiri",
+          "role": "service",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "broker",
+          "text": "Broker event|salurkan pesan saga",
+          "role": "control",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "jadwal",
+          "target": "tx",
+          "label": "commit atomik",
+          "dashed": false
+        },
+        {
+          "source": "tx",
+          "target": "relay",
+          "label": "baca event tersimpan",
+          "dashed": false
+        },
+        {
+          "source": "relay",
+          "target": "broker",
+          "label": "publikasi",
+          "dashed": false
+        },
+        {
+          "source": "broker",
+          "target": "bpjs",
+          "label": "langkah lanjut",
+          "dashed": false
+        },
+        {
+          "source": "bpjs",
+          "target": "komp",
+          "label": "kegagalan bisnis",
+          "dashed": false
+        },
+        {
+          "source": "komp",
+          "target": "jadwal",
+          "label": "transaksi pelepasan",
+          "dashed": false
+        }
+      ],
+      "note": "Saga tidak melakukan rollback ACID global. Kompensasi adalah transaksi baru; relay dan konsumen tetap menangani duplikasi.",
+      "basis": "Database per service, saga, transactional outbox, konsistensi eventual, CQRS dan kepemilikan data.",
+      "number": 10,
+      "filename": "ch10-diagram-konsep.png",
+      "source": "module/chapter10.tex",
+      "chapter_title": "Data dalam Microservices: Saga dan Outbox",
+      "sections": [
+        "Pendahuluan",
+        "Database per Service dan Basis Data Bersama",
+        "Transaksi Terdistribusi dan Eventual Consistency",
+        "Saga dan Transaksi Kompensasi",
+        "Pola Transactional Outbox",
+        "CQRS dan Read Model untuk Pelaporan",
+        "Kepemilikan Data Pasien: Satu Pasien, Satu Rekam Medis",
+        "Aktivitas: Peta Kepemilikan Data dan Rancangan Saga",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Observabilitas menghubungkan perjalanan pengguna ke keputusan SRE",
+      "nodes": [
+        {
+          "id": "journey",
+          "text": "Perjalanan pasien|tugas berhasil atau gagal",
+          "role": "actor",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "tele",
+          "text": "Telemetri berkonteks|log, metrik, trace",
+          "role": "data",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "sli",
+          "text": "SLI layanan|baik / total yang valid",
+          "role": "data",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "tindakan",
+          "text": "Keputusan operasi|rilis, reliabilitas, insiden",
+          "role": "outcome",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "budget",
+          "text": "Error budget|sisa kegagalan yang diizinkan",
+          "role": "control",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "slo",
+          "text": "SLO dan jendela|sasaran layanan",
+          "role": "control",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "journey",
+          "target": "tele",
+          "label": "instrumentasi",
+          "dashed": false
+        },
+        {
+          "source": "tele",
+          "target": "sli",
+          "label": "bukti layanan",
+          "dashed": false
+        },
+        {
+          "source": "sli",
+          "target": "slo",
+          "label": "dibandingkan",
+          "dashed": false
+        },
+        {
+          "source": "slo",
+          "target": "budget",
+          "label": "hitung konsumsi",
+          "dashed": false
+        },
+        {
+          "source": "budget",
+          "target": "tindakan",
+          "label": "picu kebijakan",
+          "dashed": false
+        },
+        {
+          "source": "tindakan",
+          "target": "journey",
+          "label": "perbaiki layanan",
+          "dashed": true
+        }
+      ],
+      "note": "Ukuran mengikuti hasil pengguna. Error budget membantu menentukan kapan kapasitas tim dialihkan untuk keandalan.",
+      "basis": "Monitoring/observability, tiga sinyal, trace context, SLI/SLO/error budget, SRE dan postmortem.",
+      "number": 11,
+      "filename": "ch11-diagram-konsep.png",
+      "source": "module/chapter11.tex",
+      "chapter_title": "Observability, SRE, dan SLO",
+      "sections": [
+        "Pendahuluan",
+        "Monitoring dan Observability",
+        "Log, Metrik, Trace, dan OpenTelemetry",
+        "SLI, SLO, dan SLA",
+        "Error Budget dan Kebijakannya",
+        "Praktik SRE: Toil, Alerting, Insiden, dan Postmortem",
+        "Aktivitas: SLO Layanan Kritis dan Rancangan Observability",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Ketahanan request dan pemulihan data saling melengkapi",
+      "nodes": [
+        {
+          "id": "request",
+          "text": "Permintaan layanan|deadline dan idempotensi",
+          "role": "actor",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "batas",
+          "text": "Timeout + retry terbatas|backoff dan jitter",
+          "role": "control",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "utama",
+          "text": "Layanan utama|circuit breaker dan bulkhead",
+          "role": "service",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "pulih",
+          "text": "Uji pemulihan|bandingkan RTO / RPO",
+          "role": "outcome",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "backup",
+          "text": "Cadangan terisolasi|titik data dapat dipulihkan",
+          "role": "data",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "replica",
+          "text": "Replika / zona lain|kelangsungan komponen",
+          "role": "service",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "request",
+          "target": "batas",
+          "label": "panggilan",
+          "dashed": false
+        },
+        {
+          "source": "batas",
+          "target": "utama",
+          "label": "usaha terkendali",
+          "dashed": false
+        },
+        {
+          "source": "utama",
+          "target": "replica",
+          "label": "replikasi",
+          "dashed": false
+        },
+        {
+          "source": "utama",
+          "target": "backup",
+          "label": "pencadangan",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "t"
+        },
+        {
+          "source": "backup",
+          "target": "pulih",
+          "label": "restore teruji",
+          "dashed": false
+        },
+        {
+          "source": "replica",
+          "target": "pulih",
+          "label": "failover teruji",
+          "dashed": false,
+          "source_port": "b",
+          "target_port": "b"
+        }
+      ],
+      "note": "Replikasi dapat menyalin kerusakan. Cadangan terisolasi dan pengujian restore tetap diperlukan sesuai hasil BIA.",
+      "basis": "Resilience patterns, multi-AZ versus DR, BIA/RTO/RPO, backup dan game day.",
+      "number": 12,
+      "filename": "ch12-diagram-konsep.png",
+      "source": "module/chapter12.tex",
+      "chapter_title": "Resiliensi dan Disaster Recovery",
+      "sections": [
+        "Pendahuluan",
+        "Mode Kegagalan dalam Sistem Terdistribusi",
+        "Pola Resiliensi",
+        "Multi-AZ dan Multi-Region",
+        "RTO, RPO, dan Strategi Disaster Recovery",
+        "Ransomware dan Cadangan yang Tidak Dapat Diubah",
+        "Chaos Engineering dan Game Day",
+        "Aktivitas: Rencana Resiliensi dan DR",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "GitOps dan platform internal memperpendek jalur perubahan",
+      "nodes": [
+        {
+          "id": "tim",
+          "text": "Tim produk|perubahan kode",
+          "role": "actor",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "ci",
+          "text": "CI pipeline|uji dan build artefak",
+          "role": "control",
+          "column": 1.0,
+          "row": 0
+        },
+        {
+          "id": "git",
+          "text": "Git desired state|versi yang disetujui",
+          "role": "data",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "platform",
+          "text": "Platform internal|self-service dan golden path",
+          "role": "service",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "actual",
+          "text": "Keadaan runtime|aplikasi berjalan",
+          "role": "service",
+          "column": 1.0,
+          "row": 1
+        },
+        {
+          "id": "reconcile",
+          "text": "Reconciler|samakan target dan aktual",
+          "role": "control",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "tim",
+          "target": "ci",
+          "label": "commit",
+          "dashed": false
+        },
+        {
+          "source": "ci",
+          "target": "git",
+          "label": "usulan versi rilis",
+          "dashed": false
+        },
+        {
+          "source": "git",
+          "target": "reconcile",
+          "label": "target deklaratif",
+          "dashed": false
+        },
+        {
+          "source": "reconcile",
+          "target": "actual",
+          "label": "terapkan",
+          "dashed": false
+        },
+        {
+          "source": "actual",
+          "target": "reconcile",
+          "label": "status aktual",
+          "dashed": true,
+          "source_port": "b",
+          "target_port": "b"
+        },
+        {
+          "source": "platform",
+          "target": "tim",
+          "label": "jalur yang dipandu",
+          "dashed": false
+        }
+      ],
+      "note": "Platform dipelihara sebagai produk untuk tim. Ukuran perubahan menilai aliran pengiriman sekaligus stabilitas layanan.",
+      "basis": "DevOps, CI/CD, GitOps desired/actual, IDP, team topologies dan DORA.",
+      "number": 13,
+      "filename": "ch13-diagram-konsep.png",
+      "source": "module/chapter13.tex",
+      "chapter_title": "DevOps, GitOps, dan Platform Engineering",
+      "sections": [
+        "Pendahuluan",
+        "DevOps dan Metrik DORA",
+        "CI/CD dan Strategi Rilis",
+        "Infrastructure as Code dan GitOps",
+        "Platform Engineering dan Internal Developer Platform",
+        "Team Topologies",
+        "Aktivitas: Model Operasi Delivery dan Peta Jalan Platform Internal",
+        "Ringkasan",
+        "Latihan"
+      ]
+    },
+    {
+      "caption": "Strangler memindahkan irisan layanan secara bertahap",
+      "nodes": [
+        {
+          "id": "klien",
+          "text": "Klien layanan|kontrak yang stabil",
+          "role": "actor",
+          "column": -0.15,
+          "row": 0
+        },
+        {
+          "id": "facade",
+          "text": "Fasad / routing|pilih irisan lama atau baru",
+          "role": "control",
+          "column": 1.03,
+          "row": 0
+        },
+        {
+          "id": "lama",
+          "text": "SIMRS lama|tetap melayani transisi",
+          "role": "service",
+          "column": 2.15,
+          "row": 0
+        },
+        {
+          "id": "guard",
+          "text": "Guardrail lintas gelombang|akses, lokasi, biaya, SLO",
+          "role": "control",
+          "column": -0.15,
+          "row": 1
+        },
+        {
+          "id": "baru",
+          "text": "Layanan irisan baru|batas dan data jelas",
+          "role": "service",
+          "column": 1.03,
+          "row": 1
+        },
+        {
+          "id": "acl",
+          "text": "Adapter / ACL|terjemahan model",
+          "role": "control",
+          "column": 2.15,
+          "row": 1
+        }
+      ],
+      "edges": [
+        {
+          "source": "klien",
+          "target": "facade",
+          "label": "permintaan",
+          "dashed": false
+        },
+        {
+          "source": "facade",
+          "target": "lama",
+          "label": "rute yang belum pindah",
+          "dashed": false
+        },
+        {
+          "source": "facade",
+          "target": "baru",
+          "label": "rute yang sudah pindah",
+          "dashed": false
+        },
+        {
+          "source": "baru",
+          "target": "acl",
+          "label": "integrasi transisi",
+          "dashed": false
+        },
+        {
+          "source": "acl",
+          "target": "lama",
+          "label": "kontrak lama",
+          "dashed": false
+        },
+        {
+          "source": "guard",
+          "target": "baru",
+          "label": "syarat penerimaan",
+          "dashed": false
+        }
+      ],
+      "note": "Gelombang mengikuti dependensi, kapasitas, dan risiko. Kepemilikan data harus jelas; dual write bukan jalan pintas.",
+      "basis": "Strangler, ACL, roadmap, policy-as-code, FinOps operate, sovereignty dan ukuran hasil.",
+      "number": 14,
+      "filename": "ch14-diagram-konsep.png",
+      "source": "module/chapter14.tex",
+      "chapter_title": "Peta Jalan Modernisasi dan Tata Kelola Cloud",
+      "sections": [
+        "Pendahuluan",
+        "Pola Strangler Fig dan Modernisasi Bertahap",
+        "Menyusun Gelombang Modernisasi",
+        "Guardrail dan Policy as Code pada Landing Zone",
+        "FinOps pada Fase Operate",
+        "Kedaulatan Data dan Sovereign Cloud",
+        "Metrik Peta Jalan dan Pelaporan Kemajuan",
+        "Aktivitas: Peta Jalan Modernisasi dan Guardrail Tata Kelola",
+        "Ringkasan",
+        "Latihan"
+      ]
+    }
+  ]
+}

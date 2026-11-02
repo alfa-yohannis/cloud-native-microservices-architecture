@@ -1,0 +1,41 @@
+% Perjalanan satu permintaan janji temu dari aplikasi Medikara+ sampai ke basis
+% data SIMRS rumah sakit, lalu jawabannya kembali ke ponsel pasien.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  kotak/.style={draw, rounded corners, align=center, minimum height=1.05cm,
+                text width=2.5cm},
+  nomor/.style={circle, draw, fill=white, inner sep=1pt, font=\tiny\bfseries},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[kotak, fill=blue!8] (ponsel) at (0,0)
+    {\textbf{Ponsel pasien}\\{\tiny\mdseries aplikasi Medikara+}};
+  \node[kotak, fill=blue!8] (jaringan) at (3.7,0)
+    {\textbf{Jaringan}\\{\tiny\mdseries internet dan\\operator seluler}};
+  \node[kotak, fill=blue!8] (aplikasi) at (7.4,0)
+    {\textbf{Server aplikasi}\\{\tiny\mdseries Medikara+ milik vendor}};
+  \node[kotak, fill=orange!12] (integrasi) at (7.4,-2.5)
+    {\textbf{Penghubung integrasi}\\{\tiny\mdseries \textit{point-to-point}, satu per rumah sakit}};
+  \node[kotak, fill=blue!8] (simrs) at (3.7,-2.5)
+    {\textbf{SIMRS rumah sakit}\\{\tiny\mdseries server \textit{on-premise}}};
+  \node[kotak, fill=green!10] (basisdata) at (0,-2.5)
+    {\textbf{Basis data SIMRS}\\{\tiny\mdseries jadwal dokter dan data pasien}};
+
+  \begin{scope}[on background layer]
+    \node[draw, dashed, gray, rounded corners, inner sep=6pt,
+          fit=(aplikasi) (integrasi)] (vendor) {};
+    \node[draw, dashed, gray, rounded corners, inner sep=6pt,
+          fit=(simrs) (basisdata)] (rumahsakit) {};
+  \end{scope}
+  \node[font=\tiny, gray, anchor=south east] at (vendor.north east) {pusat data vendor};
+  \node[font=\tiny, gray, anchor=north west] at (rumahsakit.south west)
+    {pusat data rumah sakit};
+
+  \draw[panah] (ponsel) -- node[nomor, above=2pt] {1} (jaringan);
+  \draw[panah] (jaringan) -- node[nomor, above=2pt] {2} (aplikasi);
+  \draw[panah] (aplikasi) -- node[nomor, right=2pt] {3} (integrasi);
+  \draw[panah] (integrasi) -- node[nomor, above=2pt] {4} (simrs);
+  \draw[panah] (simrs) -- node[nomor, above=2pt] {5} (basisdata);
+  \draw[panah, dashed, praditagreen] (basisdata.north) -- node[nomor, left=2pt] {6}
+    node[pos=0.5, right, font=\tiny, text=praditagreen, align=left]
+      {jawaban: slot\\terkonfirmasi} (ponsel.south);
+\end{tikzpicture}

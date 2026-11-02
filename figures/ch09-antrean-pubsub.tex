@@ -1,0 +1,46 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tahap/.style={draw, rounded corners, fill=blue!8, text width=1.3cm,
+    minimum height=0.8cm, align=center},
+  induk/.style={draw, rounded corners, fill=praditagreen!15, text width=1.5cm,
+    minimum height=0.95cm, align=center},
+  hasil/.style={draw, rounded corners, fill=green!10, text width=1.45cm,
+    minimum height=0.7cm, align=center},
+  sel/.style={draw, fill=orange!12, minimum width=0.32cm, minimum height=0.5cm},
+  judul/.style={font=\footnotesize\bfseries, anchor=west},
+  ket/.style={font=\tiny, align=center}
+]
+  % Panel A: antrean, satu pesan diambil oleh satu penerima.
+  \node[judul] at (-0.75,1.55) {A. Antrean pesan};
+  \node[tahap] (kirim) at (0,0) {Medikara+\\{\tiny\mdseries pengirim}};
+  \foreach \i in {0,1,2,3} {
+    \node[sel] (s\i) at (1.45+\i*0.34,0) {};
+  }
+  \node[draw, dashed, rounded corners, fit=(s0)(s3), inner sep=3pt] (antrean) {};
+  \node[ket, above] at (antrean.north) {antrean di \textit{broker}};
+  \node[hasil] (p1) at (3.95,0.6) {Pengirim\\pengingat A};
+  \node[hasil] (p2) at (3.95,-0.6) {Pengirim\\pengingat B};
+  \draw[panah] (kirim) -- (antrean);
+  \draw[panah] (antrean.east) -- (p1.west);
+  \draw[panah, dashed] (antrean.east) -- (p2.west);
+  \node[ket, text width=4.6cm] at (1.75,-1.4)
+    {satu pesan diambil satu penerima;\\penerima berbagi beban kerja};
+
+  % Pemisah dua panel.
+  \draw[gray!50, dashed] (5.2,1.7) -- (5.2,-1.75);
+
+  % Panel B: publish/subscribe, setiap pelanggan mendapat salinan.
+  \node[judul] at (5.45,1.55) {B. \textit{Publish/subscribe}};
+  \node[tahap] (terbit) at (6.3,0) {Janji temu\\{\tiny\mdseries penerbit}};
+  \node[induk] (topik) at (8.3,0) {Topik\\{\tiny\mdseries \textit{JanjiTemuDibuat}}};
+  \node[hasil] (l1) at (10.35,0.95) {Notifikasi};
+  \node[hasil] (l2) at (10.35,0) {Pendaftaran};
+  \node[hasil] (l3) at (10.35,-0.95) {Analitik};
+  \draw[panah] (terbit) -- (topik);
+  \draw[panah] (topik.east) -- (l1.west);
+  \draw[panah] (topik.east) -- (l2.west);
+  \draw[panah] (topik.east) -- (l3.west);
+  \node[ket, text width=4.6cm] at (8.3,-1.4)
+    {setiap pelanggan mendapat salinan;\\penerbit tidak mengenal pelanggannya};
+\end{tikzpicture}

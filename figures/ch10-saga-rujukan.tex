@@ -1,0 +1,52 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  langkah/.style={draw, rounded corners, fill=blue!8, minimum width=1.75cm,
+    minimum height=1.35cm, align=flush center, text width=1.6cm},
+  kompensasi/.style={draw, rounded corners, dashed, fill=gray!35!white,
+    minimum width=1.75cm, minimum height=1.6cm, align=flush center, text width=1.6cm},
+  catatan/.style={align=flush center, font=\tiny, gray!60!black}
+]
+  % Baris atas: transaksi lokal T1 sampai T6, masing-masing milik satu layanan.
+  \node[langkah] (t1) at (0,0)
+    {\textbf{T1} Rujukan diterima\\{\tiny\mdseries Rujukan}};
+  \node[langkah] (t2) at (2,0)
+    {\textbf{T2} Pasien dicocokkan\\{\tiny\mdseries Identitas Pasien}};
+  \node[langkah] (t3) at (4,0)
+    {\textbf{T3} Jadwal dikunci\\{\tiny\mdseries Jadwal}};
+  \node[langkah, fill=orange!12] (t4) at (6,0)
+    {\textbf{T4} BPJS diverifikasi\\{\tiny\mdseries Penjaminan}};
+  \node[langkah] (t5) at (8,0)
+    {\textbf{T5} Tagihan terbit\\{\tiny\mdseries Tagihan}};
+  \node[langkah, fill=green!10] (t6) at (10,0)
+    {\textbf{T6} Klaim terkirim\\{\tiny\mdseries Klaim}};
+  \foreach \kiri/\kanan in {t1/t2, t2/t3, t3/t4, t4/t5, t5/t6}
+    \draw[panah] (\kiri.east) -- (\kanan.west);
+
+  % Penanda jenis transaksi di atas baris langkah.
+  \draw[gray, thick] (-0.85,0.95) -- (4.85,0.95);
+  \node[catatan, above] at (2,0.95) {dapat dikompensasi};
+  \draw[gray, thick] (5.15,0.95) -- (6.85,0.95);
+  \node[catatan, above] at (6,0.95) {titik penentu};
+  \draw[gray, thick] (7.15,0.95) -- (10.85,0.95);
+  \node[catatan, above] at (9,0.95) {dapat diulang sampai berhasil};
+
+  % Baris bawah: kompensasi dijalankan mundur bila T4 gagal.
+  \node[kompensasi] (c1) at (0,-2.3)
+    {\textbf{C1} Rujukan ditolak, klinik mitra diberi tahu};
+  \node[kompensasi] (c2) at (2,-2.3)
+    {\textbf{C2} Tautan rujukan dilepas, identitas tetap};
+  \node[kompensasi] (c3) at (4,-2.3)
+    {\textbf{C3} Slot dilepas, pasien diberi tahu};
+  \node[draw, rounded corners, fill=red!22, minimum width=1.75cm,
+    minimum height=0.8cm, align=flush center, text width=1.6cm] (gagal) at (6,-2.3)
+    {Verifikasi gagal};
+  \draw[panah, red!60!black] (t4.south) -- (gagal.north);
+  \draw[panah, dashed] (gagal.west) -- (c3.east);
+  \draw[panah, dashed] (c3.west) -- (c2.east);
+  \draw[panah, dashed] (c2.west) -- (c1.east);
+  \foreach \atas/\bawah in {t1/c1, t2/c2, t3/c3}
+    \draw[gray, dotted, thick] (\atas.south) -- (\bawah.north);
+  \node[catatan, text width=3.6cm] at (9,-2.3)
+    {Langkah sesudah titik penentu tidak dikompensasi, hanya diulang};
+\end{tikzpicture}

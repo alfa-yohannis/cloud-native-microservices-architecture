@@ -1,0 +1,32 @@
+% Perjalanan mata kuliah IT40713 dalam empat Bagian, dari strategi sampai peta
+% jalan, beserta pertanyaan utama yang dijawab tiap Bagian.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  bagian/.style={draw, rounded corners, align=center, minimum height=1.15cm,
+                 text width=2.4cm, font=\scriptsize\bfseries},
+  tanya/.style={align=center, text width=2.5cm, font=\tiny, gray!30!black},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[bagian, fill=orange!12] (b1) at (0,0)
+    {Bagian I\\Fondasi dan Strategi\\{\tiny\mdseries Pertemuan 1 sampai 3}};
+  \node[bagian, fill=blue!8] (b2) at (3.1,0)
+    {Bagian II\\Kondisi Saat Ini\\{\tiny\mdseries Pertemuan 4 sampai 7}};
+  \node[bagian, fill=blue!8] (b3) at (6.2,0)
+    {Bagian III\\Arsitektur Target\\{\tiny\mdseries Pertemuan 8 sampai 11}};
+  \node[bagian, fill=green!10] (b4) at (9.3,0)
+    {Bagian IV\\Operasi dan Peta Jalan\\{\tiny\mdseries Pertemuan 12 sampai 14}};
+
+  \draw[panah] (b1) -- (b2);
+  \draw[panah] (b2) -- (b3);
+  \draw[panah] (b3) -- (b4);
+
+  \node[tanya, below=4pt of b1] {Mengapa berubah?\\Apa batasannya?\\Berapa biayanya?};
+  \node[tanya, below=4pt of b2] {Aplikasi mana yang siap?\\Di mana batas\\layanannya?};
+  \node[tanya, below=4pt of b3] {Dijalankan di mana?\\Berkomunikasi bagaimana?\\Seberapa andal?};
+  \node[tanya, below=4pt of b4] {Bagaimana dipulihkan?\\Urutan modernisasi?\\Siapa yang mengawasi?};
+
+  \node[draw, fill=praditagreen!15, rounded corners, font=\tiny\bfseries,
+        inner sep=2pt] (bab1) at ([yshift=10pt]b1.north) {Bab 1: titik awal};
+  \node[font=\tiny\bfseries, gray!30!black] at ($(b2.north)!0.5!(b3.north)+(0,0.3)$) {UTS};
+  \node[font=\tiny\bfseries, gray!30!black] at ([yshift=10pt]b4.north) {UAS};
+\end{tikzpicture}

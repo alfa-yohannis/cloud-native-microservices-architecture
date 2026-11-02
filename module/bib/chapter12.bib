@@ -1,1 +1,181 @@
 % Daftar pustaka khusus Bab 12. Kunci entri tidak boleh sama dengan entri di references.bib.
+
+% Kerangka, standar, dan pedoman
+
+@misc{c12-aws-dr2021,
+  author       = {{Amazon Web Services}},
+  title        = {Disaster Recovery of Workloads on {AWS}: Recovery in the Cloud},
+  howpublished = {AWS Whitepaper, terbit 12 Februari 2021},
+  year         = {2021},
+  url          = {https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-workloads-on-aws.html},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-aws-reliability,
+  author       = {{Amazon Web Services}},
+  title        = {Reliability Pillar: {AWS} Well-Architected Framework},
+  howpublished = {AWS Whitepaper, terbit 6 November 2024},
+  year         = {2024},
+  url          = {https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-aws-rel10,
+  author       = {{Amazon Web Services}},
+  title        = {{REL10-BP01} Deploy the Workload to Multiple Locations},
+  howpublished = {Reliability Pillar, AWS Well-Architected Framework},
+  year         = {2024},
+  url          = {https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_fault_isolation_multiaz_region_system.html},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-azure-dr,
+  author       = {{Microsoft}},
+  title        = {Architecture Strategies for Disaster Recovery},
+  howpublished = {Microsoft Azure Well-Architected Framework, Microsoft Learn, versi 19 November 2025},
+  year         = {2025},
+  url          = {https://learn.microsoft.com/en-us/azure/well-architected/reliability/disaster-recovery},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-azure-circuit,
+  author       = {{Microsoft}},
+  title        = {Circuit Breaker Pattern},
+  howpublished = {Azure Architecture Center, Microsoft Learn, versi 5 Februari 2025},
+  year         = {2025},
+  url          = {https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-azure-bulkhead,
+  author       = {{Microsoft}},
+  title        = {Bulkhead Pattern},
+  howpublished = {Azure Architecture Center, Microsoft Learn, versi 19 Maret 2026},
+  year         = {2026},
+  url          = {https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-brooker2019,
+  author       = {Brooker, Marc},
+  title        = {Timeouts, Retries, and Backoff with Jitter},
+  howpublished = {Amazon Builders' Library},
+  year         = {2019},
+  url          = {https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@book{c12-nygard2018,
+  author    = {Nygard, Michael},
+  title     = {Release It! Design and Deploy Production-Ready Software},
+  edition   = {2},
+  publisher = {Pragmatic Bookshelf},
+  address   = {Raleigh, NC},
+  year      = {2018},
+  isbn      = {9781680502398},
+  url       = {https://pragprog.com/titles/mnee2/release-it-second-edition/},
+  note      = {Diakses 30 Oktober 2026}
+}
+
+@techreport{c12-nist800-34,
+  author      = {Swanson, Marianne and Bowen, Pauline and Phillips, Amy and Gallup, Dean
+                 and Lynes, David},
+  title       = {Contingency Planning Guide for Federal Information Systems},
+  institution = {National Institute of Standards and Technology},
+  type        = {NIST Special Publication},
+  number      = {800-34 Rev. 1},
+  year        = {2010},
+  doi         = {10.6028/NIST.SP.800-34r1},
+  url         = {https://doi.org/10.6028/NIST.SP.800-34r1}
+}
+
+@misc{c12-iso22301,
+  author       = {{International Organization for Standardization}},
+  title        = {{ISO} 22301:2019 Security and Resilience: Business Continuity Management
+                  Systems: Requirements},
+  howpublished = {Edisi 2, Oktober 2019},
+  year         = {2019},
+  url          = {https://www.iso.org/standard/75106.html},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-cisa2023,
+  author       = {{Cybersecurity and Infrastructure Security Agency}},
+  title        = {{\#StopRansomware} Guide},
+  howpublished = {CISA, versi September 2023},
+  year         = {2023},
+  url          = {https://www.cisa.gov/stopransomware/ransomware-guide},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+% Chaos engineering
+
+@article{c12-basiri2016,
+  author  = {Basiri, Ali and Behnam, Niosha and de Rooij, Ruud and Hochstein, Lorin and
+             Kosewski, Luke and Reynolds, Justin and Rosenthal, Casey},
+  title   = {Chaos Engineering},
+  journal = {IEEE Software},
+  volume  = {33},
+  number  = {3},
+  pages   = {35--41},
+  year    = {2016},
+  doi     = {10.1109/MS.2016.60},
+  url     = {https://doi.org/10.1109/MS.2016.60}
+}
+
+@misc{c12-principles-chaos,
+  author       = {{Principles of Chaos Engineering}},
+  title        = {Principles of Chaos Engineering},
+  howpublished = {pembaruan terakhir Maret 2019},
+  year         = {2019},
+  url          = {https://principlesofchaos.org/},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+% Insiden dan laporan pascainsiden
+
+@misc{c12-aws-event2021,
+  author       = {{Amazon Web Services}},
+  title        = {Summary of the {AWS} Service Event in the Northern Virginia ({US-EAST-1})
+                  Region},
+  howpublished = {AWS, 10 Desember 2021},
+  year         = {2021},
+  url          = {https://aws.amazon.com/message/12721/},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-weston2024,
+  author       = {Weston, David},
+  title        = {Helping Our Customers through the {CrowdStrike} Outage},
+  howpublished = {The Official Microsoft Blog, 20 Juli 2024},
+  year         = {2024},
+  url          = {https://blogs.microsoft.com/blog/2024/07/20/helping-our-customers-through-the-crowdstrike-outage/},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-antara2024,
+  author       = {{ANTARA}},
+  title        = {Menkominfo Jelaskan Kronologi Serangan Siber {PDNS} 2},
+  howpublished = {ANTARA News Kalimantan Selatan, 27 Juni 2024},
+  year         = {2024},
+  url          = {https://kalsel.antaranews.com/berita/419220/menkominfo-jelaskan-kronologi-serangan-siber-pdns-2},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-cnn2024,
+  author       = {{CNN Indonesia}},
+  title        = {{PDNS} 2 Diserang Hacker, 3 Layanan Pulih dari Total 282 Korban},
+  howpublished = {CNN Indonesia, 26 Juni 2024},
+  year         = {2024},
+  url          = {https://www.cnnindonesia.com/teknologi/20240626015537-192-1114144/pdns-2-diserang-hacker-3-layanan-pulih-dari-total-282-korban},
+  note         = {Diakses 30 Oktober 2026}
+}
+
+@misc{c12-cnbc2024,
+  author       = {Yanwardhana, Emir},
+  title        = {Backup Pusat Data Nasional Hanya 2\%, Begini Dampaknya},
+  howpublished = {CNBC Indonesia, 28 Juni 2024},
+  year         = {2024},
+  url          = {https://www.cnbcindonesia.com/tech/20240628161650-37-550307/backup-pusat-data-nasional-hanya-2-begini-dampaknya},
+  note         = {Diakses 30 Oktober 2026}
+}

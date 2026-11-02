@@ -1,0 +1,6 @@
+# Templat peta interaksi layanan untuk Aktivitas Bab 09. Isi satu baris per interaksi; buka di Excel atau LibreOffice Calc.
+no,langkah_bisnis,layanan_pengirim,layanan_penerima,pola,alasan,akibat_bila_penerima_mati
+1,Pasien memilih slot jadwal,Medikara+,Jadwal Dokter,sinkron (request/response),Pasien perlu tahu saat itu juga apakah slot masih kosong,Janji temu tidak dapat dibuat
+2,Janji temu tersimpan,Medikara+,Notifikasi,asinkron (event JanjiTemuDibuat),Pengingat boleh terlambat beberapa menit,Pengingat tertunda; janji temu tetap dibuat
+3,Janji temu tersimpan,Medikara+,Pendaftaran SIMRS,asinkron (event JanjiTemuDibuat),Data kunjungan cukup siap sebelum pasien datang,Pra-registrasi tertunda; petugas loket mendaftar manual
+4,...,...,...,...,...,...

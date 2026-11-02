@@ -1,4 +1,30 @@
 \chapter{Peta Jalan Modernisasi dan Tata Kelola Cloud}
+\label{ch:ch14}
+
+\lstdefinelanguage{ch14rego}{
+  morekeywords={package, import, default, if, contains, some, in, not, every, else},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]"
+}
+
+\lstdefinestyle{ch14kode}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red},
+  showstringspaces=false,
+  breaklines=true,
+  frame=lines,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=4pt,
+  xleftmargin=1.6em,
+  framexleftmargin=1.6em,
+  backgroundcolor=\color{lightgray!10},
+  tabsize=2,
+  captionpos=b
+}
 
 \section*{Tujuan Pembelajaran}
 \begin{itemize}
@@ -9,59 +35,1260 @@
 
 \section{Pendahuluan}
 
-% TODO
-% Cakupan: direksi Medikara Health meminta satu dokumen yang menjawab apa yang dimodernisasi lebih dulu, berapa biayanya, dan bagaimana risikonya dikendalikan; bab ini menyatukan seluruh artefak semester menjadi peta jalan yang dapat dipertanggungjawabkan.
+Pada akhir Oktober 2026 direksi Medikara Health mengajukan permintaan yang terdengar sederhana kepada
+tim transformasi: satu dokumen yang menjawab tiga pertanyaan. Apa yang dimodernisasi lebih dulu?
+Berapa biayanya? Bagaimana risikonya dikendalikan? Selama satu semester tim sudah menghasilkan banyak
+artefak: matriks kendala lokasi data, model biaya, portofolio 46 aplikasi dengan usulan 7R, peta
+domain, Architecture Decision Record (ADR), matriks keputusan \textit{runtime}, katalog
+\textit{event}, peta kepemilikan data, Service Level Objective (SLO), rencana pemulihan bencana, dan
+model operasi \textit{delivery}. Direktur keuangan menyampaikan keberatannya dengan terus terang:
+tumpukan artefak belum tentu sebuah rencana.
+
+Bab ini adalah penutup mata kuliah. Tugasnya menyatukan artefak itu menjadi peta jalan yang dapat
+dipertanggungjawabkan. Ada tiga bahan pokok. Pertama, urutan modernisasi bertahap yang tidak
+menghentikan pelayanan, dengan pola \textit{strangler fig} dan susunan gelombang. Kedua,
+\textit{guardrail} tata kelola \textit{cloud} yang menjaga biaya, keamanan, dan lokasi data tanpa
+menjadikan setiap perubahan antrean persetujuan. Ketiga, metrik kemajuan yang bermakna bagi direksi,
+bukan sekadar hitungan aplikasi yang sudah dipindahkan.
+
+\IfFileExists{../figures/ch14-diagram-konsep.png}{%
+Gambar \ref{fig:ch14-peta-jalan} merangkum hubungan komponen dan konsep utama bab ini.
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/ch14-diagram-konsep.png}
+  \caption{Strangler memindahkan irisan layanan secara bertahap}
+  \label{fig:ch14-peta-jalan}
+\end{figure}
+}{}
+
+Bab ini disusun dalam enam langkah: pola \textit{strangler fig}, penyusunan gelombang,
+\textit{guardrail} dan \textit{policy as code}, FinOps pada fase Operate, kedaulatan data, serta
+metrik kemajuan. Rujukan utamanya adalah tulisan Fowler tentang \textit{strangler fig}
+\cite{c14-fowler-strangler}, pola \textit{strangler fig} dan \textit{anticorruption layer} dari
+Microsoft \cite{c14-azure-strangler,c14-azure-acl} yang berakar pada Evans \cite{evans2003},
+panduan tata kelola dan kedaulatan dalam Microsoft Cloud Adoption Framework (CAF)
+\cite{azurecaf,c14-azure-govern,c14-azure-sovereignty}, rujukan kendali Amazon Web Services (AWS)
+Control Tower \cite{c14-aws-controls}, dokumentasi Open Policy Agent (OPA) \cite{c14-opa}, FinOps Framework
+\cite{finops2026}, dan metrik DORA (DevOps Research and Assessment) \cite{dora-metrics}. Hasil
+bab ini adalah peta jalan modernisasi tiga gelombang dan \textit{guardrail} tata kelola
+\textit{cloud}, bagian terakhir tonggak capstone C4 yang dipresentasikan menjelang Ujian Akhir
+Semester (UAS).
 
 \section{Pola Strangler Fig dan Modernisasi Bertahap}
+\label{sec:ch14-strangler}
 
-% TODO
-% Cakupan: pola strangler fig dan alasan penggantian sekaligus berisiko tinggi; anticorruption layer selama masa transisi; cara memilih irisan pertama yang kecil tetapi bernilai.
-% Kasus Medikara: memindahkan fungsi janji temu dari SIMRS ke layanan baru tanpa menghentikan rumah sakit.
+Pertanyaan pertama direksi hampir selalu sama: mengapa tidak diganti sekaligus saja? Vendor yang
+dibahas di Bab 7 menawarkan 32 layanan baru dalam 18 bulan untuk menggantikan lima SIMRS (Sistem
+Informasi Manajemen Rumah Sakit). Penggantian sekaligus menjanjikan satu proyek, satu tanggal
+peralihan, dan satu kali repot. Jawaban atas pertanyaan itu menentukan bentuk seluruh peta jalan.
+
+\subsection{Risiko Penggantian Sekaligus}
+
+Penggantian sekaligus (\textit{big bang}) berarti sistem lama dimatikan dan sistem baru dinyalakan
+pada satu waktu peralihan. Cara ini punya tiga kelemahan. Pertama, seluruh risiko terkumpul pada
+satu malam peralihan. Bila ada yang salah, semua rumah sakit terdampak bersamaan. Kedua, nilai
+bisnis baru terasa setelah seluruh pekerjaan selesai, sehingga berbulan-bulan pertama hanya berisi
+biaya. Ketiga, kembali ke sistem lama sulit setelah data baru mulai ditulis di sistem baru, karena
+data itu harus disalin balik atau diketik ulang. Tabel \ref{tab:ch14-sekaligus-bertahap}
+membandingkan penggantian sekaligus dengan penggantian bertahap dari sisi yang biasa ditanyakan
+direksi.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Penggantian sekaligus dibandingkan dengan penggantian bertahap}
+  \label{tab:ch14-sekaligus-bertahap}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Penggantian sekaligus} & \textbf{Penggantian bertahap} \\ \hline
+    Titik risiko & Satu malam peralihan untuk seluruh fungsi dan lokasi & Banyak langkah kecil,
+      masing-masing untuk satu fungsi atau satu lokasi \\ \hline
+    Nilai bisnis pertama & Setelah seluruh pekerjaan selesai & Setelah irisan pertama berjalan \\
+      \hline
+    Kembali ke sistem lama & Sulit setelah data baru ditulis & Mudah selama rute lama masih ada \\
+      \hline
+    Biaya masa transisi & Kecil, karena tidak ada lapisan sementara & Ada biaya fasad, lapisan
+      penerjemah, dan dua sistem yang berjalan bersama \\ \hline
+    Pembelajaran tim & Baru terjadi saat peralihan & Terjadi di setiap langkah dan dipakai untuk
+      langkah berikutnya \\ \hline
+    Cocok untuk & Sistem kecil yang mudah diganti, atau sistem lama yang harus segera dimatikan &
+      Sistem besar yang harus tetap melayani selama penggantian \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Cara Kerja Strangler Fig}
+
+\textit{Strangler fig} adalah pola penggantian bertahap: sistem baru dibangun di sekitar sistem
+lama, perilaku sistem lama dipindahkan sedikit demi sedikit, sampai sistem lama dapat dimatikan.
+Nama pola ini diambil dari pohon ara pencekik yang tumbuh membelit pohon inangnya. Fowler menekankan
+tiga hal \cite{c14-fowler-strangler}. Pertama, sistem lama jarang punya batas komponen yang rapi,
+sehingga tim harus menemukan atau membuat celah pemisah (\textit{seam}) tempat satu bagian dapat
+diganti tersendiri. Kedua, kode sementara yang membuat sistem lama dan baru dapat hidup berdampingan,
+yang disebut arsitektur transisi, adalah biaya yang sengaja dibayar karena menurunkan risiko dan
+mempercepat nilai. Ketiga, struktur tim dan budaya kerja ikut berubah. Tanpa itu, sistem baru akan
+membusuk seperti sistem lama.
+
+Microsoft menjabarkan polanya dalam empat langkah \cite{c14-azure-strangler}. Sebuah fasad
+(\textit{proxy}) dipasang di antara klien dan sistem, lalu awalnya meneruskan hampir semua
+permintaan ke sistem lama. Fasad kemudian mengalihkan permintaan ke sistem baru sedikit demi
+sedikit. Setelah semua fungsi pindah dan tidak ada lagi yang bergantung pada sistem lama, sistem
+lama dimatikan. Terakhir, fasad dilepas dan klien langsung memanggil sistem baru. Fasad tidak boleh
+menjadi titik gagal tunggal atau penyebab lambat. Pola ini juga tidak cocok bila permintaan ke
+sistem lama tidak dapat dicegat, bila sistemnya kecil dan mudah diganti, atau bila sistem lama harus
+segera dimatikan.
+
+Analoginya seperti renovasi gedung rumah sakit yang tidak boleh tutup. Pengelola tidak merobohkan
+gedung lalu membangun ulang selama dua tahun. Satu sayap ditutup, pasien diarahkan lewat pintu dan
+papan petunjuk sementara ke sayap yang sudah jadi, lalu sayap berikutnya menyusul. Papan petunjuk
+itulah fasad. Ketika semua sayap selesai, papan sementara dicabut.
+
+Gambar \ref{fig:ch14-strangler} memperlihatkan tiga tahap pola ini untuk fungsi janji temu
+Medikara Health.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch14-strangler-fig.tex}
+  \caption{Tiga tahap \textit{strangler fig} untuk fungsi janji temu: fasad dipasang, permintaan
+           dipindah per rumah sakit, lalu modul janji temu SIMRS dinonaktifkan}
+  \label{fig:ch14-strangler}
+\end{figure}
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Misalkan sebuah jaringan apotek dengan 120 gerai mengganti sistem kasirnya sekaligus pada
+        satu malam. Bila sistem baru gagal pada pagi hari, 120 gerai berhenti bersamaan. Dengan
+        penggantian bertahap yang dimulai dari 5 gerai, kegagalan yang sama hanya menghentikan
+        sekitar 4 persen gerai, dan 115 gerai lain tetap memakai sistem lama.
+  \item Misalkan sebuah perusahaan asuransi memindahkan fungsi cek status klaim lebih dulu, karena
+        70 persen panggilan ke pusat layanan menanyakan status klaim. Fungsi ini hanya membaca data,
+        sehingga mudah dikembalikan ke sistem lama bila ada masalah. Nilai pertamanya terasa dalam
+        enam minggu, jauh sebelum fungsi pengajuan klaim yang lebih rumit dipindahkan.
+\end{enumerate}
+
+\subsection{Anticorruption Layer selama Masa Transisi}
+
+Selama masa transisi, sistem baru masih perlu memanggil fungsi yang belum pindah, dan bagian sistem
+lama masih perlu memanggil fungsi yang sudah pindah. \textit{Anticorruption layer} adalah lapisan
+penerjemah yang ditaruh di antara dua sistem yang maknanya berbeda. Pola ini pertama kali
+diuraikan Evans \cite{evans2003}. Tujuannya menjaga rancangan sistem baru agar tidak ikut tercemar
+model data dan istilah sistem lama. Microsoft mencatat beberapa harga yang harus dibayar
+\cite{c14-azure-acl}: lapisan ini menambah waktu tunggu, menambah satu komponen yang harus dirawat
+dan diskalakan, dan perlu diputuskan apakah bersifat permanen atau dibongkar setelah migrasi selesai.
+Karena kedua sistem dapat punya tingkat kepercayaan berbeda, data yang melintas juga diperiksa di
+lapisan ini.
+
+Analoginya seperti juru bahasa dalam rapat dengan mitra dari negara lain. Kedua pihak tetap berbicara
+dalam bahasanya sendiri, dan juru bahasa menerjemahkan maksudnya. Tanpa juru bahasa, salah satu
+pihak terpaksa belajar bahasa pihak lain, termasuk istilah-istilah yang sudah usang.
+
+Dua hal pada masa transisi sering tertukar. Pembagiannya begini. Fasad berada di depan dan
+mengarahkan permintaan dari klien ke sistem lama atau sistem baru; fasad tidak mengubah isi
+permintaan. \textit{Anticorruption layer} berada di belakang, di antara sistem baru dan sistem lama,
+dan menerjemahkan isi permintaan dari satu model ke model lain. Misalkan SIMRS Bandung versi 3.9
+memakai nomor rekam medis lokal delapan digit, sedangkan SIMRS Jakarta versi 5.2 memakai sepuluh
+digit dengan awalan kode rumah sakit. Layanan Identitas Pasien dari Bab 10 memakai satu nomor induk
+pasien. Lapisan penerjemah memetakan ketiganya, sehingga Layanan Janji Temu yang baru tidak perlu
+mengenal lima format nomor lama.
+
+\subsection{Memilih Irisan Pertama}
+
+Irisan pertama menentukan kepercayaan direksi terhadap seluruh peta jalan. Irisan yang terlalu besar
+berisiko gagal. Irisan yang terlalu kecil tidak menunjukkan nilai apa pun. Lima kriteria membantu
+memilihnya: nilai bisnis yang terukur, batas yang jelas dan sedikit dependensi (mengikuti
+\textit{bounded context} Bab 6), permintaan yang dapat dicegat di satu titik, kemudahan dikembalikan
+ke sistem lama, dan risiko klinis yang rendah. Tabel \ref{tab:ch14-irisan-pertama} menilai lima
+kandidat Medikara Health dengan kriteria itu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Penilaian kandidat irisan pertama Medikara Health (penilaian rekaan)}
+  \label{tab:ch14-irisan-pertama}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.5cm}
+      >{\raggedright\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}p{1.4cm}
+      >{\raggedright\arraybackslash}p{1.6cm}}
+    \hline
+    \textbf{Kandidat} & \textbf{Nilai bisnis} & \textbf{Batas dan dependensi} &
+      \textbf{Dapat dicegat} & \textbf{Dapat dibalik} & \textbf{Risiko klinis} \\ \hline
+    Janji temu & Tinggi: lonjakan sekitar 60 persen saat vaksinasi (Bab 7) & Jelas & Ya, lewat
+      Medikara+ & Ya, ubah rute & Rendah \\ \hline
+    Identitas pasien & Tinggi: dasar ``Satu Pasien, Satu Rekam Medis'' & Jelas, tetapi banyak
+      pemakai & Sebagian & Sulit setelah data digabung & Sedang \\ \hline
+    Klaim BPJS (Badan Penyelenggara Jaminan Sosial) Kesehatan & Tinggi: 22 dari 63 gangguan SIMRS
+      Jakarta (Bab 7) & Terkait penagihan &
+      Ya & Sedang & Rendah \\ \hline
+    Resep dan farmasi & Sedang & Terkait rekam medis dan stok & Tidak, dipanggil dari dalam SIMRS
+      & Sulit & Tinggi \\ \hline
+    Hasil laboratorium & Sedang & Terkait alat analisis (Retain, Bab 4) & Sebagian & Sedang &
+      Tinggi \\ \hline
+  \end{tabularx}
+\end{table}
+
+Janji temu unggul di semua kriteria. Identitas pasien bernilai paling strategis, tetapi sulit
+dibalik setelah data digabung, sehingga lebih aman menjadi irisan kedua setelah tim terlatih.
+
+\begin{kasus}[title={Kasus Medikara Health: Memindahkan Janji Temu tanpa Menghentikan Rumah Sakit}]
+  ADR-001 di Bab 7 menetapkan syarat peninjauan: modul pendaftaran dan jadwal dipisah menjadi
+  layanan bila lonjakan janji temu melampaui kapasitas SIMRS dua kali dalam enam bulan. Misalkan
+  syarat itu terpenuhi pada 2026 setelah dua program vaksinasi. Medikara+ menangani sekitar 28.000
+  janji temu per bulan (Bab 3). Saat ini setiap janji temu memanggil modul jadwal dokter dan modul
+  pendaftaran di SIMRS setiap rumah sakit (Bab 9).
+
+  Tim transformasi menyusun pemindahan dalam tujuh langkah. Pertama, fasad dipasang di depan
+  panggilan Medikara+ ke modul jadwal. Kedua, selama empat minggu layanan baru menerima salinan
+  setiap permintaan tanpa melayani pasien, lalu hasilnya dibandingkan dengan hasil SIMRS. Misalkan
+  99,2 persen hasil sama; selisih 0,8 persen berasal dari jadwal cuti dokter Depok yang dicatat
+  manual dan tidak terbaca layanan baru. Langkah ketiga sampai ketujuh memindahkan rute per rumah
+  sakit, dari yang paling sedikit janji temunya: Depok (sekitar 3.100 per bulan), Bogor (3.800),
+  Bekasi (5.600), Bandung (6.100), dan Jakarta (9.400). Jumlahnya 28.000.
+
+  Setiap rumah sakit dipindah paling cepat empat minggu setelah rumah sakit sebelumnya, dengan dua
+  syarat: tingkat keberhasilan membuat janji temu memenuhi SLO 99,5 persen dari Bab 11, dan rute
+  balik ke SIMRS sudah diuji dalam 10 menit. Setelah Jakarta stabil, modul jadwal SIMRS dibuat hanya
+  dapat dibaca, lalu dinonaktifkan untuk janji temu. Data kunjungan tetap dibuat di modul
+  pendaftaran SIMRS lewat \textit{anticorruption layer} sampai SIMRS terpadu berjalan.
+
+  Rencana ini punya dua konsekuensi. Pertama, pada langkah pertama kegagalan paling banyak menyentuh
+  sekitar 103 janji temu per hari di Depok ($3.100 / 30$), bukan seluruh 28.000 janji temu sebulan.
+  Kedua, selama sekitar tujuh bulan Medikara membayar dua jalur sekaligus: fasad, lapisan penerjemah,
+  dan modul lama yang masih dirawat. Biaya itu dicatat sebagai biaya transisi, bukan disembunyikan
+  dalam biaya operasi.
+\end{kasus}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Mode Bayangan dan Pemindahan Data}]
+  Fasad umumnya diwujudkan dengan \textit{API gateway}, yaitu gerbang Application Programming
+  Interface (API) yang mendukung aturan rute per \textit{header} atau per jalur, misalnya rute
+  berdasarkan kode rumah sakit. Mode bayangan
+  dijalankan dengan pencerminan lalu lintas (\textit{traffic mirroring}): salinan permintaan
+  dikirim ke layanan baru, tetapi jawabannya dibuang setelah dibandingkan dan dicatat.
+
+  Data adalah bagian tersulit. Contoh Microsoft untuk basis data monolit memakai tiga fase
+  \cite{c14-azure-strangler}. Fase pertama, layanan baru masih membaca dan menulis tabel domainnya di
+  basis data lama. Fase kedua, tabel domain disalin ke basis data baru dengan proses
+  \textit{extract, transform, load}, lalu perubahan berikutnya disinkronkan dengan \textit{change
+  data capture}, dan konsistensi kedua basis data diperiksa. Fase ketiga, basis data baru menjadi
+  sumber kebenaran, lalu tabel lama dihapus. Kembali ke basis data lama masih mudah selama fase
+  kedua. Setelah tabel lama dihapus, kembali berarti memulihkan objek lama dan memutar ulang
+  perubahan, sehingga penghapusan tabel lama sengaja ditaruh sebagai langkah terakhir.
+\end{pendalaman}
 
 \section{Menyusun Gelombang Modernisasi}
+\label{sec:ch14-gelombang}
 
-% TODO
-% Cakupan: pengelompokan aplikasi menjadi gelombang berdasarkan dependensi, risiko, dan nilai; prasyarat platform dan tim untuk tiap gelombang; memakai ulang usulan 7R (Bab 4) dan keputusan runtime (Bab 8); teknik peta jalan dan perencanaan migrasi tingkat enterprise disinggung singkat (dibahas rinci di IT40513).
+Satu irisan belum menjadi peta jalan. Pertanyaan berikutnya: bagaimana 46 aplikasi diurutkan, dan
+apa yang harus siap sebelum setiap kelompok dimulai? Bahan jawabannya sudah dikumpulkan sepanjang
+semester. Tabel \ref{tab:ch14-rekap} merangkum keputusan dari Bab 2 sampai Bab 13 yang dibawa ke peta
+jalan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Keputusan dari Bab 2 sampai Bab 13 yang menjadi bahan peta jalan Medikara Health}
+  \label{tab:ch14-rekap}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.0cm}
+      >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Bab} & \textbf{Artefak} & \textbf{Keputusan yang dibawa} \\ \hline
+    2 & Matriks kendala penempatan & Rekam medis dan data pasien ditempatkan di \textit{region}
+      Indonesia \\ \hline
+    3 & Model biaya dan sasaran nilai & Biaya infrastruktur SIMRS per kunjungan rumah sakit (RS)
+      Bekasi turun 15 persen dalam dua tahun, dari Rp5.619 menjadi paling tinggi Rp4.776; biaya
+      Medikara+ Rp2.036 per janji temu \\ \hline
+    4 & Portofolio 7R dan \textit{landing zone} & 46 aplikasi: Retire 6, Retain 5, Rehost 10,
+      Relocate 15 (termasuk Medikara+), Repurchase 3, Replatform 2, SIMRS diperdebatkan 5;
+      \textit{landing zone} 8 minggu; Cloud Center of Excellence (CCoE) \\ \hline
+    5 & Kartu skor \textit{cloud-native} & Rilis Medikara+ masih 37 langkah manual \\ \hline
+    6 & Peta domain & \textit{Bounded context} menjadi batas modul dan kandidat layanan \\ \hline
+    7 & ADR-001 & SIMRS terpadu bergaya \textit{modular monolith}; janji temu calon pertama yang
+      dipisah \\ \hline
+    8 & Matriks \textit{runtime} & Platform as a Service (PaaS) untuk layanan baru pertama;
+      \textit{managed} Kubernetes ditinjau bila layanan melewati 15 \\ \hline
+    9 & Katalog \textit{event} & Alur janji temu berbasis \textit{event} \\ \hline
+    10 & Peta kepemilikan data & Layanan Identitas Pasien memiliki 31 kolom identitas; pemindahan
+      bertahap dengan \textit{strangler fig} \\ \hline
+    11 & SLO & Janji temu 99,5 persen, hasil laboratorium 99,0 persen, klaim BPJS Kesehatan 98,0
+      persen \\ \hline
+    12 & Rencana Disaster Recovery (DR) & Rekam medis dengan Recovery Time Objective (RTO) 1 jam dan
+      Recovery Point Objective (RPO) 5 menit; biaya DR tiga layanan sekitar Rp724 juta per tahun \\
+      \hline
+    13 & Model operasi \textit{delivery} & 52 staf teknologi informasi (TI); tim platform 6 orang;
+      sasaran SIMRS rilis bulanan lalu mingguan \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Gelombang, Dependensi, Risiko, dan Nilai}
+
+Gelombang modernisasi adalah kelompok aplikasi yang dipindah atau dimodernisasi dalam satu periode,
+karena saling bergantung atau karena membutuhkan prasyarat yang sama. Tiga kriteria menentukan isi
+dan urutannya. Dependensi menentukan apa yang harus pindah bersama; aplikasi yang saling memanggil
+setiap menit tidak boleh dipisah ke gelombang berbeda tanpa rencana jaringan (peta dependensi Bab
+4). Risiko menentukan apa yang sebaiknya ditunda sampai tim lebih terlatih, baik risiko klinis,
+regulasi, maupun teknis. Nilai menentukan apa yang didahulukan agar manfaat terasa lebih awal
+(sasaran nilai Bab 3). Usulan 7R dari Bab 4 \cite{aws7r} memberi jenis pekerjaan, sedangkan matriks
+\textit{runtime} Bab 8 memberi tempat berjalannya. Setiap gelombang juga punya prasyarat platform
+dan tim: tidak ada aplikasi yang mendarat sebelum \textit{landing zone}, \textit{guardrail}, dan
+pemantauannya siap.
+
+Analoginya seperti pindahan kantor bertahap per lantai. Bagian keuangan dan akuntansi yang saling
+bertukar berkas setiap jam pindah pada akhir pekan yang sama. Ruang server dan jaringan di gedung
+baru disiapkan lebih dulu, sebelum lantai pertama pindah. Bagian yang paling sibuk menjelang tutup
+buku tidak dipindah pada bulan Desember.
+
+Gambar \ref{fig:ch14-gelombang} memperlihatkan tiga gelombang Medikara Health dalam 42 bulan, dan
+Tabel \ref{tab:ch14-isi-gelombang} merinci isinya. Teknik penyusunan peta jalan dan perencanaan
+migrasi tingkat \textit{enterprise}, termasuk portofolio inisiatif lintas unit, dibahas rinci di
+IT40513. Bab ini memusatkan perhatian pada bagian teknis peta jalan.
+
+Peta jalan IT40513 Bab 12 menjadi induk, sehingga tanggal gelombang mengikuti paket kerjanya.
+Gelombang 1 berjalan bersama P4 \textit{landing zone}, April sampai September 2027, setelah P1
+kontrol akses selesai Maret 2027. Pembangunan 8 minggu pada Bab 4 berada di dalam rentang P4,
+sedangkan pemindahan 31 aplikasi berada di luar P4 dan hanya diatur pada bab ini. Gelombang 2 memuat
+sisi teknis P3 identitas pasien yang selesai Maret 2028 dan P7 janji temu lintas fasilitas yang
+mulai April 2028. P5 konsolidasi SIMRS juga mulai April 2028, dan enam bulan pertamanya berisi
+persiapan yang berimpit dengan gelombang 2. Gelombang 3 memuat peralihan rumah sakitnya: Depok
+Desember 2028, Bekasi dan Bogor Desember 2029, lalu Jakarta dan Bandung September 2030.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch14-gelombang.tex}
+  \caption{Tiga gelombang modernisasi Medikara Health, April 2027 sampai September 2030, dengan
+           gerbang keputusan di antara gelombang}
+  \label{fig:ch14-gelombang}
+\end{figure}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Isi tiga gelombang modernisasi Medikara Health (rencana rekaan)}
+  \label{tab:ch14-isi-gelombang}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Butir} & \textbf{Gelombang 1: April sampai September 2027} & \textbf{Gelombang 2: Oktober
+      2027 sampai September 2028} & \textbf{Gelombang 3: Oktober 2028 sampai September 2030} \\ \hline
+    Isi dan strategi 7R & Retire 6, Rehost 10, Relocate 15 (14 aplikasi klaster Jakarta dan
+      Medikara+) & Refactor Medikara+ lewat Layanan Janji Temu, dan Layanan Identitas Pasien
+      (keduanya \textit{strangler fig}); Replatform 2, termasuk Enterprise Resource Planning (ERP);
+      Repurchase 2; SIMRS Bekasi Rehost & SIMRS
+      terpadu: Retain lalu Repurchase ke satu versi bergaya \textit{modular monolith}, bertahap per
+      rumah sakit \\ \hline
+    Prasyarat platform & \textit{Landing zone}, tujuh \textit{guardrail}, tag wajib, akun vendor
+      bersama dicabut & \textit{Pipeline} Continuous Integration / Continuous Delivery (CI/CD) dan
+      GitOps, PaaS, \textit{event broker}, SLO dan \textit{observability} & Lokasi kedua untuk \textit{warm standby} rekam medis, uji pemulihan
+      lulus \\ \hline
+    Prasyarat tim & Tim platform 6 orang terbentuk; staf bersertifikat \textit{cloud} naik dari 4
+      menjadi 10 & Tim domain janji temu dan tim Medikara+ mandiri & Empat tim domain SIMRS; staf
+      klinis dan administrasi dilatih \\ \hline
+    Sasaran SLO & Ketersediaan tidak turun dari tingkat sekarang & Janji temu 99,5 persen &
+      Hasil laboratorium 99,0 persen; klaim 98,0 persen \\ \hline
+    Sasaran biaya & Tagihan dalam anggaran; biaya tak teralokasi di bawah 5 persen & Rp2.036 per
+      janji temu tetap terjaga & RS Bekasi paling tinggi Rp4.776 per kunjungan \\ \hline
+    Risiko utama & Dependensi tersembunyi; sambungan internet rumah sakit & Data ganda selama
+      transisi; kapasitas tim & Pelatihan sekitar 2.900 staf; penyatuan lima basis data 12 sampai
+      18 bulan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua butir portofolio Bab 4 tidak masuk tabel. Aplikasi apotek tidak menunggu gelombang 1: Repurchase
+dikerjakan pada November dan Desember 2026, karena dukungan vendor berhenti akhir 2026. Lima
+aplikasi Retain, termasuk sistem laboratorium yang terhubung kabel ke alat analisis, tetap di tempat
+asal dan ditinjau ulang pada gerbang kedua.
+
+\subsection{Gerbang Keputusan di antara Gelombang}
+
+Peta jalan 42 bulan tidak dapat dikunci sejak hari pertama. Gerbang keputusan adalah titik
+tinjauan di akhir setiap gelombang, tempat direksi memutuskan lanjut, menunda, atau mengubah isi
+gelombang berikutnya berdasarkan bukti. Gerbang 1 pada September 2027 menuntut tiga bukti: seluruh akun
+\textit{cloud} berada di bawah \textit{landing zone}, biaya tak teralokasi di bawah 5 persen, dan
+rilis Medikara+ sudah otomatis. Bukti itu tiba sebulan sebelum titik keputusan K2 pada IT40513,
+yang mensyaratkan \textit{landing zone} selesai. Gerbang 2 pada September 2028 menuntut janji temu
+kelima rumah sakit berjalan di layanan baru dengan SLO terpenuhi tiga bulan berturut-turut, serta uji
+pemulihan rekam medis yang memenuhi RTO 1 jam (Bab 12). Di dalam gelombang 3, keputusan lanjut
+mengikuti titik keputusan K3 pada Maret 2029 dan K4 pada Oktober 2029.
+
+Gerbang mengubah sifat peta jalan. Peta jalan tidak lagi berupa janji tanggal, tetapi rangkaian
+keputusan yang diambil saat data tersedia. Investasi gelombang berikutnya juga hanya dicairkan
+setelah gerbang dilewati, sehingga kerugian terburuk terbatas pada satu gelombang.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Misalkan peta dependensi Bab 4 memperlihatkan bahwa portal dokumen akreditasi (Rehost)
+        membaca berkas dari server berbagi yang sama dengan SIMRS Jakarta setiap malam. Memindahkan
+        portal itu ke \textit{cloud} pada gelombang 1 berarti 4 gigabyte berkas melintasi
+        sambungan internet setiap malam. Tim memilih memindahkan server berbagi itu lebih dulu,
+        sehingga dua aplikasi bergeser dari bulan ketiga ke bulan kelima gelombang 1.
+  \item Bab 4 mencatat hanya 4 dari 52 staf TI yang bersertifikat \textit{cloud}. Misalkan setiap
+        aplikasi Relocate dan Rehost membutuhkan satu orang bersertifikat sebagai penanggung jawab
+        teknis, dan satu orang hanya sanggup memegang tiga aplikasi dalam satu gelombang. Untuk 25
+        aplikasi dibutuhkan sekitar 9 orang. Pelatihan dan sertifikasi 6 orang tambahan harus
+        selesai sebelum bulan kedua, atau gelombang 1 diperpanjang.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Memutuskan Lima SIMRS yang Diperdebatkan}]
+  Bab 4 menandai lima SIMRS sebagai diperdebatkan: Retain lalu Repurchase ke satu versi, atau
+  Rehost kelima versi karena perangkatnya berumur 6 sampai 9 tahun. Bab 7 kemudian memilih bentuk
+  akhirnya, yaitu satu SIMRS terpadu bergaya \textit{modular monolith}. SIMRS di kelima rumah sakit
+  berasal dari satu keluarga produk, sehingga jalur Repurchase berarti beralih ke satu versi terbaru
+  yang disusun ulang menjadi modul-modul berbatas tegas.
+
+  Peta jalan memakai keduanya secara terarah. Jalur utama adalah Retain selama gelombang 1 dan 2,
+  sambil janji temu dan identitas pasien dipindah dengan \textit{strangler fig}, lalu Repurchase ke
+  SIMRS terpadu pada gelombang 3. Satu pengecualian dibuat untuk RS Bekasi. Misalkan perangkat SIMRS
+  Bekasi yang paling tua, sembilan tahun, dan Bab 3 sudah menghitung bahwa Rehost dengan penyesuaian
+  ukuran menurunkan biaya per kunjungan dari Rp5.619 menjadi sekitar Rp4.524. SIMRS Bekasi di-Rehost
+  pada gelombang 2, lalu ikut beralih ke SIMRS terpadu pada gelombang 3.
+
+  Keputusan ini punya dua konsekuensi. Pertama, Bekasi dipindah dua kali. Biaya migrasi tambahan itu
+  dibandingkan dengan risiko perangkat berumur sembilan tahun selama dua tahun lagi dan dengan
+  sasaran nilai Bab 3 yang jatuh tempo akhir 2028. Kedua, empat rumah sakit lain tetap bergantung
+  pada perangkat lama sampai gilirannya tiba, paling lambat September 2030, sehingga kontrak
+  pemeliharaan perangkat diperpanjang dan cadangan terpisah yang tidak dapat diubah (Bab 12)
+  dipasang lebih dulu di sana.
+\end{kasus}
 
 \section{Guardrail dan Policy as Code pada Landing Zone}
+\label{sec:ch14-guardrail}
 
-% TODO
-% Cakupan: guardrail sebagai batas yang mencegah kesalahan tanpa menghambat tim; policy as code dan pemeriksaan otomatis; contoh guardrail untuk region, enkripsi, tagging, dan akses; kaitan dengan fase Govern dan Secure pada Microsoft CAF.
-% Pendalaman teknis: menulis kebijakan dengan Open Policy Agent yang menolak sumber daya di luar region yang diizinkan.
+Bab 4 menyebut aturan yang dijaga CCoE sebagai \textit{guardrail}. Pertanyaan kemudian muncul:
+bagaimana menjaga 46 aplikasi dan beberapa tim tetap patuh tanpa membuat setiap perubahan menunggu
+persetujuan manual? Sebelum \textit{landing zone} ada, Medikara punya 9 akun \textit{cloud} yang
+dibuka terpisah, tiga di antaranya tanpa autentikasi dua faktor (Bab 4). Pemeriksaan manual atas
+setiap perubahan memperlambat tim. Tanpa pemeriksaan sama sekali, kelemahan yang sama terulang.
+
+\subsection{Guardrail sebagai Batas, Bukan Gerbang}
+
+Microsoft CAF mendefinisikan tata kelola \textit{cloud} sebagai cara organisasi mengendalikan
+pemakaian layanan \textit{cloud} dengan memasang \textit{guardrail}, yaitu sekumpulan kebijakan,
+prosedur, dan alat yang menetapkan kegiatan yang boleh dan tidak boleh \cite{c14-azure-govern}.
+Cakupannya meliputi keamanan, kepatuhan regulasi, operasi, biaya, data, penyediaan sumber daya, dan
+AI (Artificial Intelligence). Prosesnya punya lima langkah: membentuk tim tata kelola, menilai
+risiko, menuliskan kebijakan, menegakkan kebijakan, dan memantau kepatuhan. Langkah pertama
+dilakukan sekali, sedangkan empat langkah berikutnya berulang terus. Di dalam CAF, tata kelola dan
+keamanan masing-masing punya fase sendiri, yaitu Govern dan Secure \cite{azurecaf}.
+
+AWS Control Tower memakai istilah kendali (\textit{control}) dan menyatakan istilah itu sama artinya
+dengan \textit{guardrail} \cite{c14-aws-controls}. Kendali adalah aturan tingkat tinggi yang ditulis
+dalam bahasa biasa untuk tata kelola yang terus berjalan. Kendali dipasang pada satu unit
+organisasi, sehingga berlaku untuk setiap akun di dalamnya. Ada tiga jenis perilaku: preventif,
+detektif, dan proaktif.
+
+Analoginya seperti pagar pengaman di jalan pegunungan. Pagar tidak memperlambat mobil dan tidak
+menanyai setiap pengemudi. Pagar hanya mencegah mobil jatuh ke jurang. Palang pintu yang
+memeriksa setiap mobil memang lebih ketat, tetapi antreannya mengular sampai ke kaki bukit.
+
+Dua hal pada tata kelola sering tertukar. Pembagiannya begini. \textit{Guardrail} adalah batas yang
+diperiksa otomatis; tim bebas bergerak di dalam batas tanpa meminta izin. Gerbang persetujuan adalah
+titik tunggu yang menuntut seseorang memeriksa dan menyetujui. Gerbang tetap diperlukan untuk
+keputusan yang jarang dan berdampak besar, misalnya membuka \textit{region} baru. Untuk perubahan
+harian, gerbang persetujuan menjadi antrean. Tabel \ref{tab:ch14-jenis-kendali} menjelaskan tiga
+jenis kendali dengan contoh Medikara.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga jenis kendali \textit{guardrail} dan contohnya di Medikara Health}
+  \label{tab:ch14-jenis-kendali}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.9cm}
+      >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Jenis} & \textbf{Kapan bekerja} & \textbf{Cara kerja umum} & \textbf{Contoh Medikara}
+      \\ \hline
+    Proaktif & Sebelum sumber daya dibuat & Rancangan perubahan diperiksa di \textit{pipeline};
+      yang melanggar tidak pernah dibuat & Rencana basis data tanpa tag kelas data ditolak saat
+      \textit{pull request} \\ \hline
+    Preventif & Saat sumber daya hendak dibuat & Permintaan ke penyedia ditolak di tingkat akun
+      atau unit organisasi & Pembuatan sumber daya di luar \textit{region} Indonesia ditolak untuk
+      akun rekam medis \\ \hline
+    Detektif & Sesudah sumber daya berjalan & Konfigurasi dipindai berkala; temuan dilaporkan ke
+      pemilik & Penyimpanan objek yang diubah menjadi publik ditandai dalam satu jam \\ \hline
+  \end{tabularx}
+\end{table}
+
+\subsection{Policy as Code}
+
+\textit{Policy as code} adalah cara menuliskan aturan tata kelola sebagai kode yang dapat dibaca
+mesin. Kode kebijakan disimpan di repositori, ditinjau seperti kode aplikasi, diuji, lalu dijalankan
+otomatis di setiap pemeriksaan. OPA adalah mesin kebijakan serbaguna bersumber terbuka yang dipakai
+untuk keperluan ini \cite{c14-opa}. Kebijakannya ditulis dalam bahasa deklaratif Rego. Perangkat
+lunak yang membutuhkan keputusan mengirim data terstruktur, umumnya JSON, ke OPA. OPA menilai data
+itu terhadap kebijakan, lalu mengembalikan keputusan. Pemisahan ini membuat aplikasi tidak perlu
+menanam logika kebijakan sendiri. Contoh pemakaiannya meliputi pemeriksaan sebelum objek diterima
+Kubernetes, \textit{pipeline} CI/CD, \textit{API gateway}, dan pemeriksaan rencana Terraform. OPA berstatus proyek \textit{graduated} di CNCF (Cloud
+Native Computing Foundation).
+
+Gambar \ref{fig:ch14-guardrail-pac} memperlihatkan tempat \textit{policy as code} dalam alur
+perubahan. Tim menulis perubahan sebagai IaC (Infrastructure as Code). Satu katalog kebijakan di
+repositori Git dibaca oleh ketiga jenis pemeriksaan, sehingga aturan yang sama tidak ditulis tiga
+kali dengan tiga cara.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch14-guardrail-pac.tex}
+  \caption{\textit{Policy as code} dalam alur perubahan: pemeriksaan proaktif di
+           \textit{pipeline}, penolakan preventif di tingkat akun, dan pemindaian detektif sesudah
+           sumber daya berjalan}
+  \label{fig:ch14-guardrail-pac}
+\end{figure}
+
+Pendekatan ini punya dua konsekuensi. Pertama, pesan penolakan menjadi bagian dari rancangan.
+Penolakan yang hanya berbunyi ``ditolak'' mendorong tim mencari jalan pintas. Penolakan yang
+menyebut aturan yang dilanggar dan cara memperbaikinya mengajari tim. Kedua, setiap
+\textit{guardrail} membutuhkan jalur pengecualian yang resmi: siapa yang menyetujui, untuk sumber
+daya apa, dan sampai kapan. \textit{Guardrail} tanpa jalur pengecualian mendorong tim membuka akun
+di luar \textit{landing zone}, dan masalah sembilan akun terpisah muncul kembali.
+
+\subsection{Katalog Guardrail Medikara Health}
+
+Tabel \ref{tab:ch14-katalog-guardrail} memuat tujuh \textit{guardrail} awal Medikara Health untuk
+biaya, keamanan, dan lokasi data. Setiap baris ditulis dalam bahasa biasa lebih dulu, karena
+direksi dan auditor harus dapat membacanya. Terjemahannya ke kode kebijakan dikerjakan anggota
+teknis CCoE.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tujuh \textit{guardrail} awal Medikara Health (rancangan rekaan)}
+  \label{tab:ch14-katalog-guardrail}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.7cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.6cm}}
+    \hline
+    \textbf{No.} & \textbf{Rumusan dalam bahasa biasa} & \textbf{Jenis} & \textbf{Risiko yang
+      dicegah} & \textbf{Pemilik} \\ \hline
+    G1 & Data rekam medis dan data pribadi spesifik hanya disimpan di \textit{region} yang berlokasi
+      di Indonesia, termasuk cadangannya & Proaktif dan preventif & Pelanggaran Peraturan Menteri
+      Kesehatan (Permenkes) 24/2022 dan Undang-Undang (UU) tentang Pelindungan Data Pribadi (PDP) &
+      Wakil keamanan \\ \hline
+    G2 & Penyimpanan data pasien dienkripsi dengan kunci yang dikelola Medikara & Proaktif dan
+      detektif & Data terbaca pihak yang tidak berhak & Wakil keamanan \\ \hline
+    G3 & Setiap sumber daya punya tag pemilik, layanan, lingkungan, pusat biaya, dan kelas data &
+      Proaktif & Tagihan tidak dapat dialokasikan; kelas data tidak diketahui & Wakil keuangan \\
+      \hline
+    G4 & Tidak ada penyimpanan data pasien yang dapat diakses publik & Preventif dan detektif &
+      Kebocoran data seperti insiden 2025 & Wakil keamanan \\ \hline
+    G5 & Akses manusia memakai identitas perorangan dan autentikasi dua faktor; tidak ada akun
+      bersama vendor & Preventif dan detektif & Temuan audit kontrol akses yang lemah & Wakil
+      keamanan \\ \hline
+    G6 & Log audit dikirim ke akun log terpusat dan tidak dapat dihapus selama 1 tahun & Preventif
+      & Jejak insiden hilang & Wakil operasi \\ \hline
+    G7 & Setiap akun punya anggaran bulanan dengan ambang peringatan 50, 80, dan 100 persen &
+      Proaktif dan detektif & Tagihan melonjak tanpa diketahui & Wakil keuangan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Bab 10 mencatat 23 akun dengan hak tulis ke tabel pasien SIMRS Bekasi, termasuk satu akun
+        vendor laboratorium. Kebiasaan yang sama mudah terbawa ke \textit{cloud}. Misalkan pemindaian
+        detektif pada bulan pertama menemukan 7 akun bersama di \textit{landing zone}. Ketujuhnya
+        diganti identitas perorangan dalam 30 hari, dan temuan audit kontrol akses dapat ditutup
+        dengan bukti laporan pemindaian.
+  \item Misalkan dalam tiga bulan pertama pemeriksaan proaktif menolak 41 dari 620 rancangan
+        perubahan, atau sekitar 6,6 persen. Sebanyak 33 penolakan karena tag tidak lengkap dan
+        diperbaiki dalam hari yang sama. Dua penolakan karena \textit{region} di luar Indonesia,
+        dan keduanya berasal dari templat lama yang disalin dari internet. Tanpa pemeriksaan
+        otomatis, 620 rancangan itu membutuhkan peninjauan manual, misalkan 20 menit per rancangan
+        atau sekitar 207 jam kerja.
+\end{enumerate}
+
+\begin{pendalaman}[title={Pendalaman Teknis (opsional): Kebijakan Region dengan Open Policy Agent}]
+  Listing \ref{lst:ch14-opa-region} adalah kebijakan Rego untuk G1. Kebijakan menerima daftar
+  sumber daya dalam format JSON yang disederhanakan, lalu menghasilkan himpunan pesan penolakan.
+  Sumber daya berkelas data rekam medis atau data pribadi spesifik ditolak bila \textit{region}-nya
+  di luar empat \textit{region} Indonesia yang tercatat di Bab 2. Sumber daya tanpa tag kelas data
+  juga ditolak, karena tanpa tag itu kebijakan tidak dapat memutuskan apa pun. Sintaks yang dipakai
+  adalah Rego v1, yaitu sintaks bawaan OPA 1.x.
+
+\begin{lstlisting}[language=ch14rego, style=ch14kode, caption={Kebijakan \textit{region} untuk
+G1, tersedia di \berkas{sources/chapter14/contoh-opa/guardrail-region.rego}},
+label={lst:ch14-opa-region}]
+package medikara.guardrail.region
+
+# Kode region yang berlokasi di Indonesia (Bab 2). Bila penyedia
+# membuka region baru, hanya daftar ini yang diubah lewat review.
+region_indonesia := {
+  "ap-southeast-3",
+  "asia-southeast2",
+  "indonesiacentral",
+  "ap-batam-1"
+}
+
+# Kelas data yang wajib tinggal di Indonesia (Permenkes 24/2022 dan
+# UU PDP). Kelas lain diatur guardrail terpisah.
+kelas_wajib_lokal := {"rekam-medis", "data-pribadi-spesifik"}
+
+# Pesan dikumpulkan sebagai himpunan agar pipeline menampilkan semua
+# pelanggaran sekaligus, bukan berhenti di pelanggaran pertama.
+tolak contains pesan if {
+  some sumber in input.sumber_daya
+  sumber.tag["kelas-data"] in kelas_wajib_lokal
+  not sumber.region in region_indonesia
+  pesan := sprintf("%s: kelas data %s tidak boleh di region %s",
+    [sumber.nama, sumber.tag["kelas-data"], sumber.region])
+}
+
+# Tanpa tag kelas data, aturan di atas tidak dapat memutuskan,
+# sehingga sumber daya ditolak dan pemiliknya diminta melengkapi.
+tolak contains pesan if {
+  some sumber in input.sumber_daya
+  not sumber.tag["kelas-data"]
+  pesan := sprintf("%s: tag kelas-data wajib diisi", [sumber.nama])
+}
+\end{lstlisting}
+
+  Kebijakan dijalankan dengan perintah \texttt{opa eval} terhadap berkas contoh
+  \berkas{sources/chapter14/contoh-opa/rencana-sumber-daya.json}, seperti tertulis di
+  \berkas{sources/chapter14/README.md}. Dari empat sumber daya contoh, dua ditolak: cadangan rekam
+  medis di \textit{region} Singapura dan penyimpanan log tanpa tag kelas data. Situs informasi
+  publik di Singapura lolos, karena kelas datanya publik. Pada pemakaian nyata, masukannya diambil
+  dari rencana Terraform yang diubah ke JSON, sehingga jalur atribut di kebijakan perlu disesuaikan
+  dengan format penyedia yang dipakai. Kebijakan diuji pada akun uji milik tim sendiri sebelum
+  dipasang di \textit{pipeline} bersama.
+\end{pendalaman}
 
 \section{FinOps pada Fase Operate}
+\label{sec:ch14-finops}
 
-% TODO
-% Cakupan: anggaran dan peringatan biaya; deteksi anomali; kebijakan tagging dan alokasi; peninjauan rutin biaya per unit (kaitan dengan Bab 3); peran capability Executive Strategy Alignment.
+\textit{Guardrail} menjaga aturan. Pertanyaan berikutnya: siapa yang menjaga tagihan setelah
+aplikasi pindah? Bab 3 membahas FinOps Framework dan tiga fasenya, yaitu Inform, Optimize, dan
+Operate \cite{finops2026}. Fase Operate adalah tempat kebiasaan harian dibentuk: anggaran dipantau,
+lonjakan diselidiki, dan biaya per unit ditinjau setiap bulan. Pada fase inilah peta jalan
+membuktikan klaim penghematannya.
+
+\subsection{Anggaran, Deteksi Anomali, dan Kebijakan Tagging}
+
+Tiga \textit{capability} FinOps menjadi tulang punggung fase ini. Budgeting adalah proses berjalan
+untuk menetapkan batas belanja teknologi, memantaunya, dan mengelolanya terhadap tujuan bisnis
+\cite{c14-finops-budgeting}. Organisasi menetapkan ambang selisih yang dapat diterima antara anggaran
+dan realisasi. Bila ambang terlewati, jalur eskalasinya bergerak dari tim teknis ke pemilik
+anggaran, lalu ke bagian keuangan, lalu ke pimpinan. Anomaly Management adalah kemampuan mendeteksi,
+memberi peringatan, menyelidiki, dan menyelesaikan kejadian biaya yang tidak terduga
+\cite{c14-finops-anomaly}. Anomali dikenali dari selisih terhadap pola belanja sebelumnya, sehingga
+pemakaian baru yang memang direncanakan pun dapat memicu peringatan. Allocation adalah cara
+membebankan biaya ke tim, proyek, atau unit yang bertanggung jawab, memakai akun, tag, label, dan
+metadata lain, termasuk pembagian biaya bersama \cite{c14-finops-allocation}. Salah satu ukurannya
+adalah porsi biaya yang tidak dapat dialokasikan.
+
+Analoginya seperti keuangan rumah tangga yang memakai amplop per pos belanja dan notifikasi bank.
+Amplop dapur, amplop sekolah, dan amplop listrik adalah anggaran per pemilik. Notifikasi bank untuk
+transaksi yang tidak biasa adalah deteksi anomali. Catatan di setiap struk belanja tentang untuk
+amplop mana adalah tag. Tanpa catatan itu, akhir bulan hanya menyisakan angka total tanpa penjelasan.
+
+Gambar \ref{fig:ch14-siklus-operate} memperlihatkan enam langkah fase Operate di Medikara Health.
+Tag wajib (G3) berada di tengah, karena setiap langkah membutuhkan jawaban atas pertanyaan ``biaya
+ini milik siapa?''.
+
+\begin{figure}[!htb]
+  \centering
+  \input{../figures/ch14-siklus-operate.tex}
+  \caption{Siklus fase Operate di Medikara Health: anggaran, pemantauan, deteksi anomali,
+           penyelidikan, tindakan, dan tinjauan biaya per unit, dengan tag wajib sebagai pusat data}
+  \label{fig:ch14-siklus-operate}
+\end{figure}
+
+Tabel \ref{tab:ch14-anggaran} memuat anggaran \textit{cloud} bulanan Medikara pada akhir gelombang 1
+beserta penerima peringatannya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Anggaran \textit{cloud} bulanan Medikara Health pada akhir gelombang 1, dalam juta rupiah
+           (angka rekaan)}
+  \label{tab:ch14-anggaran}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+      >{\raggedleft\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{4.4cm}}
+    \hline
+    \textbf{Akun} & \textbf{Anggaran} & \textbf{Pemilik anggaran} \\ \hline
+    Medikara+ produksi & 60 & Pemilik produk Medikara+ \\ \hline
+    Klaster Relocate, 14 aplikasi & 110 & Kepala infrastruktur pusat \\ \hline
+    Aplikasi Rehost, 10 aplikasi & 45 & Kepala infrastruktur pusat \\ \hline
+    Seluruh lingkungan non-produksi & 35 & Kepala tim platform \\ \hline
+    Fondasi \textit{landing zone}: jaringan, log, keamanan & 40 & Kepala tim platform \\ \hline
+    \textbf{Jumlah} & \textbf{290} & \\ \hline
+    \multicolumn{3}{>{\raggedright\arraybackslash}p{\dimexpr\textwidth-2\tabcolsep\relax}}{Ambang
+      peringatan: 50 persen ke pemilik anggaran; 80 persen ke pemilik dan wakil keuangan CCoE; 100
+      persen ke direktur TI, dan sumber daya baru di akun itu menunggu persetujuan.} \\ \hline
+  \end{tabularx}
+\end{table}
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Misalkan pada Agustus 2027 basis data uji beban di akun non-produksi lupa dimatikan.
+        Belanja harian akun itu naik dari rata-rata Rp1,1 juta menjadi Rp5,7 juta. Deteksi anomali
+        memberi peringatan pada hari pertama, sedangkan ambang 80 persen anggaran (Rp28 juta) baru
+        terlewati pada hari kelima. Empat hari lebih cepat berarti sekitar Rp18 juta tidak terbuang
+        ($4 \times$ Rp4,6 juta).
+  \item Misalkan pada Januari 2027, 23 persen tagihan \textit{cloud} tidak dapat dialokasikan ke
+        pemilik mana pun, sebagian besar dari akun lama vendor. Setelah G3 ditegakkan secara
+        proaktif dan akun lama dipindah ke \textit{landing zone}, porsi itu turun menjadi 4 persen
+        pada September 2027. Sisanya adalah biaya bersama seperti jaringan dan log, yang dibagi
+        proporsional menurut pemakaian.
+\end{enumerate}
+
+\subsection{Tinjauan Biaya per Unit dan Executive Strategy Alignment}
+
+Anggaran menjawab ``apakah belanja sesuai rencana''. Biaya per unit menjawab ``apakah belanja itu
+efisien''. Setiap bulan, komite biaya teknologi dari Bab 3 meninjau dua metrik: biaya infrastruktur
+SIMRS per kunjungan dan biaya Medikara+ per janji temu. Tagihan yang naik tidak selalu buruk. Bila
+janji temu naik 30 persen dan tagihan naik 10 persen, biaya per janji temu justru turun. Pembacaan
+ini memakai \textit{unit economics} yang dibahas Storment dan Fuller \cite{storment2023}.
+
+FinOps Framework 2026 memuat \textit{capability} Executive Strategy Alignment. \textit{Capability}
+ini mengaitkan belanja, pemakaian, dan adopsi teknologi dengan strategi bisnis, sehingga pimpinan
+dapat membandingkan pilihan, mengelola \textit{tradeoff}, dan mengawasi investasi demi nilai
+\cite{c14-finops-esa}. Cakupannya meliputi keselarasan dengan prioritas pimpinan, strategi investasi
+multitahun, prioritas produk, dan dukungan keputusan strategis. Bagi Medikara, setiap gerbang
+keputusan adalah keputusan investasi multitahun. Laporan triwulan komite biaya teknologi kepada
+direksi menyandingkan biaya gelombang dengan sasaran nilai, bukan hanya total tagihan.
 
 \section{Kedaulatan Data dan Sovereign Cloud}
+\label{sec:ch14-kedaulatan}
 
-% TODO
-% Cakupan: arti kedaulatan data, kedaulatan operasional, dan kedaulatan teknologi; pilihan sovereign cloud dan region lokal; status regulasi Indonesia per Oktober 2026 (PP 71/2019 dan rencana revisinya, PP 33/2026, rancangan Perpres pusat data); kepatuhan regulasi dibahas rinci di IT40813.
-% Kasus Medikara: guardrail lokasi data untuk rekam medis elektronik.
+G1 memastikan rekam medis disimpan di Indonesia. Bab 2 sudah membedakan residensi, kedaulatan, dan
+lokalisasi data. Pertanyaan kemudian muncul: bila datanya sudah di Indonesia, apakah urusan
+kedaulatan sudah selesai? Jawabannya belum, karena lokasi hanya satu dari beberapa bentuk kendali.
+
+\subsection{Tiga Dimensi Kedaulatan}
+
+Panduan kedaulatan dalam Microsoft CAF mendefinisikan kedaulatan digital sebagai kemampuan
+organisasi mengendalikan data, teknologi, dan tata kelola operasinya sesuai kebutuhan hukum,
+regulasi, dan bisnis \cite{c14-azure-sovereignty}. Kendali itu dicapai lewat gabungan kendali
+teknis, operasional, dan kontraktual. Kedaulatan adalah bagian dari kewajiban kepatuhan yang lebih
+luas, dengan fokus pada kendali, yurisdiksi, residensi data, akses administratif, dan tata kelola
+operasi. Panduan itu juga menegaskan bahwa kedaulatan tidak dicapai dengan isolasi semata. Kendali
+diterapkan seimbang dengan kebutuhan setiap \textit{workload}, tanpa menciptakan titik gagal tunggal
+atau ketergantungan baru. Tabel \ref{tab:ch14-dimensi-kedaulatan} menguraikan tiga dimensinya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Tiga dimensi kedaulatan dan penerapannya di Medikara Health}
+  \label{tab:ch14-dimensi-kedaulatan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Dimensi} & \textbf{Pertanyaan} & \textbf{Contoh kendali} & \textbf{Penerapan di
+      Medikara} \\ \hline
+    Kedaulatan data & Di mana data disimpan, siapa yang dapat membacanya, dan hukum mana yang
+      berlaku? & \textit{Region} lokal, enkripsi dengan kunci milik pelanggan, klasifikasi data &
+      G1 dan G2; kelas data pada tag \\ \hline
+    Kedaulatan operasional & Siapa yang mengoperasikan dan dapat mengakses sistem, dari mana, dan
+      dengan pengawasan apa? & Pencatatan dan persetujuan akses operator, petugas operasi di dalam
+      negeri & G5 dan G6; akses vendor dan operator penyedia dicatat dan ditinjau bulanan \\ \hline
+    Kedaulatan teknologi & Apakah organisasi dapat pindah penyedia atau tetap berjalan bila
+      penyedia bermasalah? & Format terbuka, rencana keluar, uji ekspor data & Rencana keluar untuk
+      sekitar 15 terabyte rekam medis (Bab 2) \\ \hline
+  \end{tabularx}
+\end{table}
+
+Analoginya seperti menyewa brankas di bank. Lokasi brankas di kota sendiri adalah kedaulatan data.
+Aturan pegawai bank mana yang boleh masuk ruang brankas, dan buku tamu yang mencatatnya, adalah
+kedaulatan operasional. Kemampuan memindahkan isi brankas ke bank lain tanpa izin bank lama adalah
+kedaulatan teknologi. Brankas di kota sendiri belum aman bila kuncinya dipegang orang yang tidak
+diketahui.
+
+\subsection{Pilihan Sovereign Cloud}
+
+Penyedia menawarkan beberapa tingkat kendali. Microsoft, misalnya, membedakan tiga model: Sovereign
+Public Cloud, yaitu kendali kedaulatan di atas \textit{region} publik; Sovereign Private Cloud,
+yaitu platform penyedia yang berjalan di perangkat dan fasilitas milik pelanggan; serta National
+Partner Cloud, yang dioperasikan mitra lokal di bawah tata kelola nasional dan hanya tersedia di
+sedikit negara seperti Jerman dan Prancis \cite{c14-azure-sovereignty}. Penyedia lain memakai nama
+dan susunan berbeda, sehingga perbandingan dilakukan per kendali yang dibutuhkan, bukan per nama
+produk.
+
+Panduan yang sama menyebut kedaulatan sebagai \textit{tradeoff} antara risiko, keleluasaan, dan
+biaya. Makin ketat kendalinya, makin tinggi biayanya, karena isolasi dan tanggung jawab operasi
+bertambah. Model publik dengan kendali kedaulatan memakai harga standar ditambah biaya layanan
+pelengkap seperti kunci enkripsi milik pelanggan. Model privat menambah biaya perangkat dan
+operasi sendiri, dan waktu siapnya lebih lama \cite{c14-azure-sovereignty}. Prinsipnya: setiap
+\textit{workload} hanya mendapat kendali yang memang dibutuhkannya.
+
+\subsection{Status Regulasi Indonesia per Oktober 2026}
+
+Tabel \ref{tab:ch14-regulasi} merangkum aturan yang membentuk \textit{guardrail} lokasi data
+Medikara, beserta statusnya per Oktober 2026. Bab 2 membahas isi aturan ini lebih rinci. Kepatuhan
+regulasi, penilaian dampak pelindungan data, dan risiko pihak ketiga dibahas rinci di IT40813.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Status regulasi yang membentuk \textit{guardrail} lokasi data, per Oktober 2026}
+  \label{tab:ch14-regulasi}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm}
+      >{\raggedright\arraybackslash}p{3.6cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aturan} & \textbf{Status} & \textbf{Kaitan dengan \textit{guardrail}} \\ \hline
+    Peraturan Pemerintah (PP) 71/2019 tentang Penyelenggaraan Sistem dan Transaksi Elektronik (PSTE)
+      \cite{pp71-2019} & Berlaku; rencana revisi masih dievaluasi Kementerian Komunikasi dan Digital
+      (Komdigi) & Pasal 21 membolehkan Penyelenggara Sistem Elektronik (PSE) lingkup privat menyimpan
+      data di luar negeri dengan syarat akses pengawasan, sebagai aturan umum \\ \hline
+    PP 28/2024 \cite{pp28-2024-kesehatan} & Berlaku & Pasal 966: pusat data kesehatan di dalam wilayah
+      Indonesia; Pasal 972: transfer untuk tujuan spesifik dengan izin Menteri. Dasar utama G1 \\
+      \hline
+    Permenkes 24/2022 tentang Rekam Medis \cite{permenkes24-2022} & Berlaku & Pasal 20: media
+      penyimpanan dapat berupa \textit{cloud} tersertifikasi; cadangan wajib di tempat berbeda \\
+      \hline
+    UU 27/2022 tentang PDP \cite{uu27-2022-pdp} & Berlaku penuh sejak Oktober 2024 &
+      Data kesehatan bersifat spesifik; Pasal 56 mengatur transfer ke luar negeri \\ \hline
+    PP 33/2026, aturan pelaksana UU PDP \cite{pp33-2026} & Ditetapkan 16 Juli 2026; berlaku 16
+      Januari 2027 menurut ringkasan firma hukum & Teks resmi dibaca di Jaringan Dokumentasi dan
+      Informasi Hukum (JDIH) sebelum \textit{guardrail} difinalkan \\ \hline
+    Rancangan Peraturan Presiden (Perpres) tentang pusat data dan kabel bawah laut
+      \cite{c14-bisnis-perpres-dc} & Disiapkan Komdigi; sudah melalui konsultasi publik; belum
+      ditetapkan & Isi tentang lokasi data belum dapat dipastikan; dipantau di setiap gerbang
+      keputusan \\ \hline
+  \end{tabularx}
+\end{table}
+
+Satu rancangan masih bergerak. Pada 20 Oktober 2026, Direktur Jenderal Infrastruktur Digital Komdigi
+menyatakan pemerintah sedang menyiapkan rancangan Perpres tentang pusat data dan kabel bawah laut,
+dengan tujuan mendorong pembangunan pusat data ke wilayah timur Indonesia, tidak hanya Batam dan
+Jawa \cite{c14-bisnis-perpres-dc}. Berita itu tidak menyebut jadwal penetapan. Karena itu, peta jalan
+mencantumkan pemantauan regulasi sebagai butir tetap di setiap gerbang keputusan.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Misalkan tim pengembang ingin memakai layanan AI untuk merangkum catatan dokter, dan layanan
+        itu baru tersedia di \textit{region} Singapura. G1 menolak permintaan untuk data rekam medis
+        asli. Pengecualian hanya diberikan untuk 2.000 catatan yang sudah dianonimkan, selama enam
+        bulan uji coba, dengan persetujuan wakil keamanan dan petugas pelindungan data.
+  \item Bab 2 memperkirakan rekam medis Medikara mencapai sekitar 15 terabyte, sedangkan Bab 12
+        menghitung bahwa memindahkan 15 terabyte lewat sambungan 1 gigabit per detik memakan sekitar
+        33 jam. Kedaulatan teknologi tidak cukup ditulis di kontrak. Rencana keluar diuji setiap
+        tahun dengan mengekspor 1 terabyte sampel ke lokasi lain dan membukanya dengan perangkat
+        lunak di luar penyedia utama.
+\end{enumerate}
+
+\begin{kasus}[title={Kasus Medikara Health: Guardrail Lokasi Data untuk Rekam Medis Elektronik}]
+  Tim transformasi menurunkan G1 menjadi empat aturan yang dapat diperiksa. Pertama, sumber daya
+  bertag kelas data \texttt{rekam-medis} hanya boleh dibuat di empat \textit{region} Indonesia yang
+  tercatat di Bab 2. Kedua, cadangan dan lokasi kedua untuk \textit{warm standby} rekam medis (Bab
+  12) juga wajib berada di Indonesia. Karena setiap penyedia global hanya punya satu \textit{region}
+  di Indonesia, lokasi kedua dipilih dari tiga pilihan Bab 12: penyedia lain di Indonesia, pusat
+  data penyedia lokal, atau ruang server milik sendiri di kota lain. Ketiga, kunci enkripsi rekam
+  medis dikelola Medikara, bukan kunci bawaan penyedia. Keempat, akses operator penyedia ke sistem
+  rekam medis dicatat dan ditinjau bulanan oleh wakil keamanan.
+
+  Aturan ini punya dua konsekuensi. Pertama, layanan yang belum tersedia di \textit{region}
+  Indonesia tidak dapat dipakai untuk rekam medis, sehingga daftar layanan per \textit{region}
+  menjadi bahan rancangan, bukan catatan kaki. Kedua, biaya kunci milik sendiri dan lokasi kedua di
+  Indonesia masuk ke anggaran gelombang 2 dan 3. Biaya itu adalah harga kedaulatan yang disadari,
+  bukan pemborosan yang harus dipangkas.
+\end{kasus}
 
 \section{Metrik Peta Jalan dan Pelaporan Kemajuan}
+\label{sec:ch14-metrik}
 
-% TODO
-% Cakupan: metrik DORA, SLO, biaya per unit, dan jejak karbon sebagai ukuran kemajuan; mengapa jumlah aplikasi yang dipindahkan adalah metrik yang menyesatkan; format laporan ringkas untuk direksi (KPI dan pelaporan direksi dibahas rinci di IT40813).
+Direksi akan menanyakan satu hal setiap triwulan: apakah peta jalan berjalan? Jawaban yang paling
+mudah disiapkan adalah jumlah aplikasi yang sudah dipindahkan. Jawaban itu juga yang paling
+menyesatkan.
+
+\subsection{Mengapa Jumlah Aplikasi yang Dipindahkan Menyesatkan}
+
+Pada akhir gelombang 1, Medikara dapat melaporkan 31 dari 46 aplikasi, atau sekitar 67 persen,
+sudah selesai. Angka itu benar, tetapi menyesatkan karena empat alasan. Pertama, ke-31 aplikasi itu
+adalah Retire, Rehost, dan Relocate, yaitu pekerjaan yang paling mudah. SIMRS, inti pelayanan,
+belum tersentuh. Kedua, aplikasi tidak setara: portal dokumen akreditasi dan SIMRS Jakarta dihitung
+sama-sama satu. Ketiga, angka itu tidak berkata apa pun tentang hasil: antrean pasien, kecepatan
+rilis, keandalan, dan biaya bisa saja tidak berubah atau malah memburuk. Keempat, metrik ini
+mendorong tim memilih pekerjaan yang mudah dihitung, bukan yang bernilai. Bab 12 memberi contoh
+serupa: ``31 dari 46 aplikasi punya cadangan'' terdengar baik, padahal hanya 3 yang cadangannya
+selamat dari \textit{ransomware}.
+
+Analoginya seperti program diet yang dilaporkan dengan jumlah kunjungan ke pusat kebugaran.
+Dua puluh kunjungan sebulan terdengar mengesankan, tetapi dokter menanyakan tekanan darah, kadar
+gula, dan berat badan. Kunjungan adalah kegiatan; tekanan darah adalah hasil.
+
+\subsection{Empat Keluarga Metrik}
+
+Empat keluarga metrik mengukur hasil, bukan kegiatan. Keluarga pertama adalah metrik DORA untuk
+kinerja pengiriman perangkat lunak (Bab 13). DORA kini mengelompokkannya menjadi
+\textit{throughput}, yaitu \textit{lead time} perubahan, frekuensi \textit{deployment}, dan waktu
+pemulihan \textit{deployment} gagal, serta ketidakstabilan, yaitu tingkat kegagalan perubahan dan
+tingkat pengerjaan ulang \cite{dora-metrics}. Keluarga kedua adalah SLO untuk perjalanan pasien
+(Bab 11), yang mengukur keandalan dari sudut pandang pengguna \cite{beyer2016}. Keluarga ketiga
+adalah biaya per unit (Bab 3), yang mengukur efisiensi. Keluarga keempat adalah jejak karbon dengan
+Software Carbon Intensity (SCI), yang dinyatakan per unit fungsi seperti per janji temu
+\cite{iso21031}.
+
+Tabel \ref{tab:ch14-kartu-metrik} adalah kartu metrik yang diusulkan untuk direksi Medikara. Setiap
+baris punya nilai awal dari bab sebelumnya dan sasaran per gerbang keputusan.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kartu metrik peta jalan Medikara Health (sasaran rekaan)}
+  \label{tab:ch14-kartu-metrik}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.1cm}
+      >{\raggedright\arraybackslash}p{2.1cm}}
+    \hline
+    \textbf{Metrik} & \textbf{Nilai awal} & \textbf{Gerbang 1, September 2027} & \textbf{Gerbang 2,
+      September 2028} \\ \hline
+    DORA: \textit{lead time} perubahan Medikara+ & 29 hari (Bab 13) & 14 hari & Di bawah 7 hari
+      \\ \hline
+    DORA: tingkat kegagalan perubahan SIMRS Jakarta & 43 persen (Bab 13) & 30 persen & Di bawah 15
+      persen \\ \hline
+    SLO: janji temu terkonfirmasi dalam 5 detik & Sekitar 97,4 persen (Bab 9) & 98,5 persen &
+      99,5 persen (Bab 11) \\ \hline
+    Biaya infrastruktur SIMRS per kunjungan, RS Bekasi & Rp5.619 (Bab 3) & Rp5.619 & Paling tinggi
+      Rp4.776 pada akhir 2028 \\ \hline
+    Biaya Medikara+ per janji temu & Rp2.036 (Bab 3) & Paling tinggi Rp2.240 selama transisi &
+      Paling tinggi Rp2.036 \\ \hline
+    SCI Medikara+ per janji temu & 58,2 gram (Bab 3) & 52 gram & Paling tinggi 44,8 gram \\
+      \hline
+  \end{tabularx}
+\end{table}
+
+Beberapa sasaran sengaja tidak membaik pada gerbang 1. Biaya per janji temu dibiarkan naik sampai
+Rp2.240 karena selama transisi Medikara membayar dua jalur. Biaya SIMRS Bekasi belum turun karena
+Rehost baru dikerjakan pada gelombang 2. Sasaran yang jujur tentang masa sulit lebih mudah
+dipertahankan di depan direksi daripada sasaran yang meleset tanpa penjelasan.
+
+\subsection{Laporan Ringkas untuk Direksi}
+
+Laporan kemajuan untuk direksi cukup satu halaman setiap triwulan, dengan tiga bagian. Bagian
+pertama adalah status setiap gelombang dalam tiga warna: hijau sesuai rencana, kuning terlambat
+tetapi dapat dikejar, merah perlu keputusan. Bagian kedua adalah kartu metrik dengan tren tiga
+triwulan terakhir, bukan hanya angka terbaru. Bagian ketiga adalah tiga risiko teratas dan
+keputusan yang diminta dari direksi, misalnya menambah anggaran pelatihan atau menunda satu rumah
+sakit. Penyusunan KPI (Key Performance Indicator) dan pelaporan direksi secara menyeluruh dibahas
+rinci di IT40813.
+
+Dua contoh kasus:
+\begin{enumerate}
+  \item Misalkan pada triwulan IV 2027 status gelombang 2 kuning karena Bogor tertunda empat minggu.
+        Laporan menyebut penyebabnya: SLO janji temu Depok baru 99,1 persen, di bawah sasaran 99,5
+        persen, karena antrean pesan saat pagi sibuk. Keputusan yang diminta hanya satu: menyetujui
+        penundaan Bogor, bukan menambah anggaran.
+  \item Misalkan direktur keuangan menanyakan mengapa tagihan \textit{cloud} naik dari Rp240 juta
+        menjadi Rp290 juta per bulan. Kartu metrik menjawabnya: janji temu naik 18 persen, biaya per
+        janji temu tetap di bawah Rp2.240, dan biaya tak teralokasi hanya 4 persen. Kenaikan tagihan
+        dapat dijelaskan, sehingga pembahasan bergeser dari ``mengapa mahal'' ke ``apakah nilainya
+        sepadan''.
+\end{enumerate}
 
 \section{Aktivitas: Peta Jalan Modernisasi dan Guardrail Tata Kelola}
+\label{sec:ch14-aktivitas}
 
-% TODO
-% Tujuan aktivitas: menyatukan artefak Bab 1 sampai 13 menjadi peta jalan modernisasi tiga gelombang dan menetapkan guardrail tata kelola cloud, lalu mempresentasikannya sebagai bagian C4.
-% Peran dalam tim: anggota non-teknis memimpin narasi nilai bisnis dan urutan prioritas; anggota teknis memeriksa kelayakan dependensi dan prasyarat teknis; seluruh anggota menyiapkan presentasi dan jawaban atas pertanyaan direksi.
-% Langkah: (1) kumpulkan artefak C1 sampai C3; (2) susun tiga gelombang berisi layanan, strategi 7R, prasyarat platform, sasaran SLO dan biaya, serta risiko; (3) tetapkan lima sampai tujuh guardrail; (4) pilih empat metrik kemajuan; (5) siapkan presentasi C4 menjelang UAS.
-% Luaran dan tonggak capstone: C4, peta jalan modernisasi dan guardrail tata kelola cloud, dipresentasikan menjelang UAS.
-% Berkas sources yang direncanakan: sources/chapter14/templat-peta-jalan-modernisasi.xlsx, sources/chapter14/katalog-guardrail.md, sources/chapter14/templat-presentasi-c4.md, sources/chapter14/contoh-opa/ (opsional)
+\textbf{Tujuan.} Tim menyatukan artefak Bab 1 sampai Bab 13 menjadi peta jalan modernisasi tiga
+gelombang dan menetapkan \textit{guardrail} tata kelola \textit{cloud}, lalu mempresentasikannya
+sebagai bagian C4. Tim memakai organisasi nyata dengan izin tertulis dan data yang dianonimkan, atau
+memakai kasus Medikara Health. Data pribadi pasien atau karyawan tidak dipakai sama sekali.
+
+\textbf{Pembagian peran.} Peta jalan harus masuk akal dari dua sisi: urutan nilai bisnis dan
+kelayakan teknis. Tabel \ref{tab:ch14-peran} membagi peran agar setiap anggota menyumbang sesuai
+latar belakangnya.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Pembagian peran dalam Aktivitas Bab 14}
+  \label{tab:ch14-peran}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm}
+      >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Peran} & \textbf{Diisi oleh} & \textbf{Tugas} \\ \hline
+    Penyusun narasi nilai & Anggota non-teknis & Memimpin urutan prioritas, sasaran nilai, dan
+      jawaban atas pertanyaan direksi tentang manfaat \\ \hline
+    Pemeriksa kelayakan & Anggota teknis & Memeriksa dependensi, prasyarat platform, dan
+      kelayakan setiap gelombang \\ \hline
+    Perancang \textit{guardrail} & Satu anggota teknis dan satu anggota non-teknis & Merumuskan
+      \textit{guardrail} dalam bahasa biasa, lalu memeriksa cara penegakannya \\ \hline
+    Penjaga konsistensi & Satu anggota yang ditunjuk & Memastikan angka di peta jalan sama dengan
+      angka di artefak C1 sampai C3 \\ \hline
+    Penyaji & Seluruh anggota & Menyiapkan presentasi dan latihan tanya jawab \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Langkah kerja.}
+\begin{enumerate}
+  \item Kumpulkan artefak C1 sampai C3 dan dua artefak C4 dari Bab 12 dan Bab 13, lalu susun tabel
+        keputusan seperti Tabel \ref{tab:ch14-rekap}. Tandai keputusan yang saling bertentangan.
+  \item Susun tiga gelombang di
+        \berkas{sources/chapter14/templat-peta-jalan-modernisasi.xlsx}. Setiap gelombang memuat
+        layanan yang dimodernisasi, strategi 7R, prasyarat platform dan tim, sasaran SLO dan biaya,
+        risiko utama, serta kriteria gerbang keputusan.
+  \item Pilih satu irisan pertama dengan lima kriteria pada Tabel \ref{tab:ch14-irisan-pertama},
+        lalu tulis urutan pemindahannya dengan pola \textit{strangler fig}.
+  \item Tetapkan lima sampai tujuh \textit{guardrail} untuk biaya, keamanan, dan lokasi data,
+        memakai \berkas{sources/chapter14/katalog-guardrail.md}. Setiap \textit{guardrail} punya
+        rumusan bahasa biasa, jenis kendali, risiko yang dicegah, pemilik, dan jalur pengecualian.
+  \item Pilih empat metrik kemajuan, satu dari setiap keluarga metrik, lengkap dengan nilai awal
+        dan sasaran per gerbang.
+  \item Siapkan presentasi C4 menjelang UAS dengan
+        \berkas{sources/chapter14/templat-presentasi-c4.md}: 15 menit presentasi dan 10 menit tanya
+        jawab, dengan dosen dan tim lain berperan sebagai direksi.
+\end{enumerate}
+
+\textbf{Luaran dan kaitan dengan capstone.} Luarannya adalah peta jalan modernisasi tiga gelombang
+dan \textit{guardrail} tata kelola \textit{cloud}. Bersama rencana resiliensi dan DR (Bab 12) serta
+model operasi \textit{delivery} (Bab 13), luaran ini melengkapi tonggak C4 Peta Jalan dan Tata
+Kelola yang dipresentasikan menjelang UAS. Peta jalan ini juga menjadi bagian teknis dari peta
+jalan \textit{enterprise} yang disusun di IT40513.
+
+\textbf{Kriteria penilaian singkat.} Tabel \ref{tab:ch14-penilaian} memuat bobot penilaian.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Kriteria penilaian Aktivitas Bab 14}
+  \label{tab:ch14-penilaian}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X
+      >{\raggedleft\arraybackslash}p{1.4cm}}
+    \hline
+    \textbf{Kriteria} & \textbf{Bobot} \\ \hline
+    Urutan gelombang masuk akal dari sisi dependensi, risiko, dan nilai & 25\% \\ \hline
+    Konsistensi angka dan keputusan dengan artefak C1 sampai C3 & 20\% \\ \hline
+    \textit{Guardrail} jelas, dapat ditegakkan, punya pemilik dan jalur pengecualian & 20\% \\
+      \hline
+    Metrik kemajuan mengukur hasil, dengan nilai awal dan sasaran & 20\% \\ \hline
+    Presentasi dan jawaban atas pertanyaan direksi & 15\% \\ \hline
+  \end{tabularx}
+\end{table}
+
+\textbf{Berkas pendukung.} Seluruh berkas ada di \berkas{sources/chapter14/}, dengan daftar dan
+kegunaannya di \berkas{sources/chapter14/README.md}.
+
+\textbf{Pendalaman teknis (opsional).} Anggota teknis menulis satu kebijakan \textit{policy as code}
+dengan Open Policy Agent yang menolak sumber daya di luar \textit{region} yang diizinkan, berangkat
+dari \berkas{sources/chapter14/contoh-opa/}. Kebijakan diuji dengan berkas masukan rekaan dan hanya
+dijalankan pada akun milik tim sendiri. Bagian ini tidak dinilai sebagai syarat C4.
 
 \section{Ringkasan}
 
-% TODO
+Bab ini menutup mata kuliah dengan satu pertanyaan direksi: apa yang dimodernisasi lebih dulu,
+berapa biayanya, dan bagaimana risikonya dikendalikan. Jawabannya bukan satu proyek besar, tetapi
+rangkaian langkah kecil yang dapat dibalik. Pola \textit{strangler fig} memasang fasad di depan
+sistem lama, memindahkan fungsi sedikit demi sedikit, lalu mematikan sistem lama setelah tidak ada
+yang bergantung padanya. \textit{Anticorruption layer} menerjemahkan model data selama masa
+transisi, sehingga sistem baru tidak mewarisi istilah dan format lama. Irisan pertama dipilih
+dengan lima kriteria; bagi Medikara, janji temu dipindah per rumah sakit dari Depok sampai Jakarta.
+
+Irisan-irisan itu disusun menjadi gelombang menurut dependensi, risiko, dan nilai, dengan prasyarat
+platform dan tim di setiap gelombang. Medikara menyusun tiga gelombang dalam 42 bulan: fondasi dan
+pindah cepat, irisan \textit{cloud-native} pertama, lalu SIMRS terpadu. Gerbang keputusan di antara
+gelombang mengubah peta jalan dari janji tanggal menjadi rangkaian keputusan berbasis bukti, dan
+membatasi kerugian terburuk pada satu gelombang.
+
+\textit{Guardrail} menjaga biaya, keamanan, dan lokasi data tanpa menjadikan setiap perubahan
+antrean persetujuan. Kendali proaktif, preventif, dan detektif membaca satu katalog kebijakan yang
+ditulis sebagai kode. FinOps pada fase Operate melengkapinya dengan anggaran berambang, deteksi
+anomali, tag wajib, dan tinjauan biaya per unit yang dibawa ke direksi lewat Executive Strategy
+Alignment.
+
+Kedaulatan data lebih luas dari lokasi penyimpanan. Kendali atas data, operasi, dan teknologi
+diterapkan seimbang dengan kebutuhan setiap \textit{workload}, karena makin ketat kendalinya makin
+tinggi biayanya. Regulasi Indonesia per Oktober 2026 masih bergerak, termasuk PP 33/2026 yang
+berlaku Januari 2027 dan rancangan Perpres tentang pusat data, sehingga pemantauan regulasi menjadi
+butir tetap di setiap gerbang.
+
+Kemajuan peta jalan diukur dengan hasil, bukan kegiatan. Jumlah aplikasi yang dipindahkan mudah
+dihitung tetapi menyesatkan. Metrik DORA, SLO, biaya per unit, dan jejak karbon menunjukkan apakah
+modernisasi membuat pelayanan lebih cepat, lebih andal, lebih efisien, dan lebih hemat energi.
+Pesan utama bab ini, sekaligus mata kuliah ini: modernisasi \textit{cloud-native} adalah rangkaian
+keputusan yang dapat dibalik, dijaga oleh batas yang jelas, dan dipertanggungjawabkan dengan angka.
 
 \section{Latihan}
 
+\subsection*{Latihan 1: Strangler Fig dibandingkan dengan Penggantian Sekaligus}
+
+Latihan ini membuktikan bahwa pola \textit{strangler fig} lebih aman daripada mengganti SIMRS
+sekaligus dalam satu kali peralihan, dengan menghitung dampak kegagalan, waktu kembali, dan biaya
+transisi.
+
 \begin{enumerate}
-  \item Jelaskan mengapa pola \textit{strangler fig} lebih aman daripada mengganti SIMRS sekaligus dalam satu kali peralihan.
-  \item Susun tiga \textit{guardrail} tata kelola \textit{cloud} untuk Medikara Health dan jelaskan risiko yang dicegah oleh masing-masing.
-  \item Pilih empat metrik untuk melaporkan kemajuan peta jalan kepada direksi. Jelaskan mengapa metrik tersebut lebih bermakna daripada jumlah aplikasi yang sudah dipindahkan.
+  \item Pilih satu fungsi SIMRS selain janji temu, misalnya klaim BPJS Kesehatan atau pendaftaran
+        rawat jalan.
+  \item Perkirakan jumlah transaksi fungsi itu per hari di setiap rumah sakit.
+  \item Hitung dampak bila peralihan gagal pada hari pertama untuk kedua cara: seluruh rumah sakit
+        sekaligus, atau satu rumah sakit pertama.
+  \item Perkirakan waktu kembali ke sistem lama, waktu sampai nilai pertama terasa, dan biaya masa
+        transisi untuk kedua cara.
+  \item Isi Tabel \ref{tab:ch14-lat1-hasil} dengan mengikuti contoh pada Tabel
+        \ref{tab:ch14-lat1-contoh}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, contoh terisi: fungsi janji temu Medikara Health (angka rekaan)}
+  \label{tab:ch14-lat1-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Penggantian sekaligus} & \textbf{\textit{Strangler fig}} \\ \hline
+    Transaksi terdampak bila gagal pada hari pertama & Sekitar 933 janji temu per hari di lima
+      rumah sakit ($28.000 / 30$) & Sekitar 103 janji temu per hari di Depok \\ \hline
+    Waktu kembali ke sistem lama & 1 sampai 3 hari: pulihkan basis data, ketik ulang data baru &
+      Sekitar 10 menit: ubah aturan rute di fasad \\ \hline
+    Nilai pertama terasa & Setelah seluruh pekerjaan selesai, misalkan bulan ke-12 & Bulan ke-2,
+      setelah Depok pindah \\ \hline
+    Biaya masa transisi & Kecil, tanpa fasad dan lapisan penerjemah & Misalkan Rp25 juta per bulan
+      selama 7 bulan, sekitar Rp175 juta \\ \hline
+    Jumlah titik keputusan & 1 & 7: mode bayangan, lima rumah sakit, penonaktifan modul \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 1, lembar isian}
+  \label{tab:ch14-lat1-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Aspek} & \textbf{Penggantian sekaligus} & \textbf{\textit{Strangler fig}} \\ \hline
+    Fungsi yang dipilih & \dots & \dots \\ \hline
+    Transaksi terdampak bila gagal pada hari pertama & \dots & \dots \\ \hline
+    Waktu kembali ke sistem lama & \dots & \dots \\ \hline
+    Nilai pertama terasa & \dots & \dots \\ \hline
+    Biaya masa transisi & \dots & \dots \\ \hline
+    Jumlah titik keputusan & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Berapa kali lebih banyak transaksi yang terdampak pada penggantian sekaligus dibandingkan
+        langkah pertama \textit{strangler fig} untuk fungsi pilihan? Apakah biaya transisi sepadan
+        dengan selisih itu?
+  \item Pada fungsi pilihan, adakah kondisi yang membuat \textit{strangler fig} tidak cocok,
+        misalnya permintaan yang tidak dapat dicegat? Bila ada, apa penggantinya?
+\end{enumerate}
+
+\subsection*{Latihan 2: Tiga Guardrail untuk Medikara Health}
+
+Latihan ini membuktikan bahwa \textit{guardrail} yang baik dapat dibaca direksi, dapat ditegakkan
+otomatis, dan mencegah risiko yang dapat disebutkan dengan jelas.
+
+\begin{enumerate}
+  \item Baca Tabel \ref{tab:ch14-katalog-guardrail} dan pilih tiga risiko Medikara yang belum
+        tertutup, masing-masing satu untuk biaya, keamanan, dan lokasi data.
+  \item Rumuskan satu \textit{guardrail} untuk setiap risiko dalam satu kalimat bahasa biasa.
+  \item Tentukan jenis kendalinya: proaktif, preventif, detektif, atau gabungannya.
+  \item Tuliskan bukti kepatuhan yang dapat ditunjukkan kepada auditor, pemilik, dan jalur
+        pengecualiannya.
+  \item Isi Tabel \ref{tab:ch14-lat2-hasil} dengan mengikuti contoh pada Tabel
+        \ref{tab:ch14-lat2-contoh}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, contoh terisi: satu \textit{guardrail} biaya untuk lingkungan non-produksi
+           (angka rekaan)}
+  \label{tab:ch14-lat2-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm}
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Butir} & \textbf{Isi} \\ \hline
+    Rumusan bahasa biasa & Lingkungan non-produksi dimatikan otomatis pukul 20.00 sampai 07.00
+      dan sepanjang akhir pekan, kecuali bertag pengecualian yang masih berlaku \\ \hline
+    Kategori & Biaya \\ \hline
+    Jenis kendali & Proaktif (tag jadwal wajib saat dibuat) dan detektif (pemindaian harian) \\
+      \hline
+    Risiko yang dicegah & Mesin uji menyala 168 jam per minggu padahal dipakai sekitar 55 jam;
+      misalkan pemborosan Rp12 juta per bulan dari anggaran non-produksi Rp35 juta \\ \hline
+    Bukti kepatuhan & Laporan harian jam nyala per akun; porsi sumber daya bertag jadwal \\ \hline
+    Pemilik & Kepala tim platform \\ \hline
+    Jalur pengecualian & Diajukan pemilik layanan, disetujui wakil keuangan CCoE, berlaku paling
+      lama 14 hari \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 2, lembar isian}
+  \label{tab:ch14-lat2-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.0cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X}
+    \hline
+    \textbf{Butir} & \textbf{\textit{Guardrail} biaya} & \textbf{\textit{Guardrail} keamanan} &
+      \textbf{\textit{Guardrail} lokasi data} \\ \hline
+    Rumusan bahasa biasa & \dots & \dots & \dots \\ \hline
+    Jenis kendali & \dots & \dots & \dots \\ \hline
+    Risiko yang dicegah & \dots & \dots & \dots \\ \hline
+    Bukti kepatuhan & \dots & \dots & \dots \\ \hline
+    Pemilik & \dots & \dots & \dots \\ \hline
+    Jalur pengecualian & \dots & \dots & \dots \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item \textit{Guardrail} mana yang paling mungkin memicu permintaan pengecualian? Berapa banyak
+        pengecualian per bulan yang menandakan rumusannya terlalu ketat?
+  \item Adakah \textit{guardrail} yang hanya dapat ditegakkan secara detektif? Berapa lama celah
+        antara pelanggaran dan temuan, dan apakah celah itu dapat diterima untuk risikonya?
+\end{enumerate}
+
+\subsection*{Latihan 3: Empat Metrik dibandingkan dengan Jumlah Aplikasi}
+
+Latihan ini membuktikan bahwa jumlah aplikasi yang sudah dipindahkan dapat naik pesat sementara
+hasil yang dirasakan pasien dan direksi tidak berubah.
+
+\begin{enumerate}
+  \item Baca data triwulan pada Tabel \ref{tab:ch14-lat3-contoh}. Data ini skenario pengandaian yang
+        sengaja meleset dari sasaran pada Tabel \ref{tab:ch14-kartu-metrik}, agar dapat dianalisis.
+  \item Hitung persentase aplikasi yang sudah dipindahkan pada setiap triwulan dari 46 aplikasi.
+  \item Bandingkan arah perubahan jumlah aplikasi dengan arah perubahan empat metrik lainnya.
+  \item Pilih empat metrik untuk laporan direksi, satu dari setiap keluarga, dan tentukan sasarannya.
+  \item Isi Tabel \ref{tab:ch14-lat3-hasil}.
+\end{enumerate}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, contoh terisi: empat triwulan pertama peta jalan Medikara Health, April 2027
+           sampai Maret 2028 (angka rekaan)}
+  \label{tab:ch14-lat3-contoh}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X r r r r}
+    \hline
+    \textbf{Metrik} & \textbf{Triwulan I} & \textbf{Triwulan II} & \textbf{Triwulan III} &
+      \textbf{Triwulan IV} \\ \hline
+    Aplikasi dipindahkan, kumulatif & 12 & 31 & 32 & 34 \\ \hline
+    \textit{Lead time} perubahan Medikara+ (hari) & 29 & 27 & 12 & 6 \\ \hline
+    Janji temu terkonfirmasi dalam 5 detik (\%) & 97,6 & 97,1 & 98,8 & 99,4 \\ \hline
+    Biaya Medikara+ per janji temu (rupiah) & 2.036 & 2.334 & 2.240 & 2.009 \\ \hline
+    SCI Medikara+ per janji temu (gram) & 58,2 & 59,7 & 52,3 & 46,4 \\ \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Latihan 3, lembar isian}
+  \label{tab:ch14-lat3-hasil}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.0cm}
+      >{\raggedright\arraybackslash}p{2.0cm}}
+    \hline
+    \textbf{Keluarga metrik} & \textbf{Metrik yang dipilih} & \textbf{Nilai awal} &
+      \textbf{Sasaran} \\ \hline
+    DORA & \dots & \dots & \dots \\ \hline
+    SLO & \dots & \dots & \dots \\ \hline
+    Biaya per unit & \dots & \dots & \dots \\ \hline
+    Jejak karbon & \dots & \dots & \dots \\ \hline
+    Alasan tidak memakai jumlah aplikasi & \multicolumn{3}{>{\raggedright\arraybackslash}p{7.0cm}}{\dots}
+      \\ \hline
+  \end{tabularx}
+\end{table}
+
+Pertanyaan analisis:
+\begin{enumerate}
+  \item Pada triwulan II jumlah aplikasi naik dari 12 menjadi 31, tetapi tiga metrik lain memburuk.
+        Apa penjelasan yang paling mungkin, dan bagaimana menyampaikannya kepada direksi?
+  \item Pada triwulan III dan IV jumlah aplikasi hampir tidak bergerak, tetapi metrik lain membaik
+        pesat. Laporan mana yang lebih jujur menggambarkan kemajuan, dan mengapa?
+  \item Metrik mana yang paling sulit diukur di organisasi pilihan tim, dan data apa yang perlu
+        dikumpulkan lebih dulu?
 \end{enumerate}

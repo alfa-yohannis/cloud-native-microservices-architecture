@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tanya/.style={draw, rounded corners, fill=blue!8, text width=5.4cm,
+    minimum height=0.62cm, align=left, inner sep=3pt},
+  hasil/.style={draw, rounded corners, fill=green!10, minimum width=2.1cm,
+    minimum height=0.62cm, align=center, font=\scriptsize\bfseries},
+  ya/.style={font=\tiny, gray!60!black, above},
+  turun/.style={font=\tiny, gray!60!black, right},
+  ket/.style={font=\tiny, gray!60!black, anchor=west, text width=2.9cm,
+    align=left}
+]
+  % Pertanyaan diajukan berurutan. Jawaban pertama yang cocok menentukan R.
+  \node[tanya] (q1) at (0,0) {1. Masih bernilai bagi bisnis?};
+  \node[tanya] (q2) at (0,-1.05) {2. Harus tetap di tempat sementara waktu?};
+  \node[tanya] (q3) at (0,-2.1) {3. Ada produk atau SaaS pengganti yang layak?};
+  \node[tanya, fill=orange!12] (q4) at (0,-3.15)
+    {4. Tuntutan bisnis kuat dan strategi lain tidak memadai?};
+  \node[tanya] (q5) at (0,-4.2) {5. Perlu perubahan kecil agar lebih efisien?};
+  \node[tanya] (q6) at (0,-5.25) {6. Platform virtualisasi dapat dipindah utuh?};
+
+  \node[hasil, fill=gray!35] (r1) at (4.4,0) {Retire};
+  \node[hasil] (r2) at (4.4,-1.05) {Retain};
+  \node[hasil] (r3) at (4.4,-2.1) {Repurchase};
+  \node[hasil, fill=orange!12] (r4) at (4.4,-3.15) {Refactor};
+  \node[hasil] (r5) at (4.4,-4.2) {Replatform};
+  \node[hasil] (r6) at (4.4,-5.25) {Relocate};
+  \node[hasil] (r7) at (0,-6.35) {Rehost};
+
+  \draw[panah] (q1) -- node[ya] {tidak} (r1);
+  \foreach \nomor in {2,...,6} {
+    \draw[panah] (q\nomor) -- node[ya] {ya} (r\nomor);
+  }
+  \draw[panah] (q1) -- node[turun] {ya} (q2);
+  \foreach \atas/\bawah in {2/3, 3/4, 4/5, 5/6} {
+    \draw[panah] (q\atas) -- node[turun] {tidak} (q\bawah);
+  }
+  \draw[panah] (q6) -- node[turun] {tidak} (r7);
+
+  % Kasus pemakaian umum menurut panduan migrasi berskala besar.
+  \node[ket] at (5.6,0) {pemakaian di bawah 5\%, tanpa koneksi masuk 90 hari};
+  \node[ket] at (5.6,-1.05) {aturan lokasi data, perangkat khusus, menunggu SaaS};
+  \node[ket] at (5.6,-2.1) {lisensi lama ke SaaS, aplikasi kustom diganti produk};
+  \node[ket] at (5.6,-3.15) {monolit menghambat rilis; strategi paling mahal dan rumit};
+  \node[ket] at (5.6,-4.2) {misalnya basis data ke layanan terkelola};
+  \node[ket] at (5.6,-5.25) {pindah di tingkat platform, arsitektur tetap};
+  \node[font=\tiny, gray!60!black, anchor=west, text width=5.2cm, align=left]
+    at (1.25,-6.35) {pindah apa adanya; modernisasi menyusul sesudah aplikasi
+    berjalan di \textit{cloud}};
+\end{tikzpicture}

@@ -1,0 +1,40 @@
+% Server yang dirawat satu per satu menumpuk perubahan manual sampai isinya tidak
+% diketahui. Server immutable dibangun ulang dari definisi tertulis lalu diganti utuh.
+\begin{tikzpicture}[
+  font=\scriptsize,
+  execute at begin node={\hyphenpenalty=10000},
+  kotak/.style={draw, rounded corners, align=center, minimum height=1.0cm,
+                text width=2.35cm, inner sep=2pt},
+  panah/.style={-{Stealth[length=2mm]}, thick}
+]
+  \node[font=\scriptsize\bfseries, anchor=west] at (-1.25,0.95)
+    {Server yang dirawat (\textit{mutable})};
+  \node[kotak, fill=blue!8] (m1) at (0,0)
+    {Server dipasang\\{\tiny\mdseries 2019, sesuai catatan}};
+  \node[kotak, fill=blue!8] (m2) at (3,0)
+    {Tambalan manual\\{\tiny\mdseries 2020 sampai 2025}};
+  \node[kotak, fill=blue!8] (m3) at (6,0)
+    {Ubah langsung\\{\tiny\mdseries di server saat darurat}};
+  \node[kotak, fill=red!22] (m4) at (9,0)
+    {Server unik\\{\tiny\mdseries isinya tidak tercatat lagi}};
+  \draw[panah] (m1) -- (m2);
+  \draw[panah] (m2) -- (m3);
+  \draw[panah] (m3) -- (m4);
+
+  \node[font=\scriptsize\bfseries, anchor=west] at (-1.25,-1.35)
+    {Server yang diganti utuh (\textit{immutable})};
+  \node[kotak, fill=praditagreen!15] (i1) at (0,-2.3)
+    {Definisi tertulis\\{\tiny\mdseries di repositori, ditinjau}};
+  \node[kotak, fill=blue!8] (i2) at (3,-2.3)
+    {\textit{Image} versi 2\\{\tiny\mdseries dibangun otomatis}};
+  \node[kotak, fill=green!10] (i3) at (6,-2.3)
+    {Server baru versi 2\\{\tiny\mdseries mulai melayani}};
+  \node[kotak, fill=gray!35] (i4) at (9,-2.3)
+    {Server versi 1\\{\tiny\mdseries dimatikan, tidak ditambal}};
+  \draw[panah] (i1) -- (i2);
+  \draw[panah] (i2) -- (i3);
+  \draw[panah] (i3) -- (i4);
+  \draw[panah, dashed, praditagreen] (i4.south) -- ++(0,-0.4) -|
+    node[pos=0.25, below, font=\tiny, text=praditagreen]
+      {perubahan berikutnya dimulai lagi dari definisi} (i1.south);
+\end{tikzpicture}

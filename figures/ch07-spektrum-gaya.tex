@@ -1,0 +1,91 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  modul/.style={draw, fill=white, rounded corners=1pt, minimum width=1.4cm,
+    minimum height=0.45cm, font=\tiny, inner sep=1pt},
+  layanan/.style={draw, fill=white, rounded corners=1pt, minimum width=1.15cm,
+    minimum height=0.45cm, font=\tiny, inner sep=1pt},
+  basis/.style={draw, cylinder, shape border rotate=90, aspect=0.25,
+    fill=gray!15, minimum width=1.5cm, minimum height=0.6cm, font=\tiny,
+    align=center, inner sep=1pt},
+  tabung/.pic={
+    \fill[gray!15] (-0.15,-0.2) rectangle (0.15,0.2);
+    \fill[gray!15] (0,-0.2) ellipse [x radius=0.15, y radius=0.06];
+    \draw (-0.15,0.2) -- (-0.15,-0.2)
+      arc[start angle=180, end angle=360, x radius=0.15, y radius=0.06]
+      -- (0.15,0.2);
+    \draw[fill=gray!25] (0,0.2) ellipse [x radius=0.15, y radius=0.06];
+  },
+  ket/.style={font=\tiny, gray!60!black, align=center}
+]
+  % Panel 1: monolit, semua bagian saling menyentuh dan berbagi satu basis data.
+  \draw[rounded corners, fill=blue!8] (0,0) rectangle (3.6,2.9);
+  \node[font=\scriptsize\bfseries] at (1.8,3.2) {Monolit};
+  \node[modul] (a1) at (0.95,2.4) {Pendaftaran};
+  \node[modul] (a2) at (2.65,2.4) {Rekam medis};
+  \node[modul] (a3) at (0.95,1.6) {Farmasi};
+  \node[modul] (a4) at (2.65,1.6) {Penagihan};
+  \node[basis] (adb) at (1.8,0.55) {satu basis data};
+  \draw[gray!70!black] (a1) -- (a4);
+  \draw[gray!70!black] (a2) -- (a3);
+  \draw[gray!70!black] (a1) -- (a2);
+  \draw[gray!70!black] (a3) -- (a4);
+  \draw[gray!70!black] (a1) -- (a3);
+  \draw[gray!70!black] (a2) -- (a4);
+  \draw[gray!70!black] (a3.south) -- (adb.north west);
+  \draw[gray!70!black] (a4.south) -- (adb.north east);
+  \draw[gray!70!black] (a1.south west) to[bend right=25] (adb.west);
+  \draw[gray!70!black] (a2.south east) to[bend left=25] (adb.east);
+  \node[ket] at (1.8,-0.35) {satu unit rilis, bagian saling menyentuh};
+
+  % Panel 2: modular monolith, satu unit rilis dengan batas modul yang ditegakkan.
+  \draw[rounded corners, fill=orange!12] (4.2,0) rectangle (7.8,2.9);
+  \node[font=\scriptsize\bfseries] at (6.0,3.2) {\textit{Modular monolith}};
+  \node[modul, very thick] (b1) at (5.15,2.4) {Pendaftaran};
+  \node[modul, very thick] (b2) at (6.85,2.4) {Rekam medis};
+  \node[modul, very thick] (b3) at (5.15,1.6) {Farmasi};
+  \node[modul, very thick] (b4) at (6.85,1.6) {Penagihan};
+  \node[basis] (bdb) at (6.0,0.55) {skema per modul};
+  \draw[panah, -{Stealth[length=1.5mm]}] (b2) -- (b1);
+  \draw[panah, -{Stealth[length=1.5mm]}] (b4) -- (b3);
+  \draw[gray!70!black] (b3.south) -- (bdb.north west);
+  \draw[gray!70!black] (b4.south) -- (bdb.north east);
+  \draw[gray!70!black] (b1.south west) to[bend right=25] (bdb.west);
+  \draw[gray!70!black] (b2.south east) to[bend left=25] (bdb.east);
+  \node[ket] at (6.0,-0.35) {satu unit rilis, batas modul ditegakkan};
+
+  % Panel 3: microservices, banyak unit rilis yang berbicara lewat jaringan.
+  \draw[rounded corners, fill=blue!8] (8.4,0) rectangle (12.0,2.9);
+  \node[font=\scriptsize\bfseries] at (10.2,3.2) {\textit{Microservices}};
+  \node[layanan] (c1) at (9.05,2.35) {Pendaftaran};
+  \pic at (9.95,2.35) {tabung};
+  \node[layanan] (c2) at (10.85,2.35) {Rekam medis};
+  \pic at (11.72,2.35) {tabung};
+  \node[layanan] (c3) at (9.05,0.7) {Farmasi};
+  \pic at (9.95,0.7) {tabung};
+  \node[layanan] (c4) at (10.85,0.7) {Penagihan};
+  \pic at (11.72,0.7) {tabung};
+  \draw[dashed, thick, gray!70!black] (8.6,1.52) -- (11.85,1.52);
+  \node[font=\tiny, gray!60!black, fill=blue!8, inner sep=1pt] at (9.95,1.52)
+    {jaringan};
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (c1.south) -- (9.05,1.52);
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (c2.south) -- (10.85,1.52);
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (c3.north) -- (9.05,1.52);
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (c4.north) -- (10.85,1.52);
+  \node[ket] at (10.2,-0.35) {banyak unit rilis, data milik tiap layanan};
+
+  % Dua sumbu: manfaat dan biaya naik bersama dari kiri ke kanan.
+  \draw[panah, praditagreen] (0,-0.95) -- (12,-0.95)
+    node[midway, above, font=\tiny, praditagreen] {kemandirian rilis dan
+    penskalaan per bagian makin tinggi};
+  \draw[panah, red!60!black] (0,-1.55) -- (12,-1.55)
+    node[midway, above, font=\tiny, red!60!black] {biaya jaringan, data,
+    pengujian, dan operasi makin tinggi};
+
+  % Jebakan yang perlu dihindari.
+  \node[draw, rounded corners, fill=red!22, align=center, font=\scriptsize,
+    text width=7.6cm] at (6.0,-2.45)
+    {\textbf{Jebakan: monolit terdistribusi}\\{\tiny\mdseries bagian dipisah
+    lewat jaringan, tetapi tetap harus dirilis bersama:\\biaya
+    \textit{microservices} ditanggung, manfaatnya tidak didapat}};
+\end{tikzpicture}

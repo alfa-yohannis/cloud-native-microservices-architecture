@@ -1,0 +1,77 @@
+# Contoh baris katalog event Bab 09 dalam AsyncAPI 3.0.0 (rekaan Medikara Health).
+# Pakai: buka di AsyncAPI Studio atau jadikan pola saat mengisi templat-katalog-event.csv.
+asyncapi: 3.0.0
+info:
+  title: Event Janji Temu Medikara Health
+  version: 0.1.0
+  description: >
+    Event yang diterbitkan konteks Janji Temu. Amplop pesan mengikuti
+    CloudEvents 1.0 mode terstruktur. Data pasien hanya berupa nomor rujukan.
+servers:
+  brokerLokal:
+    host: localhost:5672
+    protocol: amqp
+    description: RabbitMQ lokal dari contoh-broker-lokal/docker-compose.yml
+channels:
+  janjiTemuDibuat:
+    address: medikara.janji-temu
+    description: Exchange topic dengan kunci rute janji-temu.dibuat
+    messages:
+      janjiTemuDibuat:
+        $ref: '#/components/messages/JanjiTemuDibuat'
+operations:
+  terbitkanJanjiTemuDibuat:
+    action: send
+    summary: Medikara+ menerbitkan event setelah jadwal dokter terkunci.
+    channel:
+      $ref: '#/channels/janjiTemuDibuat'
+  terimaJanjiTemuDibuat:
+    action: receive
+    summary: Layanan Notifikasi menjadwalkan pengingat untuk pasien.
+    channel:
+      $ref: '#/channels/janjiTemuDibuat'
+components:
+  messages:
+    JanjiTemuDibuat:
+      name: JanjiTemuDibuat
+      title: Janji temu dibuat
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        required: [specversion, id, source, type, time, data]
+        properties:
+          specversion:
+            type: string
+            const: '1.0'
+          id:
+            type: string
+            description: Kunci idempotensi saat dikirim ulang.
+          source:
+            type: string
+            const: /medikara-plus/janji-temu
+          type:
+            type: string
+            const: example.medikara.janjitemu.dibuat.v1
+          time:
+            type: string
+            format: date-time
+          data:
+            $ref: '#/components/schemas/DataJanjiTemu'
+  schemas:
+    DataJanjiTemu:
+      type: object
+      required: [nomorJanjiTemu, rujukanPasien, fasilitas, waktuKunjungan]
+      properties:
+        nomorJanjiTemu:
+          type: string
+          examples: [JT-2026-104233]
+        rujukanPasien:
+          type: string
+          description: Nomor rujukan pasien, bukan nama atau nomor identitas.
+        fasilitas:
+          type: string
+        poliklinik:
+          type: string
+        waktuKunjungan:
+          type: string
+          format: date-time

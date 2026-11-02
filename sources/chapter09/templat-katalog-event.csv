@@ -1,0 +1,6 @@
+# Templat katalog event untuk Aktivitas Bab 09. Isi satu baris per event; buka di Excel atau LibreOffice Calc.
+nama_event,pemilik,pemicu_bisnis,pola,isi_data,pelanggan,data_pribadi,versi
+JanjiTemuDibuat,Konteks Janji Temu (Medikara+),Pasien mengonfirmasi slot jadwal,notification dengan sebagian state,nomorJanjiTemu; rujukanPasien; fasilitas; poliklinik; waktuKunjungan,Notifikasi; Pendaftaran SIMRS; Kepesertaan BPJS; Analitik,hanya nomor rujukan pasien,v1
+HasilLabTersedia,Konteks Laboratorium,Hasil pemeriksaan selesai divalidasi,notification,nomorPermintaanLab; rujukanPasien; statusKritis,Pelayanan klinis; Notifikasi; Penagihan,hanya nomor rujukan pasien; isi hasil diambil lewat API berizin,v1
+TagihanTerbit,Konteks Penagihan,Kunjungan ditutup dan rincian biaya final,event-carried state transfer,nomorTagihan; nomorKunjungan; totalTagihan; penjamin,Notifikasi; ERP keuangan; Klaim,tanpa data klinis,v1
+...,...,...,...,...,...,...,...

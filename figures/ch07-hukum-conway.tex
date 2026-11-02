@@ -1,0 +1,56 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  tim/.style={draw, rounded corners, fill=blue!8, minimum width=1.7cm,
+    minimum height=0.5cm, align=center, font=\tiny},
+  sistem/.style={draw, rounded corners, fill=gray!35, minimum width=2.0cm,
+    minimum height=0.5cm, align=center, font=\tiny},
+  timbaru/.style={draw, rounded corners, fill=blue!8, minimum width=2.3cm,
+    minimum height=0.62cm, align=center, font=\tiny},
+  modul/.style={draw, rounded corners, fill=green!10, minimum width=2.0cm,
+    minimum height=0.62cm, align=center, font=\tiny},
+  kepala/.style={font=\tiny\bfseries, gray!60!black},
+  ket/.style={font=\tiny, gray!60!black}
+]
+  % Panel kiri: tim TI per rumah sakit, masing-masing mengubah salinan SIMRS sendiri.
+  \node[font=\scriptsize\bfseries] at (2.4,5.6) {Sekarang: tim per rumah sakit};
+  \node[kepala] at (0.9,5.1) {Organisasi};
+  \node[kepala] at (4.0,5.1) {Sistem};
+  \foreach \lokasi/\versi/\tinggi in {Jakarta/{v5.2}/4.2, Bekasi/{}/3.5,
+      Depok/{}/2.8, Bogor/{}/2.1, Bandung/{v3.9}/1.4} {
+    \node[tim] (t\lokasi) at (0.9,\tinggi) {Tim TI \lokasi};
+    \node[sistem] (s\lokasi) at (4.0,\tinggi) {SIMRS \lokasi\ \versi};
+    \draw[panah] (t\lokasi) -- (s\lokasi);
+  }
+  \node[ket] at (2.45,0.95) {tiap tim mengubah salinannya sendiri};
+  \node[draw, rounded corners, fill=red!22, font=\tiny, align=center,
+    text width=4.6cm] at (2.45,0.35)
+    {lima salinan kode, lima cara kerja, lima jadwal rilis};
+
+  % Garis pemisah.
+  \draw[dashed, gray] (5.55,0.0) -- (5.55,5.75);
+
+  % Panel kanan: tim per domain membentuk modul per domain (manuver Conway terbalik).
+  \node[font=\scriptsize\bfseries] at (9.0,5.6)
+    {Target: tim per domain (manuver Conway terbalik)};
+  \node[kepala] at (7.3,5.1) {Organisasi};
+  \node[kepala] at (10.7,5.1) {Sistem};
+  \node[timbaru] (u1) at (7.3,4.0) {Tim pendaftaran\\dan jadwal};
+  \node[timbaru] (u2) at (7.3,3.15) {Tim rekam medis};
+  \node[timbaru] (u3) at (7.3,2.3) {Tim farmasi\\dan laboratorium};
+  \node[timbaru] (u4) at (7.3,1.45) {Tim penagihan\\dan klaim};
+  \node[modul] (m1) at (10.7,4.0) {Modul pendaftaran\\dan jadwal};
+  \node[modul] (m2) at (10.7,3.15) {Modul rekam medis};
+  \node[modul] (m3) at (10.7,2.3) {Modul farmasi\\dan laboratorium};
+  \node[modul] (m4) at (10.7,1.45) {Modul penagihan\\dan klaim};
+  \node[draw, thick, praditagreen, rounded corners, inner sep=4pt,
+    fit=(m1)(m4)] (simrs) {};
+  \node[font=\tiny\bfseries, praditagreen, anchor=south] at (simrs.north)
+    {SIMRS terpadu};
+  \foreach \nomor in {1,...,4} {
+    \draw[panah] (u\nomor) -- (m\nomor);
+  }
+  \node[draw, rounded corners, fill=green!10, font=\tiny, align=center,
+    text width=5.6cm] at (9.0,0.35)
+    {satu basis kode untuk lima rumah sakit,\\batas modul mengikuti batas tim};
+\end{tikzpicture}

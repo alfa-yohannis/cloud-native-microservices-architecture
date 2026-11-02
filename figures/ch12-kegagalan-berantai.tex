@@ -1,0 +1,48 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  panah/.style={-{Stealth[length=2mm]}, thick},
+  komponen/.style={draw, rounded corners, fill=blue!8, align=center,
+    text width=2.3cm, minimum height=1.05cm},
+  luar/.style={draw, rounded corners, fill=gray!35, align=center,
+    text width=2.3cm, minimum height=1.05cm},
+  akibat/.style={draw, rounded corners, align=center, text width=2.35cm,
+    minimum height=1.25cm, font=\tiny},
+  nomor/.style={circle, draw, fill=white, inner sep=1pt, font=\tiny\bfseries}
+]
+  % Baris atas: rantai panggilan dari loket sampai layanan pihak ketiga.
+  \node[komponen] (loket) at (0,0)
+    {\textbf{Loket pendaftaran}\\{\tiny\mdseries 5 rumah sakit, 18 klinik}};
+  \node[komponen] (daftar) at (3.15,0)
+    {\textbf{Layanan pendaftaran}\\{\tiny\mdseries milik Medikara}};
+  \node[komponen] (integrasi) at (6.3,0)
+    {\textbf{Layanan integrasi}\\{\tiny\mdseries cek kepesertaan}};
+  \node[luar] (bpjs) at (9.45,0)
+    {\textbf{Layanan BPJS Kesehatan}\\{\tiny\mdseries pihak ketiga}};
+  \draw[panah] (loket) -- (daftar);
+  \draw[panah] (daftar) -- (integrasi);
+  \draw[panah] (integrasi) -- (bpjs);
+
+  % Baris bawah: akibat yang muncul berurutan dari kanan ke kiri.
+  \node[akibat, fill=red!22] (a1) at (9.45,-1.85)
+    {Respons melambat dari 0,8 detik menjadi 30 detik};
+  \node[akibat, fill=orange!12] (a2) at (6.3,-1.85)
+    {2 permintaan per detik $\times$ 30 detik = 60 menunggu; kolam 50 koneksi
+    habis};
+  \node[akibat, fill=orange!12] (a3) at (3.15,-1.85)
+    {Pendaftaran tertahan; fungsi lain yang memakai kolam yang sama ikut
+    lambat};
+  \node[akibat, fill=red!22] (a4) at (0,-1.85)
+    {Antrean loket memanjang; petugas beralih ke pencatatan manual};
+  \foreach \atas/\bawah in {bpjs/a1, integrasi/a2, daftar/a3, loket/a4} {
+    \draw[densely dotted, thick, gray!70!black] (\atas.south) -- (\bawah.north);
+  }
+  \node[nomor] at (a1.north east) {1};
+  \node[nomor] at (a2.north east) {2};
+  \node[nomor] at (a3.north east) {3};
+  \node[nomor] at (a4.north east) {4};
+
+  % Arah rambatan gangguan.
+  \draw[panah, red!60!black] (10.65,-2.95) -- (-1.2,-2.95)
+    node[midway, below, font=\tiny, red!60!black]
+    {gangguan di pihak ketiga merambat ke arah pasien dalam hitungan menit};
+\end{tikzpicture}

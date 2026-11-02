@@ -1,0 +1,23 @@
+# Contoh Bab 13 (rekaan): riwayat deployment 2025 SIMRS RS Jakarta dan Medikara+. Pakai: python hitung-metrik-dora.py contoh-riwayat-deployment.csv
+id_deployment,aplikasi,tanggal_deploy,jenis,jumlah_perubahan,lead_time_hari,butuh_perbaikan,menit_pemulihan
+S01,SIMRS Jakarta,2025-03-22,terjadwal,58,52,ya,540
+S02,SIMRS Jakarta,2025-04-02,darurat,2,3,tidak,0
+S03,SIMRS Jakarta,2025-06-21,terjadwal,64,61,tidak,0
+S04,SIMRS Jakarta,2025-09-20,terjadwal,71,58,ya,720
+S05,SIMRS Jakarta,2025-09-24,darurat,3,2,ya,180
+S06,SIMRS Jakarta,2025-12-20,terjadwal,49,55,tidak,0
+S07,SIMRS Jakarta,2025-12-23,darurat,1,1,tidak,0
+M01,Medikara+,2025-01-16,terjadwal,8,28,tidak,0
+M02,Medikara+,2025-02-13,terjadwal,7,31,tidak,0
+M03,Medikara+,2025-03-13,terjadwal,9,26,tidak,0
+M04,Medikara+,2025-04-17,terjadwal,10,35,ya,360
+M05,Medikara+,2025-05-15,terjadwal,6,24,tidak,0
+M06,Medikara+,2025-06-12,terjadwal,8,30,tidak,0
+M07,Medikara+,2025-06-25,darurat,2,2,tidak,0
+M08,Medikara+,2025-07-17,terjadwal,7,33,tidak,0
+M09,Medikara+,2025-08-14,terjadwal,9,27,tidak,0
+M10,Medikara+,2025-09-11,terjadwal,8,36,ya,240
+M11,Medikara+,2025-10-16,terjadwal,6,25,tidak,0
+M12,Medikara+,2025-11-13,terjadwal,7,29,tidak,0
+M13,Medikara+,2025-11-20,darurat,1,1,tidak,0
+M14,Medikara+,2025-12-11,terjadwal,9,32,tidak,0
