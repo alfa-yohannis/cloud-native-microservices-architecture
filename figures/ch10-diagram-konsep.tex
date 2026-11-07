@@ -1,0 +1,70 @@
+% Diagram konsep Bab 10: Transaksi lokal, outbox, dan kompensasi saga.
+% Dibangkitkan tools/render-diagrams.py dari figures/chapter-diagrams.json;
+% ubah data JSON lalu jalankan ulang skrip, jangan sunting berkas ini langsung.
+\begin{tikzpicture}[
+  x=0.92cm, y=0.95cm,
+  kotak konsep/.style={draw, line width=0.5pt, rounded corners=2pt,
+    align=center, minimum width=2.999cm,
+    minimum height=1.330cm, inner sep=0pt, font=\scriptsize,
+    text=konsepJudul},
+  peran actor/.style={kotak konsep, fill=konsepIsiActor, draw=konsepGarisActor},
+  peran service/.style={kotak konsep, fill=konsepIsiService, draw=konsepGarisService},
+  peran control/.style={kotak konsep, fill=konsepIsiControl, draw=konsepGarisControl},
+  peran data/.style={kotak konsep, fill=konsepIsiData, draw=konsepGarisData},
+  peran outcome/.style={kotak konsep, fill=konsepIsiOutcome, draw=konsepGarisOutcome},
+  peran risk/.style={kotak konsep, fill=konsepIsiRisk, draw=konsepGarisRisk},
+  panah konsep/.style={-{Stealth[length=1.3mm, width=1.2mm]}, line width=0.6pt,
+    draw=konsepPanah},
+  panah putus/.style={panah konsep, draw=konsepPanahPutus,
+    dash pattern=on 2.5pt off 1.5pt},
+  label panah/.style={font=\tiny, align=center, fill=white,
+    inner sep=1pt, text=konsepLabel},
+  catatan/.style={font=\scriptsize, align=left, anchor=north west,
+    inner sep=0pt, text width=12.383cm, text=konsepTeks,
+    execute at begin node={\hyphenpenalty=10000\hbadness=10000\relax}},
+]
+  \definecolor{konsepIsiActor}{HTML}{EEF1F6}
+  \definecolor{konsepGarisActor}{HTML}{50627D}
+  \definecolor{konsepIsiService}{HTML}{EAF2FB}
+  \definecolor{konsepGarisService}{HTML}{3F6893}
+  \definecolor{konsepIsiControl}{HTML}{E9F3EC}
+  \definecolor{konsepGarisControl}{HTML}{316B4B}
+  \definecolor{konsepIsiData}{HTML}{F1EDF8}
+  \definecolor{konsepGarisData}{HTML}{786394}
+  \definecolor{konsepIsiOutcome}{HTML}{E4F2EC}
+  \definecolor{konsepGarisOutcome}{HTML}{236C57}
+  \definecolor{konsepIsiRisk}{HTML}{FCEDE7}
+  \definecolor{konsepGarisRisk}{HTML}{B36947}
+  \definecolor{konsepJudul}{HTML}{20394F}
+  \definecolor{konsepTeks}{HTML}{455264}
+  \definecolor{konsepLabel}{HTML}{35485C}
+  \definecolor{konsepPanah}{HTML}{5C7084}
+  \definecolor{konsepPanahPutus}{HTML}{A15D40}
+  % Panah dan label lebih dahulu; kotak menutupi sisa latar label.
+  \draw[panah konsep] (0.93,0) -- (2.77,0);
+  \draw[panah konsep] (6.03,0) -- (7.87,0);
+  \draw[panah konsep] (9.5,-0.7) -- (9.5,-2);
+  \draw[panah konsep] (7.87,-2.7) -- (6.03,-2.7);
+  \draw[panah konsep] (2.77,-2.7) -- (0.93,-2.7);
+  \draw[panah konsep] (-0.7,-2) -- (-0.7,-0.7);
+  \node[label panah] at (1.85,0) {commit\\atomik};
+  \node[label panah] at (6.95,0.44) {baca event\\tersimpan};
+  \node[label panah] at (9.5,-1.35) {publikasi};
+  \node[label panah] at (6.95,-2.39) {langkah lanjut};
+  \node[label panah] at (1.85,-2.26) {kegagalan\\bisnis};
+  \node[label panah] at (-0.7,-1.35) {transaksi pelepasan};
+  \node[peran service] (jadwal) at (-0.7,0)
+    {\textbf{Layanan jadwal}\\[0.5pt]{\tiny\color{konsepTeks}pemilik data slot}};
+  \node[peran data] (tx) at (4.4,0)
+    {\textbf{Satu transaksi lokal}\\[0.5pt]{\tiny\color{konsepTeks}reservasi + baris outbox}};
+  \node[peran control] (relay) at (9.5,0)
+    {\textbf{Relay outbox}\\[0.5pt]{\tiny\color{konsepTeks}publikasi dapat berulang}};
+  \node[peran risk] (komp) at (-0.7,-2.7)
+    {\textbf{Kompensasi bisnis}\\[0.5pt]{\tiny\color{konsepTeks}lepaskan slot jika gagal}};
+  \node[peran service] (bpjs) at (4.4,-2.7)
+    {\textbf{Langkah BPJS}\\[0.5pt]{\tiny\color{konsepTeks}transaksi lokal sendiri}};
+  \node[peran control] (broker) at (9.5,-2.7)
+    {\textbf{Broker event}\\[0.5pt]{\tiny\color{konsepTeks}salurkan pesan saga}};
+  \node[catatan] at (-2.33,-3.77)
+    {Saga tidak melakukan rollback ACID global. Kompensasi adalah transaksi baru; relay dan konsumen tetap menangani duplikasi.};
+\end{tikzpicture}

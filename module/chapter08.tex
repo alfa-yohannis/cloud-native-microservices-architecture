@@ -26,16 +26,15 @@ pilihan memindahkan sebagian pekerjaan dari organisasi ke penyedia, dan setiap p
 \textit{tradeoff} sendiri antara kendali, biaya, keterampilan, dan ketergantungan. Tidak ada pilihan
 yang terbaik untuk semua layanan. Pertanyaan yang tepat adalah pilihan mana yang paling cocok untuk
 layanan tertentu, dengan pola beban tertentu, yang dijalankan oleh tim tertentu.
-\IfFileExists{../figures/ch08-diagram-konsep.png}{%
 Pada Kubernetes, controller membandingkan keadaan aktual dengan target
 deklaratif, lalu membuat, mengganti, atau menambah pod sesuai kebutuhan.
 Gambar \ref{fig:ch08-pelabuhan} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch08-diagram-konsep.png}
+  \input{../figures/ch08-diagram-konsep.tex}
   \caption{Kubernetes merekonsiliasi keadaan yang diinginkan}
   \label{fig:ch08-pelabuhan}
-\end{figure}}{}
+\end{figure}
 
 Rujukan utama bab ini adalah panduan keamanan \textit{container} dari National Institute of
 Standards and Technology (NIST), NIST SP 800-190 \cite{c08-nist800-190}, dokumentasi resmi

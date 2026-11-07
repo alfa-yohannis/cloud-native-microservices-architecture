@@ -26,17 +26,15 @@ gangguan di satu titik merambat ke banyak sistem. Bab ini membahas cara layanan 
 gangguan tidak merambat: kapan sebuah layanan perlu menunggu jawaban, kapan cukup mengirim kabar,
 dan bagaimana proses yang melibatkan banyak layanan dikoordinasikan.
 
-\IfFileExists{../figures/ch09-diagram-konsep.png}{%
 Broker menyalurkan fakta bisnis kepada konsumen yang berlangganan.
 Penyampaian ulang memerlukan identitas event dan pengolahan yang idempoten.
 Gambar \ref{fig:ch09-pos-pemilah} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch09-diagram-konsep.png}
+  \input{../figures/ch09-diagram-konsep.tex}
   \caption{Penyampaian event dan penanganan duplikasi}
   \label{fig:ch09-pos-pemilah}
-\end{figure}%
-}{}
+\end{figure}
 
 Rujukan utama bab ini adalah buku \textit{Building Microservices} karya Newman \cite{newman2021},
 \textit{Microservices Patterns} karya Richardson \cite{richardson2018}, katalog pola integrasi

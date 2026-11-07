@@ -51,15 +51,13 @@ menghentikan pelayanan, dengan pola \textit{strangler fig} dan susunan gelombang
 menjadikan setiap perubahan antrean persetujuan. Ketiga, metrik kemajuan yang bermakna bagi direksi,
 bukan sekadar hitungan aplikasi yang sudah dipindahkan.
 
-\IfFileExists{../figures/ch14-diagram-konsep.png}{%
 Gambar \ref{fig:ch14-peta-jalan} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch14-diagram-konsep.png}
+  \input{../figures/ch14-diagram-konsep.tex}
   \caption{Strangler memindahkan irisan layanan secara bertahap}
   \label{fig:ch14-peta-jalan}
 \end{figure}
-}{}
 
 Bab ini disusun dalam enam langkah: pola \textit{strangler fig}, penyusunan gelombang,
 \textit{guardrail} dan \textit{policy as code}, FinOps pada fase Operate, kedaulatan data, serta

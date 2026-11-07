@@ -591,19 +591,17 @@ dinyalakan ulang, semua sesi di dalamnya hilang dan penggunanya harus masuk ulan
   \label{fig:ch05-sesi-skala}
 \end{figure}
 
-% Diagram konsep PNG; sumber komponen dan relasi di figures/chapter-diagrams.json.
-\IfFileExists{../figures/ch05-diagram-konsep.png}{%
+% Diagram konsep TikZ; sumber komponen dan relasi di figures/chapter-diagrams.json.
 Proses aplikasi dibuat dapat diganti dan ditambah secara identik.
 Data serta sesi persisten berada pada layanan pendukung di luar proses aplikasi.
 
 Gambar \ref{fig:ch05-loket-kembar} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch05-diagram-konsep.png}
+  \input{../figures/ch05-diagram-konsep.tex}
   \caption{Aplikasi stateless memisahkan proses dari data persisten}
   \label{fig:ch05-loket-kembar}
 \end{figure}
-}{}
 
 Memindahkan sesi ke penyimpanan bersama punya harga: satu layanan tambahan yang harus
 dirawat dan dijaga ketersediaannya. Kasus berikut memperlihatkan mengapa harga itu layak

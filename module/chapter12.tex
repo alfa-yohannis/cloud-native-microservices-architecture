@@ -37,15 +37,13 @@ fungsi terbatas, ketika sebagian komponennya gagal. \textit{Disaster Recovery} (
 arsitektur, dan latihan untuk memulihkan layanan setelah kejadian besar yang tidak dapat ditahan
 oleh resiliensi biasa.
 
-\IfFileExists{../figures/ch12-diagram-konsep.png}{%
 Gambar \ref{fig:ch12-ilustrasi} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch12-diagram-konsep.png}
+  \input{../figures/ch12-diagram-konsep.tex}
   \caption{Ketahanan request dan pemulihan data saling melengkapi}
   \label{fig:ch12-ilustrasi}
 \end{figure}
-}{}
 
 Bab ini disusun dalam enam langkah: mode kegagalan dalam sistem terdistribusi, pola resiliensi,
 penerapan \textit{multi-AZ} dan \textit{multi-region}, \textit{Recovery Time Objective} (RTO) dan

@@ -1,7 +1,7 @@
 {
   "code": "IT40713",
   "format_version": 1,
-  "description": "Diagram konsep orisinal, disusun dari naskah bab; kotak generik, tanpa TikZ.",
+  "description": "Diagram konsep orisinal, disusun dari naskah bab; kotak generik yang dibangkitkan menjadi TikZ oleh tools/render-diagrams.py.",
   "chapters": [
     {
       "caption": "Perjalanan permintaan janji temu dan ketergantungannya",
@@ -102,7 +102,7 @@
       "note": "Layanan bergantung pada beberapa sistem dan tim. Penempatan di cloud saja belum membentuk praktik cloud-native.",
       "basis": "Istilah aplikasi/server/data/jaringan, perjalanan Medikara+, kualitas layanan dan cloud-hosted versus cloud-native.",
       "number": 1,
-      "filename": "ch01-diagram-konsep.png",
+      "filename": "ch01-diagram-konsep.tex",
       "source": "module/chapter01.tex",
       "chapter_title": "Orientasi dan Bahasa Bersama Cloud-Native",
       "sections": [
@@ -206,7 +206,7 @@
       "note": "Pada semua model, pelanggan tetap mengendalikan tujuan data dan hak akses. Residensi berbeda dari kedaulatan data.",
       "basis": "NIST cloud, model layanan/penerapan, shared responsibility, region/AZ dan perbedaan residency/sovereignty/localization.",
       "number": 2,
-      "filename": "ch02-diagram-konsep.png",
+      "filename": "ch02-diagram-konsep.tex",
       "source": "module/chapter02.tex",
       "chapter_title": "Model Layanan, Model Penerapan, dan Lokasi Data",
       "sections": [
@@ -312,7 +312,7 @@
       "note": "FinOps menghubungkan bisnis, keuangan, dan teknik. Biaya rendah belum tentu berarti emisi terendah atau nilai tertinggi.",
       "basis": "TCO, model harga, Inform/Optimize/Operate, showback/chargeback, SCI dan unit fungsional.",
       "number": 3,
-      "filename": "ch03-diagram-konsep.png",
+      "filename": "ch03-diagram-konsep.tex",
       "source": "module/chapter03.tex",
       "chapter_title": "Ekonomi Cloud, FinOps, dan Keberlanjutan",
       "sections": [
@@ -416,7 +416,7 @@
       "note": "Retain atau retire dapat menjadi keputusan yang tepat. CCoE menjaga guardrail dan membantu tim, bukan memaksa refactor.",
       "basis": "CAF enam perspektif, 7R, landing zone, CCoE, urutan prasyarat migrasi.",
       "number": 4,
-      "filename": "ch04-diagram-konsep.png",
+      "filename": "ch04-diagram-konsep.tex",
       "source": "module/chapter04.tex",
       "chapter_title": "Kerangka Adopsi Cloud dan Strategi Migrasi 7R",
       "sections": [
@@ -516,7 +516,7 @@
       "note": "Replika tidak menyimpan sesi penting pada disk lokal. Penambahan replika membutuhkan kapasitas backing services yang cukup.",
       "basis": "12-factor, build/release/run, external config, backing services, horizontal scaling, immutable instances.",
       "number": 5,
-      "filename": "ch05-diagram-konsep.png",
+      "filename": "ch05-diagram-konsep.tex",
       "source": "module/chapter05.tex",
       "chapter_title": "Prinsip Cloud-Native dan Twelve-Factor App",
       "sections": [
@@ -617,7 +617,7 @@
       "note": "Satu bounded context tidak wajib menjadi satu microservice. Pasien dapat memiliki makna berbeda di pendaftaran dan keuangan.",
       "basis": "DDD, subdomain, ubiquitous language, bounded context, context map dan ACL BPJS.",
       "number": 6,
-      "filename": "ch06-diagram-konsep.png",
+      "filename": "ch06-diagram-konsep.tex",
       "source": "module/chapter06.tex",
       "chapter_title": "Domain-Driven Design dan Batas Layanan",
       "sections": [
@@ -715,7 +715,7 @@
       "note": "Arah inti SIMRS adalah modular monolith. Ekstraksi layanan memerlukan alasan beban, kepemilikan, dan kemampuan operasi.",
       "basis": "Monolith/modular monolith/microservices, Conway, empat coupling, enam pengembang dan ADR.",
       "number": 7,
-      "filename": "ch07-diagram-konsep.png",
+      "filename": "ch07-diagram-konsep.tex",
       "source": "module/chapter07.tex",
       "chapter_title": "Monolit, Modular Monolith, dan Microservices",
       "sections": [
@@ -821,7 +821,7 @@
       "note": "Kubernetes adalah salah satu opsi runtime. Managed control plane tetap menyisakan pekerjaan aplikasi, data, dan kebijakan.",
       "basis": "Container/image/registry, desired versus actual state, reconciliation, managed Kubernetes dan opsi PaaS/serverless.",
       "number": 8,
-      "filename": "ch08-diagram-konsep.png",
+      "filename": "ch08-diagram-konsep.tex",
       "source": "module/chapter08.tex",
       "chapter_title": "Container, Kubernetes, dan Serverless",
       "sections": [
@@ -925,7 +925,7 @@
       "note": "At-least-once memungkinkan event diterima ulang. Idempotensi atau deduplikasi diperlukan pada setiap efek yang penting.",
       "basis": "Sinkron/asinkron, queue versus topic, event facts, delivery semantics, choreography dan orchestration.",
       "number": 9,
-      "filename": "ch09-diagram-konsep.png",
+      "filename": "ch09-diagram-konsep.tex",
       "source": "module/chapter09.tex",
       "chapter_title": "Komunikasi Antarlayanan dan Event-Driven Architecture",
       "sections": [
@@ -1028,7 +1028,7 @@
       "note": "Saga tidak melakukan rollback ACID global. Kompensasi adalah transaksi baru; relay dan konsumen tetap menangani duplikasi.",
       "basis": "Database per service, saga, transactional outbox, konsistensi eventual, CQRS dan kepemilikan data.",
       "number": 10,
-      "filename": "ch10-diagram-konsep.png",
+      "filename": "ch10-diagram-konsep.tex",
       "source": "module/chapter10.tex",
       "chapter_title": "Data dalam Microservices: Saga dan Outbox",
       "sections": [
@@ -1131,7 +1131,7 @@
       "note": "Ukuran mengikuti hasil pengguna. Error budget membantu menentukan kapan kapasitas tim dialihkan untuk keandalan.",
       "basis": "Monitoring/observability, tiga sinyal, trace context, SLI/SLO/error budget, SRE dan postmortem.",
       "number": 11,
-      "filename": "ch11-diagram-konsep.png",
+      "filename": "ch11-diagram-konsep.tex",
       "source": "module/chapter11.tex",
       "chapter_title": "Observability, SRE, dan SLO",
       "sections": [
@@ -1237,7 +1237,7 @@
       "note": "Replikasi dapat menyalin kerusakan. Cadangan terisolasi dan pengujian restore tetap diperlukan sesuai hasil BIA.",
       "basis": "Resilience patterns, multi-AZ versus DR, BIA/RTO/RPO, backup dan game day.",
       "number": 12,
-      "filename": "ch12-diagram-konsep.png",
+      "filename": "ch12-diagram-konsep.tex",
       "source": "module/chapter12.tex",
       "chapter_title": "Resiliensi dan Disaster Recovery",
       "sections": [
@@ -1342,7 +1342,7 @@
       "note": "Platform dipelihara sebagai produk untuk tim. Ukuran perubahan menilai aliran pengiriman sekaligus stabilitas layanan.",
       "basis": "DevOps, CI/CD, GitOps desired/actual, IDP, team topologies dan DORA.",
       "number": 13,
-      "filename": "ch13-diagram-konsep.png",
+      "filename": "ch13-diagram-konsep.tex",
       "source": "module/chapter13.tex",
       "chapter_title": "DevOps, GitOps, dan Platform Engineering",
       "sections": [
@@ -1444,7 +1444,7 @@
       "note": "Gelombang mengikuti dependensi, kapasitas, dan risiko. Kepemilikan data harus jelas; dual write bukan jalan pintas.",
       "basis": "Strangler, ACL, roadmap, policy-as-code, FinOps operate, sovereignty dan ukuran hasil.",
       "number": 14,
-      "filename": "ch14-diagram-konsep.png",
+      "filename": "ch14-diagram-konsep.tex",
       "source": "module/chapter14.tex",
       "chapter_title": "Peta Jalan Modernisasi dan Tata Kelola Cloud",
       "sections": [

@@ -26,15 +26,13 @@ Siapa pemilik setiap data? Bagaimana proses yang melintasi beberapa layanan teta
 transaksi basis data? Bagaimana laporan manajemen tetap tersedia tanpa membebani layanan yang
 melayani pasien?
 
-\IfFileExists{../figures/ch10-diagram-konsep.png}{%
 Gambar \ref{fig:ch10-lemari-arsip} merangkum hubungan komponen dan konsep utama bab ini.
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{../figures/ch10-diagram-konsep.png}
+  \input{../figures/ch10-diagram-konsep.tex}
   \caption{Transaksi lokal, outbox, dan kompensasi saga}
   \label{fig:ch10-lemari-arsip}
 \end{figure}
-}{}
 
 Bab ini menjawab ketiga pertanyaan itu secara berurutan. Rujukan utamanya adalah buku
 \textit{Microservices Patterns} karya Richardson \cite{richardson2018} beserta katalog pola daring
